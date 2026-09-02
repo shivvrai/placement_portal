@@ -1,0 +1,29 @@
+[
+  {
+    "job_id": "job-001", "title": "Data Analyst", "company": "Infosys",
+    "role_category": "Analytics", "location": "Pune",
+    "tfidf_score": 0.71, "semantic_score": 0.80, "hybrid_score": 0.84,
+    "match_rank": 1,
+    "matched_skills": ["Python", "SQL", "Pandas"],
+    "missing_required": ["Tableau", "Power BI"],
+    "missing_preferred": ["AWS", "Statistics"]
+  },
+  {
+    "job_id": "job-002", "title": "Python Developer", "company": "TCS",
+    "role_category": "Engineering", "location": "Bangalore",
+    "tfidf_score": 0.68, "semantic_score": 0.75, "hybrid_score": 0.79,
+    "match_rank": 2,
+    "matched_skills": ["Python", "Git", "React"],
+    "missing_required": ["FastAPI", "Docker"],
+    "missing_preferred": ["PostgreSQL"]
+  },
+  {
+    "job_id": "job-003", "title": "ML Engineer Intern", "company": "Wipro",
+    "role_category": "Machine Learning", "location": "Hyderabad",
+    "tfidf_score": 0.62, "semantic_score": 0.70, "hybrid_score": 0.71,
+    "match_rank": 3,
+    "matched_skills": ["Python", "scikit-learn", "Pandas"],
+    "missing_required": ["TensorFlow", "MLflow"],
+    "missing_preferred": ["Docker", "Spark"]
+  }
+]

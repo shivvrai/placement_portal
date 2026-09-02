@@ -1,0 +1,16 @@
+{
+  "skill_demand": [
+    { "skill_name": "Python", "demand_pct": 78, "supply_pct": 55, "gap": 23 },
+    { "skill_name": "SQL", "demand_pct": 82, "supply_pct": 61, "gap": 21 },
+    { "skill_name": "Machine Learning", "demand_pct": 55, "supply_pct": 28, "gap": 27 },
+    { "skill_name": "Data Visualization", "demand_pct": 49, "supply_pct": 24, "gap": 25 },
+    { "skill_name": "React", "demand_pct": 61, "supply_pct": 48, "gap": 13 },
+    { "skill_name": "Docker", "demand_pct": 42, "supply_pct": 18, "gap": 24 },
+    { "skill_name": "Cloud (AWS/GCP)", "demand_pct": 58, "supply_pct": 22, "gap": 36 },
+    { "skill_name": "System Design", "demand_pct": 65, "supply_pct": 38, "gap": 27 },
+    { "skill_name": "Java", "demand_pct": 45, "supply_pct": 52, "gap": -7 },
+    { "skill_name": "Communication", "demand_pct": 90, "supply_pct": 72, "gap": 18 },
+    { "skill_name": "Git", "demand_pct": 88, "supply_pct": 79, "gap": 9 },
+    { "skill_name": "Statistics", "demand_pct": 48, "supply_pct": 25, "gap": 23 }
+  ]
+}

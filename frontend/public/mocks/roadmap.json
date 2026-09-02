@@ -1,0 +1,26 @@
+{
+  "id": "rm1",
+  "student_id": "stu1",
+  "target_role": "Data Analyst",
+  "total_weeks": 12,
+  "status": "active",
+  "progress_pct": 33,
+  "generated_at": "2026-08-01T10:00:00Z",
+  "updated_at": "2026-08-28T18:30:00Z",
+  "tasks": [
+    { "id": "t1", "title": "SQL Fundamentals", "description": "SELECT, JOINs, GROUP BY, subqueries", "week_number": 1, "order_in_week": 1, "estimated_hours": 6, "status": "completed", "completed_at": "2026-08-07T20:00:00Z" },
+    { "id": "t2", "title": "Excel / Sheets for Data", "description": "Pivot tables, VLOOKUP, charting", "week_number": 1, "order_in_week": 2, "estimated_hours": 3, "status": "completed", "completed_at": "2026-08-07T22:00:00Z" },
+    { "id": "t3", "title": "SQL Advanced — Window Functions", "description": "RANK, ROW_NUMBER, LAG, LEAD, CTEs", "week_number": 2, "order_in_week": 1, "estimated_hours": 5, "status": "completed", "completed_at": "2026-08-14T19:00:00Z" },
+    { "id": "t4", "title": "Statistics Basics", "description": "Mean, median, std dev, distributions", "week_number": 2, "order_in_week": 2, "estimated_hours": 4, "status": "completed", "completed_at": "2026-08-14T21:00:00Z" },
+    { "id": "t5", "title": "Python — pandas core", "description": "DataFrames, merge, groupby, pivot_table", "week_number": 3, "order_in_week": 1, "estimated_hours": 8, "status": "in_progress", "completed_at": null },
+    { "id": "t6", "title": "Data Visualization — matplotlib/seaborn", "description": "Line, bar, scatter, heatmaps", "week_number": 4, "order_in_week": 1, "estimated_hours": 5, "status": "pending", "completed_at": null },
+    { "id": "t7", "title": "Tableau / Power BI Basics", "description": "Connect to DB, build dashboard, publish", "week_number": 5, "order_in_week": 1, "estimated_hours": 6, "status": "pending", "completed_at": null },
+    { "id": "t8", "title": "End-to-End Project: Retail Sales Analysis", "description": "SQL + Python + Tableau. Upload to GitHub.", "week_number": 6, "order_in_week": 1, "estimated_hours": 10, "status": "pending", "completed_at": null },
+    { "id": "t9", "title": "Python — numpy & scipy", "description": "Array ops, statistical tests", "week_number": 7, "order_in_week": 1, "estimated_hours": 4, "status": "pending", "completed_at": null },
+    { "id": "t10", "title": "Probability & Hypothesis Testing", "description": "t-test, chi-square, p-values", "week_number": 8, "order_in_week": 1, "estimated_hours": 5, "status": "pending", "completed_at": null },
+    { "id": "t11", "title": "Intro to Machine Learning (sklearn)", "description": "Linear Regression, Decision Tree", "week_number": 9, "order_in_week": 1, "estimated_hours": 6, "status": "pending", "completed_at": null },
+    { "id": "t12", "title": "Mock Interview Practice", "description": "Pramp + StrataScratch 20 SQL problems", "week_number": 10, "order_in_week": 1, "estimated_hours": 4, "status": "pending", "completed_at": null },
+    { "id": "t13", "title": "Resume & LinkedIn Update", "description": "Add projects, quantify impact", "week_number": 11, "order_in_week": 1, "estimated_hours": 3, "status": "pending", "completed_at": null },
+    { "id": "t14", "title": "Capstone: Customer Churn Dashboard", "description": "Python + SQL + Tableau. Full pipeline.", "week_number": 12, "order_in_week": 1, "estimated_hours": 12, "status": "pending", "completed_at": null }
+  ]
+}

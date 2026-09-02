@@ -1,0 +1,13 @@
+{
+  "student_id": "stu1",
+  "target_role": "Data Analyst",
+  "overall_score": 62,
+  "available_roles": ["Data Analyst", "Software Engineer", "ML Engineer", "Full Stack Developer", "DevOps Engineer"],
+  "gaps": [
+    { "skill_name": "Statistics", "category": "ml_ai", "current_score": 30, "required_score": 65, "gap": 35, "severity": "high" },
+    { "skill_name": "Data Visualization", "category": "tools", "current_score": 25, "required_score": 60, "gap": 35, "severity": "high" },
+    { "skill_name": "Python", "category": "language", "current_score": 55, "required_score": 70, "gap": 15, "severity": "medium" },
+    { "skill_name": "SQL", "category": "language", "current_score": 70, "required_score": 80, "gap": 10, "severity": "low" },
+    { "skill_name": "Excel", "category": "tools", "current_score": 45, "required_score": 50, "gap": 5, "severity": "low" }
+  ]
+}

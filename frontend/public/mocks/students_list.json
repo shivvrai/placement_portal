@@ -1,0 +1,18 @@
+{
+  "data": [
+    { "id": "s1", "roll_number": "CS21001", "first_name": "Aarav", "last_name": "Shah", "email": "aarav.shah@college.edu", "department_code": "CS", "department_name": "Computer Science", "current_semester": 7, "cgpa": 8.9, "resume_parsed": true, "placement_status": "shortlisted", "skill_score": 82 },
+    { "id": "s2", "roll_number": "CS21002", "first_name": "Priya", "last_name": "Menon", "email": "priya.menon@college.edu", "department_code": "CS", "department_name": "Computer Science", "current_semester": 7, "cgpa": 9.1, "resume_parsed": true, "placement_status": "selected", "skill_score": 91 },
+    { "id": "s3", "roll_number": "IT21001", "first_name": "Rohan", "last_name": "Verma", "email": "rohan.verma@college.edu", "department_code": "IT", "department_name": "Information Technology", "current_semester": 7, "cgpa": 7.8, "resume_parsed": true, "placement_status": "applied", "skill_score": 68 },
+    { "id": "s4", "roll_number": "ECE21003", "first_name": "Sneha", "last_name": "Patel", "email": "sneha.patel@college.edu", "department_code": "ECE", "department_name": "Electronics & Communication", "current_semester": 7, "cgpa": 7.2, "resume_parsed": false, "placement_status": null, "skill_score": 52 },
+    { "id": "s5", "roll_number": "CS21005", "first_name": "Karthik", "last_name": "Nair", "email": "karthik.nair@college.edu", "department_code": "CS", "department_name": "Computer Science", "current_semester": 7, "cgpa": 8.3, "resume_parsed": true, "placement_status": "shortlisted", "skill_score": 77 },
+    { "id": "s6", "roll_number": "IT21008", "first_name": "Divya", "last_name": "Reddy", "email": "divya.reddy@college.edu", "department_code": "IT", "department_name": "Information Technology", "current_semester": 7, "cgpa": 6.9, "resume_parsed": false, "placement_status": null, "skill_score": 45 },
+    { "id": "s7", "roll_number": "CS21012", "first_name": "Arjun", "last_name": "Krishnan", "email": "arjun.k@college.edu", "department_code": "CS", "department_name": "Computer Science", "current_semester": 7, "cgpa": 9.4, "resume_parsed": true, "placement_status": "selected", "skill_score": 95 },
+    { "id": "s8", "roll_number": "ME21004", "first_name": "Meera", "last_name": "Iyer", "email": "meera.iyer@college.edu", "department_code": "ME", "department_name": "Mechanical Engineering", "current_semester": 7, "cgpa": 7.5, "resume_parsed": false, "placement_status": null, "skill_score": 38 }
+  ],
+  "meta": {
+    "page": 1,
+    "per_page": 50,
+    "total": 420,
+    "total_pages": 9
+  }
+}
