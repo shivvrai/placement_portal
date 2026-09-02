@@ -1,0 +1,12 @@
+{
+  "department_code": "CS",
+  "semester_filter": null,
+  "gaps": [
+    { "subject_code": "CS501", "subject_name": "Big Data Analytics", "semester_number": 5, "coverage_pct": 40, "demand_score": 85, "gap_score": 45, "top_missing_skills": ["Apache Spark", "Hadoop", "Kafka", "Data Pipeline design"] },
+    { "subject_code": "CS401", "subject_name": "Cloud Computing", "semester_number": 4, "coverage_pct": 45, "demand_score": 88, "gap_score": 43, "top_missing_skills": ["AWS Lambda", "Terraform", "Kubernetes", "Microservices"] },
+    { "subject_code": "CS601", "subject_name": "Machine Learning", "semester_number": 6, "coverage_pct": 58, "demand_score": 90, "gap_score": 32, "top_missing_skills": ["MLflow", "Model Deployment", "Feature Stores"] },
+    { "subject_code": "CS301", "subject_name": "Database Management Systems", "semester_number": 3, "coverage_pct": 72, "demand_score": 92, "gap_score": 20, "top_missing_skills": ["Query Optimization", "Partitioning", "NoSQL patterns"] },
+    { "subject_code": "CS201", "subject_name": "Data Structures", "semester_number": 2, "coverage_pct": 88, "demand_score": 96, "gap_score": 8, "top_missing_skills": ["Advanced Graph Algorithms"] },
+    { "subject_code": "CS102", "subject_name": "Programming Fundamentals", "semester_number": 1, "coverage_pct": 95, "demand_score": 98, "gap_score": 3, "top_missing_skills": [] }
+  ]
+}

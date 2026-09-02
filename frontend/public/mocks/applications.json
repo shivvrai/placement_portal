@@ -1,0 +1,34 @@
+{
+  "applications": [
+    {
+      "id": "app1",
+      "drive_id": "d2",
+      "company_name": "Amazon",
+      "drive_title": "Data Engineer",
+      "salary_ctc": 25.0,
+      "status": "shortlisted",
+      "current_stage": "Technical Round 1",
+      "applied_at": "2026-09-02T10:30:00Z",
+      "updated_at": "2026-09-10T14:00:00Z",
+      "stages": [
+        { "id": "s1", "stage_name": "Resume Screening", "stage_order": 1, "status": "passed", "feedback": "Strong profile selected for technical round.", "scheduled_at": "2026-09-05T09:00:00Z", "completed_at": "2026-09-05T10:00:00Z" },
+        { "id": "s2", "stage_name": "Online Assessment", "stage_order": 2, "status": "passed", "feedback": "Score: 89/100. Top 10% of applicants.", "scheduled_at": "2026-09-08T10:00:00Z", "completed_at": "2026-09-08T12:00:00Z" },
+        { "id": "s3", "stage_name": "Technical Round 1", "stage_order": 3, "status": "scheduled", "feedback": null, "scheduled_at": "2026-09-20T11:00:00Z", "completed_at": null }
+      ]
+    },
+    {
+      "id": "app2",
+      "drive_id": "d5",
+      "company_name": "Flipkart",
+      "drive_title": "SDE-1",
+      "salary_ctc": 18.0,
+      "status": "rejected",
+      "current_stage": null,
+      "applied_at": "2026-08-15T08:00:00Z",
+      "updated_at": "2026-08-25T16:00:00Z",
+      "stages": [
+        { "id": "s4", "stage_name": "Resume Screening", "stage_order": 1, "status": "failed", "feedback": "Profile did not meet CGPA cutoff for this cohort.", "scheduled_at": null, "completed_at": "2026-08-20T00:00:00Z" }
+      ]
+    }
+  ]
+}

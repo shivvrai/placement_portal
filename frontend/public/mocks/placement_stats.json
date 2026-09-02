@@ -1,0 +1,44 @@
+{
+  "academic_year": "2025-26",
+  "total_students": 420,
+  "registered": 390,
+  "placed": 312,
+  "placement_pct": 74.3,
+  "avg_package": 8.4,
+  "median_package": 6.5,
+  "highest_package": 80.0,
+  "companies_visited": 38,
+  "offers_released": 358,
+  "monthly_trend": [
+    { "month": "Aug", "placed": 12, "offers": 15 },
+    { "month": "Sep", "placed": 28, "offers": 34 },
+    { "month": "Oct", "placed": 67, "offers": 79 },
+    { "month": "Nov", "placed": 89, "offers": 102 },
+    { "month": "Dec", "placed": 56, "offers": 63 },
+    { "month": "Jan", "placed": 35, "offers": 42 },
+    { "month": "Feb", "placed": 25, "offers": 23 }
+  ],
+  "dept_breakdown": [
+    { "department_code": "CS", "department_name": "Computer Science", "total": 120, "placed": 108, "placement_pct": 90.0, "avg_package": 12.4 },
+    { "department_code": "IT", "department_name": "Information Technology", "total": 90, "placed": 76, "placement_pct": 84.4, "avg_package": 9.8 },
+    { "department_code": "ECE", "department_name": "Electronics & Communication", "total": 80, "placed": 58, "placement_pct": 72.5, "avg_package": 7.2 },
+    { "department_code": "ME", "department_name": "Mechanical Engineering", "total": 75, "placed": 41, "placement_pct": 54.7, "avg_package": 4.8 },
+    { "department_code": "CE", "department_name": "Civil Engineering", "total": 55, "placed": 29, "placement_pct": 52.7, "avg_package": 4.1 }
+  ],
+  "top_recruiters": [
+    { "company_name": "TCS", "sector": "IT Services", "offers": 48, "avg_ctc": 4.2 },
+    { "company_name": "Infosys", "sector": "IT Services", "offers": 36, "avg_ctc": 3.6 },
+    { "company_name": "Wipro", "sector": "IT Services", "offers": 29, "avg_ctc": 3.5 },
+    { "company_name": "Amazon", "sector": "E-Commerce", "offers": 18, "avg_ctc": 24.5 },
+    { "company_name": "Microsoft", "sector": "Product", "offers": 12, "avg_ctc": 42.0 },
+    { "company_name": "Deloitte", "sector": "Consulting", "offers": 22, "avg_ctc": 7.8 }
+  ],
+  "package_bands": [
+    { "band_label": "< 4L", "count": 28 },
+    { "band_label": "4-7L", "count": 142 },
+    { "band_label": "7-12L", "count": 89 },
+    { "band_label": "12-20L", "count": 36 },
+    { "band_label": "20-50L", "count": 14 },
+    { "band_label": "> 50L", "count": 3 }
+  ]
+}

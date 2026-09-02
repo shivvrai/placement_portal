@@ -1,0 +1,19 @@
+{
+  "id": "student-001",
+  "email": "student@demo.ccip",
+  "role": "student",
+  "first_name": "Arjun",
+  "last_name": "Sharma",
+  "roll_number": "CS2021001",
+  "department_code": "CS",
+  "department_name": "Computer Science",
+  "current_semester": 7,
+  "admission_year": 2021,
+  "cgpa": 8.2,
+  "github_url": "https://github.com/arjunsharma",
+  "linkedin_url": "https://linkedin.com/in/arjunsharma",
+  "bio": "Passionate about ML and building data products.",
+  "resume_parsed": true,
+  "consent_resume_analysis": true,
+  "consent_profile_visible": true
+}

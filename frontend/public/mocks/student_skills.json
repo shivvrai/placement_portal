@@ -1,0 +1,8 @@
+[
+  { "skill": "Python", "category": "language", "confidence": 0.85, "source": "resume", "proficiency_level": "advanced" },
+  { "skill": "SQL", "category": "database", "confidence": 0.72, "source": "academic", "proficiency_level": "intermediate" },
+  { "skill": "React", "category": "framework", "confidence": 0.60, "source": "project", "proficiency_level": "intermediate" },
+  { "skill": "scikit-learn", "category": "library", "confidence": 0.55, "source": "resume", "proficiency_level": "beginner" },
+  { "skill": "Git", "category": "tool", "confidence": 0.78, "source": "project", "proficiency_level": "intermediate" },
+  { "skill": "Pandas", "category": "library", "confidence": 0.70, "source": "academic", "proficiency_level": "intermediate" }
+]
