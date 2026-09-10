@@ -164,9 +164,15 @@ export default function LoginPage() {
           <select 
             onChange={(e) => {
               const role = e.target.value;
-              if (role) {
-                setEmail(`${role}@demo.ccip`);
-                setPassword('password123');
+              const creds = {
+                student:  { email: 'priya.agarwal0@ccip.edu', password: 'student123' },
+                tpo:      { email: 'tpo@ccip.edu',            password: 'tpo123' },
+                faculty:  { email: 'faculty@ccip.edu',         password: 'faculty123' },
+                admin:    { email: 'tpo@ccip.edu',             password: 'tpo123' },
+              };
+              if (role && creds[role]) {
+                setEmail(creds[role].email);
+                setPassword(creds[role].password);
               }
             }}
             style={{
@@ -182,10 +188,9 @@ export default function LoginPage() {
             defaultValue=""
           >
             <option value="" disabled>Select a role...</option>
-            <option value="student">Student</option>
-            <option value="faculty">Faculty</option>
-            <option value="tpo">TPO</option>
-            <option value="admin">Admin</option>
+            <option value="student">Student (Priya Agarwal)</option>
+            <option value="faculty">Faculty (Dr. Sharma)</option>
+            <option value="tpo">TPO (Admin)</option>
           </select>
         </div>
       </div>
