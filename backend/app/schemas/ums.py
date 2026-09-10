@@ -6,6 +6,11 @@ from pydantic import BaseModel
 from typing import Optional
 
 
+class UMSSyncRequest(BaseModel):
+    roll_number: str
+
+
+
 class UMSStudentPreview(BaseModel):
     """Read-only preview of a student's data as seen in UMS."""
     ums_id: str

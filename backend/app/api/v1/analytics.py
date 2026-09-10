@@ -12,10 +12,13 @@ from app.models.user import User
 from app.schemas.analytics import (
     PlacementStatsResponse, DeptPlacementRow,
     SkillDemandRow, CurriculumGapRow,
+    RecruiterRow, MonthlyTrendRow, PackageBandRow,
+    YoYPlacementRow, SectorPieRow,
 )
 from app.services import analytics_service
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
+
 
 _tpo_or_faculty = RoleChecker(["tpo", "faculty", "hod", "admin"])
 
@@ -30,11 +33,55 @@ async def get_placement_stats(
 
 
 @router.get("/departments", response_model=list[DeptPlacementRow], summary="Dept-wise placement breakdown")
+@router.get("/placement/departments", response_model=list[DeptPlacementRow], summary="Dept-wise placement breakdown")
 async def get_dept_stats(
     current_user: User = Depends(_tpo_or_faculty),
     db: AsyncSession = Depends(get_db),
 ):
     return await analytics_service.get_dept_placement_stats(db)
+
+
+@router.get("/top-recruiters", response_model=list[RecruiterRow], summary="Top recruiters by offers")
+async def get_top_recruiters(
+    limit: int = Query(10, ge=1, le=50),
+    current_user: User = Depends(_tpo_or_faculty),
+    db: AsyncSession = Depends(get_db),
+):
+    return await analytics_service.get_top_recruiters(db, limit=limit)
+
+
+@router.get("/trends", response_model=list[MonthlyTrendRow], summary="Monthly placement & offer trends")
+async def get_placement_trends(
+    academic_year: str = Query("2025-26"),
+    current_user: User = Depends(_tpo_or_faculty),
+    db: AsyncSession = Depends(get_db),
+):
+    return await analytics_service.get_monthly_trends(db, academic_year=academic_year)
+
+
+@router.get("/package-distribution", response_model=list[PackageBandRow], summary="Salary package band distribution")
+async def get_package_distribution(
+    current_user: User = Depends(_tpo_or_faculty),
+    db: AsyncSession = Depends(get_db),
+):
+    return await analytics_service.get_package_distribution(db)
+
+
+@router.get("/yoy", response_model=list[YoYPlacementRow], summary="Year-over-year placement performance")
+async def get_yoy_stats(
+    current_user: User = Depends(_tpo_or_faculty),
+    db: AsyncSession = Depends(get_db),
+):
+    return await analytics_service.get_yoy_stats(db)
+
+
+@router.get("/sectors", response_model=list[SectorPieRow], summary="Placement breakdown by company sector")
+async def get_sector_distribution(
+    current_user: User = Depends(_tpo_or_faculty),
+    db: AsyncSession = Depends(get_db),
+):
+    return await analytics_service.get_sector_distribution(db)
+
 
 
 @router.get("/skill-demand", response_model=list[SkillDemandRow], summary="Skill demand vs campus supply")

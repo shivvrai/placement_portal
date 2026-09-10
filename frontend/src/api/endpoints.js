@@ -11,11 +11,18 @@ const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
 async function mockOr(mockFile, apiFn) {
   if (USE_MOCKS) {
-    const res = await fetch(`/mocks/${mockFile}`);
-    return { data: await res.json() };
+    try {
+      const res = await fetch(`/mocks/${mockFile}`);
+      if (res.ok) {
+        return { data: await res.json() };
+      }
+    } catch {
+      // fallback to api
+    }
   }
   return apiFn();
 }
+
 
 // ─── Auth ─────────────────────────────────────────────────────────
 export const authApi = {
@@ -78,7 +85,20 @@ export const analyticsApi = {
     mockOr('curriculum_gaps.json', () => api.get(`/analytics/curriculum-gaps/${deptCode}`)),
   getDepartmentOverview: (deptCode) =>
     mockOr('dept_overview.json', () => api.get(`/analytics/departments/${deptCode}`)),
+  getDeptPlacement: () =>
+    mockOr('dept_placement.json', () => api.get('/analytics/placement/departments')),
+  getTopRecruiters: (params) =>
+    mockOr('top_recruiters.json', () => api.get('/analytics/top-recruiters', { params })),
+  getPlacementTrends: (params) =>
+    mockOr('placement_trends.json', () => api.get('/analytics/trends', { params })),
+  getPackageDistribution: () =>
+    mockOr('package_dist.json', () => api.get('/analytics/package-distribution')),
+  getYoYStats: () =>
+    mockOr('yoy_stats.json', () => api.get('/analytics/yoy')),
+  getSectorDistribution: () =>
+    mockOr('sector_dist.json', () => api.get('/analytics/sectors')),
 };
+
 
 // ─── Curriculum ───────────────────────────────────────────────────
 export const curriculumApi = {

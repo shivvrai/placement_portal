@@ -30,9 +30,16 @@ class StudentSummary(BaseModel):
     current_semester: int
     cgpa: Optional[float] = None
     resume_parsed: bool
-    placement_status: Optional[str] = None  # derived
+    placement_status: Optional[str] = "unregistered"  # derived
+    company: Optional[str] = None
+    package: Optional[float] = None
+    skill_score: Optional[int] = None
+    backlogs: Optional[int] = 0
+    year: Optional[int] = None
 
     model_config = {"from_attributes": True}
+
+
 
 
 class StudentProfile(BaseModel):
