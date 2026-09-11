@@ -9,10 +9,15 @@ import uuid
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
 from app.core.security import get_current_user, RoleChecker
 from app.models.user import User
+from app.models.placement import PlacementOutcome, Application, PlacementDrive
+from app.models.skill import StudentSkill
+from app.models.academic import AcademicRecord
 from app.schemas.student import (
     StudentProfile, StudentSummary, StudentUpdateRequest,
     ConsentUpdateRequest, AcademicRecordResponse,
@@ -22,6 +27,7 @@ from app.schemas.common import MessageResponse, PaginatedResponse, PaginationMet
 from app.services import student_service
 
 router = APIRouter(prefix="/students", tags=["Students"])
+
 
 _tpo_admin = RoleChecker(["tpo", "admin"])
 _student_or_tpo = RoleChecker(["student", "tpo", "faculty", "hod", "admin"])
@@ -110,36 +116,110 @@ async def list_students(
     department_code: Optional[str] = Query(None, description="Filter by dept code e.g. CS"),
     min_cgpa: Optional[float] = Query(None, ge=0, le=10),
     semester: Optional[int] = Query(None, ge=1, le=10),
+    status: Optional[str] = Query(None, description="Filter by placement status"),
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     current_user: User = Depends(_tpo_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    if not isinstance(department_code, str):
+        department_code = None
+    if not isinstance(min_cgpa, (int, float)):
+        min_cgpa = None
+    if not isinstance(semester, int):
+        semester = None
+    if not isinstance(status, str):
+        status = None
+
     students, total = await student_service.list_students(
+
         db, department_code=department_code,
         min_cgpa=min_cgpa, semester=semester,
         page=page, per_page=per_page,
     )
-    data = [
-        StudentSummary(
-            id=s.id,
-            roll_number=s.roll_number,
-            first_name=s.user.first_name,
-            last_name=s.user.last_name,
-            email=s.user.email,
-            department_code=s.department.code,
-            department_name=s.department.name,
-            current_semester=s.current_semester,
-            cgpa=float(s.cgpa) if s.cgpa else None,
-            resume_parsed=s.resume_parsed,
+    data = []
+    for s in students:
+        # Placement status & details
+        company = None
+        pkg = None
+        placement_status = "unregistered"
+
+        # Check placement outcome first
+        outcome_res = await db.execute(
+            select(PlacementOutcome)
+            .where(PlacementOutcome.student_id == s.id)
+            .limit(1)
         )
-        for s in students
-    ]
+        outcome = outcome_res.scalar_one_or_none()
+        if outcome:
+            placement_status = "selected"
+            company = outcome.company_name
+            pkg = float(outcome.salary_ctc) if outcome.salary_ctc else None
+        else:
+            app_res = await db.execute(
+                select(Application)
+                .options(joinedload(Application.drive).joinedload(PlacementDrive.company))
+                .where(Application.student_id == s.id)
+                .order_by(Application.applied_at.desc())
+                .limit(1)
+            )
+            latest_app = app_res.scalar_one_or_none()
+            if latest_app:
+                placement_status = latest_app.status
+                if latest_app.drive and latest_app.drive.company:
+                    company = latest_app.drive.company.name
+                    pkg = float(latest_app.drive.salary_ctc) if latest_app.drive.salary_ctc else None
+                elif latest_app.drive:
+                    company = latest_app.drive.title
+                    pkg = float(latest_app.drive.salary_ctc) if latest_app.drive.salary_ctc else None
+
+        # Backlogs
+        backlogs_cnt = (await db.execute(
+            select(func.count(AcademicRecord.id))
+            .where(AcademicRecord.student_id == s.id, AcademicRecord.status == "failed")
+        )).scalar_one() or 0
+
+        # Skill score
+        skills_cnt = (await db.execute(
+            select(func.count(StudentSkill.id)).where(StudentSkill.student_id == s.id)
+        )).scalar_one() or 0
+        cgpa_val = float(s.cgpa) if s.cgpa else 7.5
+        skill_score = min(98, max(50, int(skills_cnt * 6 + cgpa_val * 4 + 20)))
+
+        # Year
+        year = (s.current_semester + 1) // 2 if s.current_semester else 4
+
+        # Filter by status if requested
+        if status and status != "All" and placement_status != status:
+            continue
+
+        data.append(
+            StudentSummary(
+                id=s.id,
+                roll_number=s.roll_number,
+                first_name=s.user.first_name,
+                last_name=s.user.last_name,
+                email=s.user.email,
+                department_code=s.department.code,
+                department_name=s.department.name,
+                current_semester=s.current_semester,
+                cgpa=float(s.cgpa) if s.cgpa else None,
+                resume_parsed=s.resume_parsed,
+                placement_status=placement_status,
+                company=company,
+                package=pkg,
+                skill_score=skill_score,
+                backlogs=backlogs_cnt,
+                year=year,
+            )
+        )
+
     total_pages = max(1, (total + per_page - 1) // per_page)
     return PaginatedResponse(
         data=data,
         meta=PaginationMeta(page=page, per_page=per_page, total=total, total_pages=total_pages),
     )
+
 
 
 @router.get("/{student_id}", response_model=StudentProfile, summary="Get student by ID (TPO)")
