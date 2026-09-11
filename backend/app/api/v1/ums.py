@@ -22,9 +22,11 @@ from app.services.ums_sync_service import sync_single_student, sync_department
 from app.schemas.ums import (
     UMSStudentPreview,
     UMSSyncResult,
+    UMSSyncRequest,
     UMSDepartmentSyncResult,
     UMSSubjectResponse,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +136,29 @@ async def sync_student(
 
 
 @router.post(
+    "/sync",
+    response_model=UMSSyncResult,
+    summary="Sync a single student from UMS by roll number (TPO/Admin)",
+)
+async def sync_student_by_body(
+    payload: UMSSyncRequest,
+    current_user: User = Depends(_tpo_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    adapter = MockUMSAdapter(db)
+    result = await sync_single_student(db, adapter, payload.roll_number)
+
+    if not result["success"]:
+        raise HTTPException(
+            status_code=404,
+            detail=result.get("error", "Sync failed"),
+        )
+
+    return UMSSyncResult(**result)
+
+
+@router.post(
+
     "/sync/department/{department_code}",
     response_model=UMSDepartmentSyncResult,
     summary="Sync all students in a department (TPO/Admin)",

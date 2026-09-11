@@ -35,6 +35,7 @@ class MonthlyTrendRow(BaseModel):
 
 class RecruiterRow(BaseModel):
     company_name: str
+    company: Optional[str] = None
     sector: Optional[str] = None
     offers: int
     avg_ctc: Optional[float] = None
@@ -60,3 +61,17 @@ class CurriculumGapRow(BaseModel):
     demand_score: float
     gap_score: float
     top_missing_skills: list[str] = []
+
+
+class YoYPlacementRow(BaseModel):
+    year: str
+    placed: int
+    rate: float
+    avg_pkg: Optional[float] = None
+
+
+class SectorPieRow(BaseModel):
+    name: str
+    value: int
+    color: Optional[str] = None
+
