@@ -4,7 +4,10 @@ Tests for Analytics API endpoints and TPO dashboard functionality.
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from tests.conftest import auth_headers
+from app.models.user import Student
 
 pytestmark = pytest.mark.asyncio
 
@@ -83,9 +86,13 @@ async def test_get_skill_demand(client: AsyncClient, seed_tpo):
     assert isinstance(response.json(), list)
 
 
-async def test_ums_sync_body_endpoint(client: AsyncClient, seed_tpo, seed_student):
+async def test_ums_sync_body_endpoint(client: AsyncClient, seed_tpo, seed_student, db: AsyncSession):
     """TPO can sync UMS using POST /ums/sync with roll_number body."""
     _, student = seed_student
+
+    # Save original CGPA before sync (sync recalculates it from academic records)
+    original_cgpa = float(student.cgpa) if student.cgpa else None
+
     response = await client.post(
         "/api/v1/ums/sync",
         json={"roll_number": student.roll_number},
@@ -95,3 +102,11 @@ async def test_ums_sync_body_endpoint(client: AsyncClient, seed_tpo, seed_studen
     data = response.json()
     assert data["success"] is True
     assert data["roll_number"] == student.roll_number
+
+    # Restore original CGPA to prevent test pollution for downstream tests
+    result = await db.execute(
+        select(Student).where(Student.roll_number == student.roll_number)
+    )
+    s = result.scalar_one()
+    s.cgpa = original_cgpa
+    await db.commit()
