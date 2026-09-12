@@ -39,6 +39,19 @@ async def get_student_skill_gap(
     return await matching_service.compute_skill_gap(db, student_id, target_role)
 
 
+@router.get("/matching/students/{student_id}/gap", response_model=SkillGapResponse, summary="Student skill gap (ML)")
+@router.get("/students/{student_id}/gap", response_model=SkillGapResponse, include_in_schema=False)
+async def get_skill_gap_for_student(
+    student_id: uuid.UUID,
+    target_role: str = Query("Software Engineer", description="Target role for gap analysis"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await student_service.get_student_by_user_id(db, student_id)
+    return await matching_service.compute_skill_gap(db, student_id, target_role)
+
+
+
 @router.get("/matching/me", response_model=list[JobMatchResponse], summary="My job matches")
 async def get_my_job_matches(
     limit: int = Query(20, ge=1, le=100),
@@ -71,3 +84,26 @@ async def get_student_job_matches(
         student_dept_code=student.department.code if student.department else None,
         limit=limit,
     )
+
+
+@router.get("/matching/students/{student_id}/jobs", response_model=list[JobMatchResponse], summary="Student job matches (ML-ranked)")
+@router.get("/students/{student_id}/jobs", response_model=list[JobMatchResponse], include_in_schema=False)
+async def get_student_job_matches_jobs(
+    student_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=100),
+    role: Optional[str] = Query(None),
+    location: Optional[str] = Query(None),
+    minMatch: Optional[float] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    student = await student_service.get_student_full(db, student_id)
+    matches = await matching_service.compute_job_matches(
+        db=db,
+        student_id=student_id,
+        student_cgpa=float(student.cgpa) if student.cgpa else None,
+        student_dept_code=student.department.code if student.department else None,
+        limit=limit,
+    )
+    return matches
+
