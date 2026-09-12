@@ -1,103 +1,25 @@
 /**
  * Student Skill Gap — shows per-skill gap analysis vs. target job role.
- * Charts: horizontal bar chart per category, detailed skill table.
+ * Connected to live ML gap engine with semantic embeddings.
  */
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { intelligenceApi } from '../../api/endpoints';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, Cell,
 } from 'recharts';
 
-// ─── Mock Data ────────────────────────────────────────────────────
 const TARGET_ROLES = [
-  { id: 1, label: 'Data Analyst' },
-  { id: 2, label: 'Python Developer' },
-  { id: 3, label: 'ML Engineer' },
-  { id: 4, label: 'Full Stack Developer' },
+  'Software Engineer',
+  'Data Analyst',
+  'ML Engineer',
+  'Full Stack Developer',
+  'DevOps Engineer',
+  'Data Engineer',
+  'Backend Developer',
 ];
-
-const SKILL_DATA = {
-  1: {
-    overallScore: 67,
-    categories: [
-      { category: 'Programming', current: 75, required: 85 },
-      { category: 'Statistics', current: 45, required: 80 },
-      { category: 'SQL & Databases', current: 70, required: 90 },
-      { category: 'Data Viz', current: 50, required: 75 },
-      { category: 'ML Basics', current: 55, required: 70 },
-      { category: 'Communication', current: 78, required: 80 },
-    ],
-    skills: [
-      { skill: 'Python', category: 'Programming', current: 75, required: 85, gap: 10, severity: 'low', resources: 3 },
-      { skill: 'Pandas / NumPy', category: 'Programming', current: 60, required: 85, gap: 25, severity: 'medium', resources: 5 },
-      { skill: 'SQL', category: 'SQL & Databases', current: 70, required: 90, gap: 20, severity: 'medium', resources: 4 },
-      { skill: 'Statistics', category: 'Statistics', current: 45, required: 80, gap: 35, severity: 'high', resources: 7 },
-      { skill: 'Tableau / Power BI', category: 'Data Viz', current: 20, required: 75, gap: 55, severity: 'critical', resources: 6 },
-      { skill: 'Machine Learning', category: 'ML Basics', current: 55, required: 70, gap: 15, severity: 'low', resources: 8 },
-      { skill: 'Excel Advanced', category: 'Data Viz', current: 60, required: 70, gap: 10, severity: 'low', resources: 2 },
-      { skill: 'Communication', category: 'Communication', current: 78, required: 80, gap: 2, severity: 'none', resources: 0 },
-    ],
-  },
-  2: {
-    overallScore: 74,
-    categories: [
-      { category: 'Python', current: 80, required: 90 },
-      { category: 'Web Frameworks', current: 50, required: 85 },
-      { category: 'Databases', current: 65, required: 80 },
-      { category: 'DevOps', current: 20, required: 70 },
-      { category: 'Testing', current: 40, required: 75 },
-      { category: 'System Design', current: 45, required: 65 },
-    ],
-    skills: [
-      { skill: 'Python', category: 'Python', current: 80, required: 90, gap: 10, severity: 'low', resources: 3 },
-      { skill: 'FastAPI / Django', category: 'Web Frameworks', current: 50, required: 85, gap: 35, severity: 'high', resources: 6 },
-      { skill: 'PostgreSQL', category: 'Databases', current: 65, required: 80, gap: 15, severity: 'low', resources: 4 },
-      { skill: 'Docker', category: 'DevOps', current: 20, required: 70, gap: 50, severity: 'critical', resources: 5 },
-      { skill: 'Git Advanced', category: 'DevOps', current: 55, required: 70, gap: 15, severity: 'low', resources: 3 },
-      { skill: 'pytest', category: 'Testing', current: 40, required: 75, gap: 35, severity: 'high', resources: 4 },
-    ],
-  },
-  3: {
-    overallScore: 58,
-    categories: [
-      { category: 'Math & Stats', current: 45, required: 90 },
-      { category: 'ML Frameworks', current: 55, required: 85 },
-      { category: 'Python', current: 80, required: 85 },
-      { category: 'MLOps', current: 10, required: 70 },
-      { category: 'Deep Learning', current: 35, required: 80 },
-      { category: 'Data Engineering', current: 30, required: 65 },
-    ],
-    skills: [
-      { skill: 'Linear Algebra', category: 'Math & Stats', current: 45, required: 90, gap: 45, severity: 'critical', resources: 8 },
-      { skill: 'scikit-learn', category: 'ML Frameworks', current: 55, required: 85, gap: 30, severity: 'high', resources: 5 },
-      { skill: 'PyTorch / TensorFlow', category: 'Deep Learning', current: 35, required: 80, gap: 45, severity: 'critical', resources: 9 },
-      { skill: 'MLflow', category: 'MLOps', current: 10, required: 70, gap: 60, severity: 'critical', resources: 4 },
-      { skill: 'Feature Engineering', category: 'ML Frameworks', current: 50, required: 85, gap: 35, severity: 'high', resources: 6 },
-      { skill: 'Python', category: 'Python', current: 80, required: 85, gap: 5, severity: 'none', resources: 0 },
-    ],
-  },
-  4: {
-    overallScore: 70,
-    categories: [
-      { category: 'React', current: 60, required: 85 },
-      { category: 'Node.js', current: 45, required: 80 },
-      { category: 'CSS / Design', current: 65, required: 75 },
-      { category: 'Databases', current: 60, required: 75 },
-      { category: 'DevOps', current: 25, required: 65 },
-      { category: 'TypeScript', current: 30, required: 80 },
-    ],
-    skills: [
-      { skill: 'React', category: 'React', current: 60, required: 85, gap: 25, severity: 'medium', resources: 6 },
-      { skill: 'TypeScript', category: 'TypeScript', current: 30, required: 80, gap: 50, severity: 'critical', resources: 5 },
-      { skill: 'Node.js / Express', category: 'Node.js', current: 45, required: 80, gap: 35, severity: 'high', resources: 7 },
-      { skill: 'MongoDB', category: 'Databases', current: 40, required: 75, gap: 35, severity: 'high', resources: 4 },
-      { skill: 'Docker', category: 'DevOps', current: 25, required: 65, gap: 40, severity: 'critical', resources: 5 },
-      { skill: 'CSS / Tailwind', category: 'CSS / Design', current: 65, required: 75, gap: 10, severity: 'low', resources: 3 },
-    ],
-  },
-};
 
 const SEVERITY_CONFIG = {
   none:     { label: 'No Gap',  color: 'var(--accent-success)', bg: 'rgba(34,197,94,0.1)' },
@@ -205,63 +127,147 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────
+// ─── Main Component ────────────────────────────────────────────────
 export default function SkillGap() {
-  const [selectedRole, setSelectedRole] = useState(1);
+  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetRole = searchParams.get('role') || 'Software Engineer';
+
+  const [gapData, setGapData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
-  const data = SKILL_DATA[selectedRole];
+
+  useEffect(() => {
+    async function fetchGap() {
+      try {
+        setLoading(true);
+        setError(null);
+        // This calls the ML gap engine
+        const res = await intelligenceApi.getSkillGap(user.id, targetRole);
+        setGapData(res.data);
+      } catch (err) {
+        console.error('Skill gap fetch failed:', err);
+        setError(err.response?.data?.detail || 'Failed to compute skill gap analysis');
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (user?.id) {
+      fetchGap();
+    }
+  }, [user, targetRole]);
+
+  const handleRoleChange = (role) => {
+    setSearchParams({ role });
+  };
+
+  if (loading) {
+    return (
+      <div className="page-body" style={{ textAlign: 'center', padding: '4rem' }}>
+        Computing semantic skill gap analysis...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page-body" style={{ color: '#ef4444', textAlign: 'center', padding: '4rem' }}>
+        {error}
+      </div>
+    );
+  }
+
+  const overallScore = Math.round(gapData?.overall_score ?? 0);
+
+  // Map backend gaps to display items
+  const gaps = (gapData?.gaps || []).map((g) => {
+    const current = g.current_score > 1 ? Math.round(g.current_score) : Math.round(g.current_score * 100);
+    const required = g.required_score > 1 ? Math.round(g.required_score) : Math.round(g.required_score * 100);
+    const gap = g.gap > 1 ? Math.round(g.gap) : Math.round(g.gap * 100);
+    return {
+      skill: g.skill_name,
+      category: g.category ? g.category.charAt(0).toUpperCase() + g.category.slice(1) : 'General',
+      current,
+      required,
+      gap: Math.max(0, gap),
+      severity: g.severity || 'low',
+      resources: gap > 0 ? Math.min(6, Math.max(1, Math.round(gap / 10))) : 0,
+    };
+  });
 
   const filteredSkills = filter === 'all'
-    ? data.skills
-    : data.skills.filter(s => s.severity === filter);
+    ? gaps
+    : gaps.filter((s) => s.severity === filter);
 
-  const chartData = data.categories.map(c => ({
-    name: c.category,
-    Current: c.current,
-    Required: c.required,
+  // Compute category averages for the bar chart
+  const categoryMap = {};
+  gaps.forEach((g) => {
+    if (!categoryMap[g.category]) {
+      categoryMap[g.category] = { currentSum: 0, requiredSum: 0, count: 0 };
+    }
+    categoryMap[g.category].currentSum += g.current;
+    categoryMap[g.category].requiredSum += g.required;
+    categoryMap[g.category].count += 1;
+  });
+
+  const chartData = Object.entries(categoryMap).map(([category, data]) => ({
+    name: category,
+    Current: Math.round(data.currentSum / data.count),
+    Required: Math.round(data.requiredSum / data.count),
   }));
 
   return (
     <div>
       <div className="page-header">
         <h1>Skill Gap Analysis</h1>
-        <p>See exactly where you stand vs. industry requirements for your target role</p>
+        <p>AI semantic intelligence comparing your verified skills to industry standards</p>
       </div>
 
       <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
-
         {/* Role selector */}
-        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)', alignSelf: 'center' }}>
             Target role:
           </span>
-          {TARGET_ROLES.map(r => (
+          {TARGET_ROLES.map((r) => (
             <button
-              key={r.id}
-              onClick={() => setSelectedRole(r.id)}
-              className={`btn ${selectedRole === r.id ? 'btn-primary' : 'btn-secondary'}`}
+              key={r}
+              onClick={() => handleRoleChange(r)}
+              className={`btn ${targetRole.toLowerCase() === r.toLowerCase() ? 'btn-primary' : 'btn-secondary'}`}
               style={{ height: 36, fontSize: 'var(--font-size-sm)' }}
             >
-              {r.label}
+              {r}
             </button>
           ))}
         </div>
 
-        {/* Top row: score ring + radar */}
+        {/* Top row: score ring + category bar chart */}
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 'var(--space-6)' }}>
-
           {/* Score card */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-4)' }}>
+          <div
+            className="card"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'var(--space-4)',
+            }}
+          >
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)', fontWeight: 500 }}>
               Overall Readiness
             </div>
-            <ScoreRing score={data.overallScore} />
+            <ScoreRing score={overallScore} />
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
-                {data.overallScore >= 75 ? '🟢 On track' : data.overallScore >= 55 ? '🟡 Needs work' : '🔴 Significant gaps'}
+                {overallScore >= 75 ? '🟢 On track' : overallScore >= 55 ? '🟡 Needs work' : '🔴 Significant gaps'}
               </div>
               <Link to="/student/roadmap">
-                <button className="btn btn-primary" style={{ marginTop: 'var(--space-4)', height: 36, fontSize: 'var(--font-size-sm)' }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ marginTop: 'var(--space-4)', height: 36, fontSize: 'var(--font-size-sm)' }}
+                >
                   🗺️ View Roadmap
                 </button>
               </Link>
@@ -296,15 +302,19 @@ export default function SkillGap() {
         {/* Skill table */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
-            <div style={{ fontWeight: 600 }}>Skill-Level Breakdown</div>
+            <div style={{ fontWeight: 600 }}>Skill-Level Breakdown ({targetRole})</div>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              {['all', 'critical', 'high', 'medium', 'low', 'none'].map(f => (
+              {['all', 'critical', 'high', 'medium', 'low', 'none'].map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
                   style={{
-                    padding: '4px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                    fontSize: 'var(--font-size-xs)', fontWeight: 500,
+                    padding: '4px 12px',
+                    borderRadius: 999,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 'var(--font-size-xs)',
+                    fontWeight: 500,
                     background: filter === f ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                     color: filter === f ? 'white' : 'var(--text-muted)',
                     transition: 'all var(--transition-fast)',
@@ -329,7 +339,9 @@ export default function SkillGap() {
                 </tr>
               </thead>
               <tbody>
-                {filteredSkills.map(s => <SkillRow key={s.skill} skill={s} />)}
+                {filteredSkills.map((s) => (
+                  <SkillRow key={s.skill} skill={s} />
+                ))}
               </tbody>
             </table>
           </div>
@@ -340,7 +352,6 @@ export default function SkillGap() {
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

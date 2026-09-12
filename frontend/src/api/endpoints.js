@@ -34,6 +34,9 @@ export const authApi = {
 
 // ─── Student Profile ──────────────────────────────────────────────
 export const studentApi = {
+  getMyProfile: () => api.get('/students/me'),
+  getMySkills: () => api.get('/students/me/skills'),
+  getMyAcademicRecords: () => api.get('/students/me/academic-records'),
   getProfile: (id) => mockOr('student_profile.json', () => api.get(`/students/${id}`)),
   updateProfile: (id, data) => api.patch(`/students/${id}`, data),
   getSkills: (id) => mockOr('student_skills.json', () => api.get(`/students/${id}/skills`)),
@@ -53,8 +56,11 @@ export const studentApi = {
 export const intelligenceApi = {
   getMatches: (studentId, params) =>
     mockOr('job_matches.json', () => api.get(`/matching/students/${studentId}/jobs`, { params })),
-  getSkillGap: (studentId, jobId) =>
-    mockOr('skill_gap.json', () => api.get(`/gaps/students/${studentId}/jobs/${jobId}`)),
+  getMyMatches: (params) => api.get('/matching/me', { params }),
+  getSkillGap: (studentId, targetRole) =>
+    mockOr('skill_gap.json', () => api.get(`/matching/students/${studentId}/gap`, { params: { target_role: targetRole } })),
+  getMySkillGap: (targetRole) =>
+    api.get('/gaps/me', { params: { target_role: targetRole } }),
   getRoadmap: (studentId) =>
     mockOr('roadmap.json', () => api.get(`/roadmap/students/${studentId}`)),
   generateRoadmap: (studentId, targetRole) =>
