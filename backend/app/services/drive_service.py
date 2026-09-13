@@ -89,8 +89,7 @@ async def create_drive(
     )
     db.add(drive)
     await db.commit()
-    await db.refresh(drive)
-    return drive
+    return await get_drive(db, drive.id)
 
 
 async def update_drive(
@@ -101,8 +100,7 @@ async def update_drive(
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(drive, field, value)
     await db.commit()
-    await db.refresh(drive)
-    return drive
+    return await get_drive(db, drive.id)
 
 
 # ─── Applications ──────────────────────────────────────────────────────────────
