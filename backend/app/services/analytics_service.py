@@ -582,4 +582,3 @@ async def get_department_overview(db: AsyncSession, department_code: str):
         total_at_risk_count=len(at_risk_list),
     )
 
-

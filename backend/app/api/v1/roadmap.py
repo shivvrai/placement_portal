@@ -3,6 +3,7 @@ Roadmap API — generate and manage student learning roadmaps.
 """
 
 import uuid
+from typing import Optional
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,11 +18,14 @@ router = APIRouter(prefix="/roadmap", tags=["Roadmap"])
 
 
 @router.get("/me", response_model=RoadmapResponse | None, summary="Get my active roadmap")
+@router.get("/students/{student_id}", response_model=RoadmapResponse | None, include_in_schema=False)
 async def get_my_roadmap(
+    student_id: Optional[uuid.UUID] = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await roadmap_service.get_student_roadmap(db, current_user.id)
+    target_id = student_id if student_id else current_user.id
+    return await roadmap_service.get_student_roadmap(db, target_id)
 
 
 @router.post("/me/generate", response_model=RoadmapResponse, status_code=status.HTTP_201_CREATED)

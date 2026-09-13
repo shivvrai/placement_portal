@@ -94,12 +94,17 @@ export const resumeApi = {
 export const intelligenceApi = {
   getMatches: (studentId, params) =>
     mockOr('job_matches.json', () => api.get(`/matching/students/${studentId}/jobs`, { params })),
-  getSkillGap: (studentId, jobId) =>
-    mockOr('skill_gap.json', () => api.get(`/gaps/students/${studentId}/jobs/${jobId}`)),
+  getMyMatches: (params) => api.get('/matching/me', { params }),
+  getSkillGap: (studentId, targetRole) =>
+    mockOr('skill_gap.json', () => api.get(`/matching/students/${studentId}/gap`, { params: { target_role: targetRole } })),
+  getMySkillGap: (targetRole) =>
+    api.get('/gaps/me', { params: { target_role: targetRole } }),
   getRoadmap: (studentId) =>
-    mockOr('roadmap.json', () => api.get(`/roadmap/students/${studentId}`)),
-  generateRoadmap: (studentId, targetRole) =>
-    api.post(`/roadmap/students/${studentId}/generate`, { target_role: targetRole }),
+    mockOr('roadmap.json', () => studentId ? api.get(`/roadmap/students/${studentId}`) : api.get('/roadmap/me')),
+  generateRoadmap: (roleOrId, targetRole) =>
+    targetRole
+      ? api.post(`/roadmap/students/${roleOrId}/generate`, { target_role: targetRole })
+      : api.post('/roadmap/me/generate', { target_role: roleOrId }),
   updateTask: (taskId, status) =>
     api.patch(`/roadmap/tasks/${taskId}`, { status }),
 };
