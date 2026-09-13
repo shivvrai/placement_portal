@@ -75,3 +75,55 @@ class SectorPieRow(BaseModel):
     value: int
     color: Optional[str] = None
 
+
+class DeptKpis(BaseModel):
+    avg_skill_score: float
+    curriculum_coverage: float
+    subjects_high_gap: int
+    students_at_risk: int
+
+
+class SkillRadarItem(BaseModel):
+    skill: str
+    score: float
+    benchmark: float
+
+
+class CoverageDonutItem(BaseModel):
+    name: str
+    value: float
+    color: str
+
+
+class SubjectGapRankItem(BaseModel):
+    subject: str
+    gap: float
+    dept: str
+    sem: int
+
+
+class BatchSkillItem(BaseModel):
+    batch: str
+    score: float
+
+
+class AtRiskStudentItem(BaseModel):
+    roll: str
+    name: str
+    cgpa: float
+    skill: float
+    risk: str  # 'high' | 'medium'
+    id: Optional[uuid.UUID] = None
+
+
+class DepartmentOverviewResponse(BaseModel):
+    department_code: str
+    department_name: str
+    kpis: DeptKpis
+    skill_radar: list[SkillRadarItem] = []
+    coverage_donut: list[CoverageDonutItem] = []
+    subject_gap_rank: list[SubjectGapRankItem] = []
+    batch_skill: list[BatchSkillItem] = []
+    at_risk: list[AtRiskStudentItem] = []
+    total_at_risk_count: int = 0
+

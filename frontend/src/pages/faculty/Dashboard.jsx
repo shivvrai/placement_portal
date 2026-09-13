@@ -2,21 +2,24 @@
  * Faculty/HOD Dashboard — dept skill score KPIs, coverage donut, gap leaderboard.
  */
 
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip,
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
+import { analyticsApi } from '../../api/endpoints';
 
-// ─── Mock Data ────────────────────────────────────────────────────
-const DEPT_KPIS = {
+// ─── Default Fallback Data (used when API is loading or network error) ──
+const DEFAULT_KPIS = {
   avg_skill_score: 68,
   subjects_high_gap: 5,
-  students_at_risk: 23,
+  students_at_risk: 11,
   curriculum_coverage: 62,
 };
 
-const SKILL_RADAR = [
+const DEFAULT_SKILL_RADAR = [
   { skill: 'Programming',   score: 78, benchmark: 85 },
   { skill: 'Databases',     score: 70, benchmark: 80 },
   { skill: 'ML / AI',       score: 55, benchmark: 80 },
@@ -25,12 +28,12 @@ const SKILL_RADAR = [
   { skill: 'Communication', score: 72, benchmark: 75 },
 ];
 
-const COVERAGE_DONUT = [
+const DEFAULT_COVERAGE_DONUT = [
   { name: 'Covered by Curriculum', value: 62, color: '#6366f1' },
   { name: 'Gap (Not Covered)',     value: 38, color: '#ef4444' },
 ];
 
-const SUBJECT_GAP_RANK = [
+const DEFAULT_SUBJECT_GAP_RANK = [
   { subject: 'Cloud Computing',   gap: 72, dept: 'CS', sem: 7 },
   { subject: 'DevOps Practices',  gap: 68, dept: 'CS', sem: 8 },
   { subject: 'Deep Learning',     gap: 65, dept: 'CS', sem: 7 },
@@ -40,14 +43,14 @@ const SUBJECT_GAP_RANK = [
   { subject: 'Data Engineering',  gap: 45, dept: 'CS', sem: 7 },
 ];
 
-const BATCH_SKILL = [
+const DEFAULT_BATCH_SKILL = [
   { batch: '2021', score: 68 },
   { batch: '2022', score: 71 },
   { batch: '2023', score: 65 },
   { batch: '2024', score: 74 },
 ];
 
-const AT_RISK = [
+const DEFAULT_AT_RISK = [
   { roll: 'CS21B022', name: 'Rohan Mehta',   cgpa: 6.2, skill: 42, risk: 'high' },
   { roll: 'CS21B055', name: 'Priti Singh',   cgpa: 6.8, skill: 48, risk: 'high' },
   { roll: 'CS21B071', name: 'Aakash Rao',    cgpa: 7.1, skill: 51, risk: 'medium' },
@@ -72,23 +75,76 @@ function ChartTooltip({ active, payload, label }) {
 
 export default function FacultyDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [overviewData, setOverviewData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const deptCode = user?.department_code || user?.department?.code || 'CS';
+
+  const fetchOverview = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await analyticsApi.getDepartmentOverview(deptCode);
+      setOverviewData(res.data);
+    } catch (err) {
+      console.error('Failed to load department overview:', err);
+      setError('Unable to fetch live department analytics. Displaying cached overview.');
+    } finally {
+      setLoading(false);
+    }
+  }, [deptCode]);
+
+  useEffect(() => {
+    fetchOverview();
+  }, [fetchOverview]);
+
+  const kpis = overviewData?.kpis || DEFAULT_KPIS;
+  const skillRadar = overviewData?.skill_radar?.length ? overviewData.skill_radar : DEFAULT_SKILL_RADAR;
+  const coverageDonut = overviewData?.coverage_donut?.length ? overviewData.coverage_donut : DEFAULT_COVERAGE_DONUT;
+  const subjectGapRank = overviewData?.subject_gap_rank?.length ? overviewData.subject_gap_rank : DEFAULT_SUBJECT_GAP_RANK;
+  const batchSkill = overviewData?.batch_skill?.length ? overviewData.batch_skill : DEFAULT_BATCH_SKILL;
+  const atRisk = overviewData?.at_risk?.length ? overviewData.at_risk : DEFAULT_AT_RISK;
+  const totalAtRisk = overviewData?.total_at_risk_count ?? atRisk.length;
+  const deptName = overviewData?.department_name || (user?.department?.name || `Department of ${deptCode}`);
 
   return (
     <div>
-      <div className="page-header">
-        <h1>Faculty Dashboard</h1>
-        <p>Curriculum intelligence for {user?.first_name ? `${user.first_name} ${user.last_name}` : 'Department of Computer Science'}</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1>Faculty Dashboard</h1>
+          <p>Curriculum intelligence for {user?.first_name ? `${user.first_name} ${user.last_name}` : 'Department HOD'} ({deptName})</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {loading && <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>Updating metrics...</span>}
+          <button
+            className="btn btn-secondary"
+            onClick={fetchOverview}
+            disabled={loading}
+            style={{ height: 34, fontSize: 'var(--font-size-xs)' }}
+          >
+            {loading ? 'Refreshing...' : '🔄 Refresh Data'}
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div style={{ margin: '0 var(--space-6) var(--space-4)', padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#ef4444', fontSize: 'var(--font-size-xs)' }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
 
         {/* KPI Cards */}
         <div className="stat-grid">
           {[
-            { label: 'Dept Avg Skill Score', value: DEPT_KPIS.avg_skill_score, unit: '/100', icon: '📊' },
-            { label: 'Curriculum Coverage', value: DEPT_KPIS.curriculum_coverage, unit: '%', icon: '📚' },
-            { label: 'High-Gap Subjects', value: DEPT_KPIS.subjects_high_gap, unit: ' subjects', icon: '⚠️' },
-            { label: 'Students At Risk', value: DEPT_KPIS.students_at_risk, unit: ' students', icon: '🔴' },
+            { label: 'Dept Avg Skill Score', value: Math.round(kpis.avg_skill_score), unit: '/100', icon: '📊' },
+            { label: 'Curriculum Coverage', value: Math.round(kpis.curriculum_coverage), unit: '%', icon: '📚' },
+            { label: 'High-Gap Subjects', value: kpis.subjects_high_gap, unit: ' subjects', icon: '⚠️' },
+            { label: 'Students At Risk', value: kpis.students_at_risk, unit: ' students', icon: '🔴' },
           ].map(s => (
             <div key={s.label} className="stat-card">
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -107,7 +163,7 @@ export default function FacultyDashboard() {
           <div className="card">
             <div style={{ fontWeight: 600, marginBottom: 'var(--space-4)' }}>Dept Skill Profile vs Industry Benchmark</div>
             <ResponsiveContainer width="100%" height={260}>
-              <RadarChart data={SKILL_RADAR}>
+              <RadarChart data={skillRadar}>
                 <PolarGrid stroke="var(--border-color)" />
                 <PolarAngleAxis dataKey="skill" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                 <Radar name="Dept Score" dataKey="score" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} />
@@ -130,12 +186,12 @@ export default function FacultyDashboard() {
               <div style={{ fontWeight: 600, marginBottom: 'var(--space-4)' }}>Curriculum → Industry Coverage</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-6)' }}>
                 <PieChart width={130} height={130}>
-                  <Pie data={COVERAGE_DONUT} cx={65} cy={65} innerRadius={40} outerRadius={60} dataKey="value" startAngle={90} endAngle={-270}>
-                    {COVERAGE_DONUT.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                  <Pie data={coverageDonut} cx={65} cy={65} innerRadius={40} outerRadius={60} dataKey="value" startAngle={90} endAngle={-270}>
+                    {coverageDonut.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                 </PieChart>
                 <div style={{ flex: 1 }}>
-                  {COVERAGE_DONUT.map(c => (
+                  {coverageDonut.map(c => (
                     <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
                       <div style={{ width: 12, height: 12, borderRadius: 2, background: c.color, flexShrink: 0 }} />
                       <div>
@@ -151,7 +207,7 @@ export default function FacultyDashboard() {
             <div className="card" style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, marginBottom: 'var(--space-3)' }}>Avg Skill Score by Batch</div>
               <ResponsiveContainer width="100%" height={100}>
-                <BarChart data={BATCH_SKILL} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
+                <BarChart data={batchSkill} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
                   <XAxis dataKey="batch" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                   <YAxis domain={[50, 90]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} hide />
                   <Tooltip content={<ChartTooltip />} />
@@ -174,7 +230,7 @@ export default function FacultyDashboard() {
               </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              {SUBJECT_GAP_RANK.map((s, i) => (
+              {subjectGapRank.map((s, i) => (
                 <div key={s.subject} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                   <div style={{
                     width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
@@ -190,10 +246,10 @@ export default function FacultyDashboard() {
                     <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>Sem {s.sem}</div>
                   </div>
                   <div style={{ width: 90, height: 6, background: 'var(--bg-tertiary)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ width: `${s.gap}%`, height: '100%', background: s.gap > 60 ? '#ef4444' : s.gap > 45 ? '#f59e0b' : '#6366f1', borderRadius: 3 }} />
+                    <div style={{ width: `${Math.min(100, Math.max(0, s.gap))}%`, height: '100%', background: s.gap > 60 ? '#ef4444' : s.gap > 45 ? '#f59e0b' : '#6366f1', borderRadius: 3 }} />
                   </div>
                   <span style={{ width: 32, textAlign: 'right', fontSize: 'var(--font-size-xs)', fontWeight: 700, color: s.gap > 60 ? '#ef4444' : s.gap > 45 ? '#f59e0b' : '#6366f1' }}>
-                    {s.gap}%
+                    {Math.round(s.gap)}%
                   </span>
                 </div>
               ))}
@@ -217,8 +273,8 @@ export default function FacultyDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {AT_RISK.map(s => {
-                    const rc = RISK_CFG[s.risk];
+                  {atRisk.map(s => {
+                    const rc = RISK_CFG[s.risk] || RISK_CFG.medium;
                     return (
                       <tr key={s.roll}>
                         <td>
@@ -238,8 +294,12 @@ export default function FacultyDashboard() {
                 </tbody>
               </table>
             </div>
-            <button className="btn btn-secondary" style={{ width: '100%', marginTop: 'var(--space-4)', height: 34, fontSize: 'var(--font-size-sm)' }}>
-              View All 23 At-Risk Students
+            <button
+              className="btn btn-secondary"
+              onClick={() => navigate('/faculty/students')}
+              style={{ width: '100%', marginTop: 'var(--space-4)', height: 34, fontSize: 'var(--font-size-sm)' }}
+            >
+              View All {totalAtRisk} At-Risk Students →
             </button>
           </div>
 

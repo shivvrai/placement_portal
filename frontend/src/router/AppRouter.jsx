@@ -126,6 +126,7 @@ export function AppRouter() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<FacultyDashboard />} />
           <Route path="curriculum" element={<CurriculumMap />} />
+          <Route path="students" element={<TPOStudents />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

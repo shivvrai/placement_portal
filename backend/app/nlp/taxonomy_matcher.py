@@ -16,7 +16,38 @@ from app.models.skill import Skill
 
 
 # Similarity threshold — strings scoring below this are rejected
-MATCH_THRESHOLD = 75.0  # out of 100
+MATCH_THRESHOLD = 80.0  # out of 100
+
+CANONICAL_ALIASES: dict[str, str] = {
+    "golang": "go",
+    "go language": "go",
+    "go programming": "go",
+    "r language": "r",
+    "r programming": "r",
+    "r script": "r",
+    "c programming": "c",
+    "c language": "c",
+    "postgres": "postgresql",
+    "reactjs": "react",
+    "react.js": "react",
+    "nodejs": "node.js",
+    "node": "node.js",
+    "huggingface": "hugging face",
+    "sklearn": "scikit-learn",
+    "k8s": "kubernetes",
+    "amazon web services": "aws",
+    "google cloud": "gcp",
+    "google cloud platform": "gcp",
+    "oops": "oop",
+    "object oriented programming": "oop",
+    "operating system": "operating systems",
+    "data structure": "data structures",
+    "data structures and algorithms": "data structures",
+    "dsa": "data structures",
+    "algorithm": "algorithms",
+    "html5": "html",
+    "css3": "css",
+}
 
 
 def _normalise(s: str) -> str:
@@ -47,41 +78,47 @@ def match_skill(
     Match a raw skill string to the best canonical Skill in the index.
 
     Strategy:
-      1. Exact match on normalised name
-      2. Fuzzy match using rapidfuzz WRatio scorer
+      1. Exact match on normalised name or alias
+      2. Fuzzy match using rapidfuzz token_sort_ratio (guarded against short strings)
 
     Returns the matched Skill object or None if no match above threshold.
     """
-    try:
-        from rapidfuzz import process, fuzz
-    except ImportError:
-        # Fallback to exact match only
-        norm = _normalise(raw_skill)
-        return skill_index.get(norm)
-
     norm = _normalise(raw_skill)
+    norm = CANONICAL_ALIASES.get(norm, norm)
 
     # 1. Exact match (fast path)
     if norm in skill_index:
         return skill_index[norm]
 
-    # 2. Fuzzy match across all keys
-    if not skill_index:
+    # Never fuzzy-match short strings (length <= 3) to prevent mis-mapping (e.g. 'oracle' -> 'r')
+    if len(norm) <= 3 or not skill_index:
         return None
 
-    candidates = list(skill_index.keys())
-    result = process.extractOne(
-        norm,
-        candidates,
-        scorer=fuzz.WRatio,
-        score_cutoff=threshold,
-    )
-
-    if result is None:
+    try:
+        from rapidfuzz import fuzz
+    except ImportError:
         return None
 
-    best_key, score, _ = result
-    return skill_index[best_key]
+    # Filter candidates: never match against short candidates (length <= 3), and require length compatibility
+    candidates = [
+        k for k in skill_index.keys()
+        if len(k) >= 4 and (min(len(norm), len(k)) / max(len(norm), len(k))) >= 0.65
+    ]
+    if not candidates:
+        return None
+
+    best_key = None
+    best_score = 0.0
+    for cand in candidates:
+        score = fuzz.token_sort_ratio(norm, cand)
+        if score > best_score and score >= threshold:
+            best_score = score
+            best_key = cand
+
+    if best_key is not None:
+        return skill_index[best_key]
+
+    return None
 
 
 async def match_skills_to_db(
@@ -94,37 +131,42 @@ async def match_skills_to_db(
 
     Returns list of (raw_skill, matched_Skill_or_None, confidence_score).
     """
-    try:
-        from rapidfuzz import fuzz
-    except ImportError:
-        fuzz = None
-
     skill_index = await load_skill_index(db)
     results: list[tuple[str, Optional[Skill], float]] = []
 
     for raw in raw_skills:
         norm = _normalise(raw)
+        norm = CANONICAL_ALIASES.get(norm, norm)
 
-        # Exact match
+        # 1. Exact match
         if norm in skill_index:
             results.append((raw, skill_index[norm], 100.0))
             continue
 
-        # Fuzzy match
-        if fuzz and skill_index:
-            from rapidfuzz import process
-            match = process.extractOne(
-                norm,
-                list(skill_index.keys()),
-                scorer=fuzz.WRatio,
-                score_cutoff=threshold,
-            )
-            if match:
-                best_key, score, _ = match
-                results.append((raw, skill_index[best_key], float(score)))
+        # Short strings <= 3 chars must NOT be fuzzy matched
+        if len(norm) <= 3:
+            results.append((raw, None, 0.0))
+            continue
+
+        try:
+            from rapidfuzz import fuzz
+            candidates = [
+                k for k in skill_index.keys()
+                if len(k) >= 4 and (min(len(norm), len(k)) / max(len(norm), len(k))) >= 0.65
+            ]
+            best_key = None
+            best_score = 0.0
+            for cand in candidates:
+                score = fuzz.token_sort_ratio(norm, cand)
+                if score > best_score and score >= threshold:
+                    best_score = score
+                    best_key = cand
+
+            if best_key is not None:
+                results.append((raw, skill_index[best_key], float(best_score)))
             else:
                 results.append((raw, None, 0.0))
-        else:
+        except ImportError:
             results.append((raw, None, 0.0))
 
     return results
@@ -136,6 +178,7 @@ async def create_or_get_skill(db: AsyncSession, name: str) -> Skill:
     Used when the NLP pipeline finds a brand-new skill not in the taxonomy.
     """
     import re
+    from datetime import datetime, timezone
     normalised = re.sub(r"\s+", " ", name.lower().strip())
 
     result = await db.execute(
@@ -149,6 +192,7 @@ async def create_or_get_skill(db: AsyncSession, name: str) -> Skill:
         name=name.strip().title(),
         normalized_name=normalised,
         category="other",
+        created_at=datetime.now(timezone.utc),
     )
     db.add(new_skill)
     await db.flush()
