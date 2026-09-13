@@ -19,9 +19,9 @@ from typing import Optional
 # This is the primary lookup — extend as needed.
 # ---------------------------------------------------------------------------
 SKILL_VOCAB: set[str] = {
-    # Languages
-    "python", "java", "javascript", "typescript", "c", "c++", "c#", "go",
-    "golang", "rust", "swift", "kotlin", "r", "matlab", "scala", "ruby",
+    # Languages (single-letter 'c', 'r', and 'go' handled via SPECIAL_SKILL_PATTERNS below)
+    "python", "java", "javascript", "typescript", "c++", "c#",
+    "golang", "rust", "swift", "kotlin", "matlab", "scala", "ruby",
     "php", "perl", "bash", "shell", "powershell", "sql", "nosql", "dart",
     # Web / Frontend
     "html", "css", "react", "reactjs", "react.js", "angular", "angularjs",
@@ -31,16 +31,16 @@ SKILL_VOCAB: set[str] = {
     # Backend / Frameworks
     "node.js", "nodejs", "express", "fastapi", "django", "flask", "spring",
     "spring boot", "rails", "laravel", "asp.net", "dotnet", ".net",
-    "hibernate", "sqlalchemy",
+    "hibernate", "sqlalchemy", "streamlit", "gradio", "java swing",
     # Data / ML / AI
     "machine learning", "deep learning", "artificial intelligence", "nlp",
     "natural language processing", "computer vision", "tensorflow", "pytorch",
     "keras", "scikit-learn", "sklearn", "xgboost", "lightgbm", "catboost",
     "pandas", "numpy", "scipy", "matplotlib", "seaborn", "plotly",
-    "huggingface", "transformers", "bert", "gpt", "llm",
+    "huggingface", "hugging face", "transformers", "bert", "gpt", "llm",
     "data science", "data analysis", "data engineering", "feature engineering",
     "statistics", "probability", "regression", "classification", "clustering",
-    "reinforcement learning", "transfer learning", "fine-tuning",
+    "reinforcement learning", "transfer learning", "fine-tuning", "gemini api", "google gemini",
     # Databases
     "postgresql", "postgres", "mysql", "mongodb", "redis", "elasticsearch",
     "cassandra", "sqlite", "oracle", "mssql", "dynamodb", "firestore",
@@ -71,6 +71,26 @@ SKILL_VOCAB: set[str] = {
     "blockchain", "solidity", "web3", "unity", "unreal engine",
     "android", "ios", "react native", "flutter", "firebase",
     "opencv", "ros", "embedded systems", "fpga", "vhdl", "verilog",
+}
+
+# Ambiguous or short skills that should NOT use blind word-boundary matching on lowercased text
+SPECIAL_SKILL_PATTERNS = {
+    "r": [
+        re.compile(r'\b(r\s*(?:language|programming|script|studio|project))\b', re.IGNORECASE),
+        re.compile(r'\b(?:python|sql|julia|sas|spss|matlab)\s*[,/]\s*r\b', re.IGNORECASE),
+        re.compile(r'\br\s*[,/]\s*(?:python|sql|julia|sas|spss|matlab)\b', re.IGNORECASE),
+        re.compile(r'(?:programming|languages?|technologies|skills)[^:\n]*:[^\n]*\b[R]\b'),
+    ],
+    "c": [
+        re.compile(r'\b((?:ansi\s+|embedded\s+)?c\s*(?:language|programming|compiler))\b', re.IGNORECASE),
+        re.compile(r'\bC\s*[,/]\s*C\+\+'),
+        re.compile(r'\bC\+\+\s*[,/]\s*C\b'),
+        re.compile(r'(?:programming|languages?|technologies|skills)[^:\n]*:[^\n]*\b[C]\b'),
+    ],
+    "go": [
+        re.compile(r'\b(golang|(?:go\s*(?:language|programming)))\b', re.IGNORECASE),
+        re.compile(r'(?:programming|languages?|technologies|skills)[^:\n]*:[^\n]*\b[G]o\b'),
+    ],
 }
 
 # Regex for "SkillName vX.X" patterns
@@ -119,7 +139,12 @@ def extract_skills(text: str, use_spacy: bool = True) -> list[str]:
     matched_ranges: list[tuple[int, int]] = []
 
     for skill in sorted_vocab:
-        pattern = r'\b' + re.escape(skill) + r'\b'
+        # Proper boundary assertion for skills containing symbols like ++, #, or .
+        if skill.endswith(('+', '#')) or skill.startswith('.'):
+            pattern = r'(?<![a-zA-Z0-9])' + re.escape(skill) + r'(?![a-zA-Z0-9#+])'
+        else:
+            pattern = r'\b' + re.escape(skill) + r'\b'
+
         for m in re.finditer(pattern, norm_text):
             # Avoid overlapping with already-matched ranges
             start, end = m.start(), m.end()
@@ -127,6 +152,11 @@ def extract_skills(text: str, use_spacy: bool = True) -> list[str]:
             if not overlap:
                 found.add(skill)
                 matched_ranges.append((start, end))
+
+    # --- Pass 1b: Special / single-letter languages (R, C, Go) ---
+    for skill_key, patterns in SPECIAL_SKILL_PATTERNS.items():
+        if any(p.search(text) for p in patterns):
+            found.add(skill_key)
 
     # --- Pass 2: Version-tagged skills ---
     for m in _VERSION_RE.finditer(text):
@@ -157,7 +187,7 @@ def extract_skills_from_sections(text: str) -> dict[str, list[str]]:
     Returns dict: {"skills_section": [...], "full_text": [...]}
     """
     skills_section_re = re.compile(
-        r'(?:technical\s+)?skills?[:\s]*\n(.*?)(?:\n\n|\Z)',
+        r'(?:technical\s+)?skills?[:\s]*\n(.*?)(?:\n\s*\n|\n(?=[A-Z][A-Za-z\s]{2,25}(?:[:\n]|\s*\|))|\Z)',
         re.IGNORECASE | re.DOTALL,
     )
     m = skills_section_re.search(text)

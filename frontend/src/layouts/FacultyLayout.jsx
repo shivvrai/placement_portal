@@ -11,6 +11,7 @@ const FACULTY_NAV = [
     items: [
       { path: '/faculty/dashboard', icon: '🏠', label: 'Dashboard' },
       { path: '/faculty/curriculum', icon: '📚', label: 'Curriculum Map' },
+      { path: '/faculty/students', icon: '👥', label: 'Students Roster' },
     ],
   },
 ];

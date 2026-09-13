@@ -66,3 +66,16 @@ class SubjectWithSkillsResponse(BaseModel):
     ai_suggestions: list[str] = []
 
     model_config = {"from_attributes": True}
+
+
+class AddSkillRequest(BaseModel):
+    skill_id: Optional[uuid.UUID] = None
+    skill_name: Optional[str] = None
+    confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    category: Optional[str] = "other"
+    proficiency_level: Optional[str] = "intermediate"
+
+
+class ApplySuggestionRequest(BaseModel):
+    skill_name: Optional[str] = None
+

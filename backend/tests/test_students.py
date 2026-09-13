@@ -184,3 +184,151 @@ async def test_get_student_by_id_not_found(client: AsyncClient, seed_tpo):
         headers=auth_headers(seed_tpo),
     )
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Self Access & Skill Management
+# ---------------------------------------------------------------------------
+
+async def test_get_student_by_id_as_self(client: AsyncClient, seed_student):
+    """Student can fetch their own profile using /{id}."""
+    user, student = seed_student
+    response = await client.get(
+        f"/api/v1/students/{student.id}",
+        headers=auth_headers(user),
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] == str(student.id)
+
+
+async def test_update_phone_persists_to_user(client: AsyncClient, seed_student):
+    """Updating phone in profile updates the User.phone field."""
+    user, _ = seed_student
+    new_phone = "+91 91234 56789"
+    response = await client.patch(
+        "/api/v1/students/me",
+        json={"phone": new_phone},
+        headers=auth_headers(user),
+    )
+    assert response.status_code == 200
+    assert response.json()["phone"] == new_phone
+
+    # Verify subsequent GET returns the new phone
+    get_res = await client.get(
+        "/api/v1/students/me",
+        headers=auth_headers(user),
+    )
+    assert get_res.status_code == 200
+    assert get_res.json()["phone"] == new_phone
+
+
+async def test_add_and_delete_student_skill(client: AsyncClient, seed_student):
+    """Student can add a manual skill and then remove it."""
+    user, _ = seed_student
+
+    # Add skill
+    payload = {
+        "skill_name": "Kubernetes",
+        "category": "cloud",
+        "confidence": 0.8,
+        "proficiency_level": "advanced",
+    }
+    add_res = await client.post(
+        "/api/v1/students/me/skills",
+        json=payload,
+        headers=auth_headers(user),
+    )
+    assert add_res.status_code == 200
+    skill_data = add_res.json()
+    assert skill_data["skill"]["name"] == "Kubernetes"
+    assert skill_data["source"] == "manual"
+    student_skill_id = skill_data["id"]
+
+    # Verify skill appears in get_my_skills
+    skills_res = await client.get(
+        "/api/v1/students/me/skills",
+        headers=auth_headers(user),
+    )
+    assert skills_res.status_code == 200
+    names = [s["skill"]["name"] for s in skills_res.json()]
+    assert "Kubernetes" in names
+
+    # Delete skill
+    del_res = await client.delete(
+        f"/api/v1/students/me/skills/{student_skill_id}",
+        headers=auth_headers(user),
+    )
+    assert del_res.status_code == 200
+    assert "message" in del_res.json()
+
+    # Verify skill is removed
+    skills_after = await client.get(
+        "/api/v1/students/me/skills",
+        headers=auth_headers(user),
+    )
+    assert skills_after.status_code == 200
+    names_after = [s["skill"]["name"] for s in skills_after.json()]
+    assert "Kubernetes" not in names_after
+
+
+async def test_delete_student_skill_by_name(client: AsyncClient, seed_student):
+    """Student can delete a skill using its name in the endpoint."""
+    user, _ = seed_student
+
+    # Add skill
+    await client.post(
+        "/api/v1/students/me/skills",
+        json={"skill_name": "Terraform", "category": "cloud", "confidence": 0.75},
+        headers=auth_headers(user),
+    )
+
+    # Delete by skill name
+    del_res = await client.delete(
+        "/api/v1/students/me/skills/Terraform",
+        headers=auth_headers(user),
+    )
+    assert del_res.status_code == 200
+
+    # Verify skill is removed
+    skills_after = await client.get(
+        "/api/v1/students/me/skills",
+        headers=auth_headers(user),
+    )
+    names_after = [s["skill"]["name"] for s in skills_after.json()]
+    assert "Terraform" not in names_after
+
+
+async def test_delete_student_skill_by_skill_id_with_duplicates(client: AsyncClient, seed_student, db):
+    """Deleting by Skill.id cleans up duplicate entries for the student without error."""
+    import uuid
+    from datetime import datetime, timezone
+    from app.models.skill import Skill, StudentSkill
+
+    user, student = seed_student
+
+    # Create a skill in taxonomy
+    skill = Skill(name="GraphQL", normalized_name="graphql", category="framework", created_at=datetime.now(timezone.utc))
+    db.add(skill)
+    await db.flush()
+
+    # Create two StudentSkill rows (e.g. from resume and manual)
+    db.add(StudentSkill(student_id=student.id, skill_id=skill.id, confidence=0.7, source="resume"))
+    db.add(StudentSkill(student_id=student.id, skill_id=skill.id, confidence=0.8, source="manual"))
+    await db.commit()
+
+    # Delete by taxonomy skill_id
+    del_res = await client.delete(
+        f"/api/v1/students/me/skills/{skill.id}",
+        headers=auth_headers(user),
+    )
+    assert del_res.status_code == 200
+
+    # Verify both rows are removed
+    skills_after = await client.get(
+        "/api/v1/students/me/skills",
+        headers=auth_headers(user),
+    )
+    names_after = [s["skill"]["name"] for s in skills_after.json()]
+    assert "GraphQL" not in names_after
+
+

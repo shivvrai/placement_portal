@@ -44,23 +44,24 @@ def _get_upload_path(student_id: uuid.UUID, ext: str) -> Path:
 async def _run_parse_pipeline(
     student_id: uuid.UUID,
     file_path: Path,
-    db: AsyncSession,
     overwrite: bool = True,
 ):
     """Run in background after file is saved."""
-    content = file_path.read_bytes()
-    result = await process_resume(
-        db=db,
-        student_id=student_id,
-        file_content=content,
-        filename=file_path.name,
-        overwrite_existing=overwrite,
-    )
-    if result.errors:
-        import logging
-        logging.getLogger(__name__).warning(
-            "Resume parse errors for %s: %s", student_id, result.errors
+    from app.core.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        content = file_path.read_bytes()
+        result = await process_resume(
+            db=db,
+            student_id=student_id,
+            file_content=content,
+            filename=file_path.name,
+            overwrite_existing=overwrite,
         )
+        if result.errors:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Resume parse errors for %s: %s", student_id, result.errors
+            )
 
 
 @router.post(
@@ -114,7 +115,6 @@ async def upload_resume(
         _run_parse_pipeline,
         student_id=current_user.id,
         file_path=file_path,
-        db=db,
         overwrite=True,
     )
 
@@ -174,7 +174,6 @@ async def reparse_resume(
         _run_parse_pipeline,
         student_id=current_user.id,
         file_path=file_path,
-        db=db,
         overwrite=True,
     )
 

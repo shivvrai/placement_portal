@@ -4,8 +4,9 @@ CCIP Backend Configuration.
 Loads settings from environment variables with sensible defaults for development.
 """
 
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import List
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -42,7 +43,7 @@ class Settings(BaseSettings):
     MAX_RESUME_SIZE_MB: int = 10
 
     # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     model_config = {
         "env_file": ".env",
