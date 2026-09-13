@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, Field
 
 
 # ─── Department ────────────────────────────────────────────────────────────────
@@ -77,6 +77,14 @@ class StudentUpdateRequest(BaseModel):
     phone: Optional[str] = None
 
 
+class AddStudentSkillRequest(BaseModel):
+    skill_id: Optional[uuid.UUID] = None
+    skill_name: Optional[str] = None
+    category: Optional[str] = "other"
+    confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    proficiency_level: Optional[str] = "intermediate"
+
+
 class ConsentUpdateRequest(BaseModel):
     consent_resume_analysis: Optional[bool] = None
     consent_profile_visible: Optional[bool] = None
@@ -99,8 +107,10 @@ class AcademicRecordResponse(BaseModel):
     id: uuid.UUID
     subject: SubjectResponse
     grade: Optional[str] = None
+    grade_points: Optional[float] = None
     marks: Optional[float] = None
     max_marks: Optional[float] = None
     status: str
 
     model_config = {"from_attributes": True}
+

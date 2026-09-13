@@ -14,18 +14,46 @@ from typing import Union
 
 
 def extract_text_from_pdf(content: bytes) -> str:
-    """Extract all text from a PDF byte stream using pdfplumber."""
+    """Extract all text from a PDF byte stream using pdfplumber with fallbacks to pypdfium2 and pdfminer."""
+    # 1. Try pdfplumber
     try:
         import pdfplumber
         with pdfplumber.open(io.BytesIO(content)) as pdf:
             pages_text = []
             for page in pdf.pages:
                 text = page.extract_text(x_tolerance=3, y_tolerance=3)
-                if text:
+                if text and text.strip():
                     pages_text.append(text.strip())
+            if pages_text:
+                return "\n\n".join(pages_text)
+    except Exception:
+        pass
+
+    # 2. Try pypdfium2
+    try:
+        import pypdfium2 as pdfium
+        pdf = pdfium.PdfDocument(content)
+        pages_text = []
+        for page in pdf:
+            textpage = page.get_textpage()
+            text = textpage.get_text_range()
+            if text and text.strip():
+                pages_text.append(text.strip())
+        if pages_text:
             return "\n\n".join(pages_text)
-    except Exception as e:
-        raise ValueError(f"PDF extraction failed: {e}") from e
+    except Exception:
+        pass
+
+    # 3. Try pdfminer.six
+    try:
+        from pdfminer.high_level import extract_text as pdfminer_extract
+        text = pdfminer_extract(io.BytesIO(content))
+        if text and text.strip():
+            return text.strip()
+    except Exception:
+        pass
+
+    raise ValueError("PDF extraction failed: unable to extract text using available PDF parsers")
 
 
 def extract_text_from_docx(content: bytes) -> str:

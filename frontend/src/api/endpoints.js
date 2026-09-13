@@ -34,23 +34,61 @@ export const authApi = {
 
 // ─── Student Profile ──────────────────────────────────────────────
 export const studentApi = {
-  getMyProfile: () => api.get('/students/me'),
-  getMySkills: () => api.get('/students/me/skills'),
-  getMyAcademicRecords: () => api.get('/students/me/academic-records'),
-  getProfile: (id) => mockOr('student_profile.json', () => api.get(`/students/${id}`)),
-  updateProfile: (id, data) => api.patch(`/students/${id}`, data),
-  getSkills: (id) => mockOr('student_skills.json', () => api.get(`/students/${id}/skills`)),
-  getAcademicRecords: (id) => mockOr('academic_records.json', () => api.get(`/students/${id}/academic-records`)),
-  getAttendance: (id) => mockOr('attendance.json', () => api.get(`/students/${id}/attendance`)),
-  uploadResume: (id, file) => {
+  // My (current) student profile endpoints - use JWT token for authentication
+  getMyProfile: () => mockOr('student_profile.json', () => api.get('/students/me')),
+  updateMyProfile: (data) => api.patch('/students/me', data),
+  getMySkills: () => mockOr('student_skills.json', () => api.get('/students/me/skills')),
+  addMySkill: (data) => api.post('/students/me/skills', data),
+  deleteMySkill: (skillId) => {
+    if (USE_MOCKS) {
+      return Promise.resolve({ data: { message: 'Skill removed successfully' } });
+    }
+    return api.delete(`/students/me/skills/${encodeURIComponent(skillId)}`);
+  },
+  getMyAcademicRecords: () => mockOr('academic_records.json', () => api.get('/students/me/academic-records')),
+  updateMyConsent: (consent) => api.patch('/students/me/consent', consent),
+
+  // Legacy endpoints for backward compatibility (still work but require student ID)
+  // Deprecated: prefer using the /me endpoints above
+  getProfile: (id) => mockOr('student_profile.json', () => (id ? api.get(`/students/${id}`) : api.get('/students/me'))),
+  updateProfile: (id, data) => (data ? api.patch(`/students/${id}`, data) : api.patch('/students/me', id)),
+  getSkills: (id) => mockOr('student_skills.json', () => (id ? api.get(`/students/${id}/skills`) : api.get('/students/me/skills'))),
+  addSkill: (data) => api.post('/students/me/skills', data),
+  deleteSkill: (skillId) => {
+    if (USE_MOCKS) {
+      return Promise.resolve({ data: { message: 'Skill removed successfully' } });
+    }
+    return api.delete(`/students/me/skills/${encodeURIComponent(skillId)}`);
+  },
+  getAcademicRecords: (id) => mockOr('academic_records.json', () => (id ? api.get(`/students/${id}/academic-records`) : api.get('/students/me/academic-records'))),
+  getAttendance: (id) => mockOr('attendance.json', () => (id ? api.get(`/students/${id}/attendance`) : api.get('/students/me/attendance'))),
+  uploadResume: (idOrFile, file) => {
+    const fileObj = (idOrFile instanceof File || idOrFile instanceof Blob) ? idOrFile : file;
     const form = new FormData();
-    form.append('file', file);
-    return api.post(`/students/${id}/resume`, form, {
+    form.append('file', fileObj);
+    return api.post('/resume/upload', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  updateConsent: (id, consent) => api.patch(`/students/${id}/consent`, consent),
+  updateConsent: (idOrConsent, consent) => {
+    const payload = consent !== undefined ? consent : idOrConsent;
+    return api.patch('/students/me/consent', payload);
+  },
 };
+
+// ─── Resume & NLP ────────────────────────────────────────────────
+export const resumeApi = {
+  upload: (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post('/resume/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  getStatus: () => api.get('/resume/status'),
+  reparse: () => api.post('/resume/reparse'),
+};
+
 
 // ─── Matching & Intelligence ──────────────────────────────────────
 export const intelligenceApi = {
@@ -114,8 +152,10 @@ export const curriculumApi = {
     mockOr('subjects.json', () => api.get('/curriculum/subjects', { params: { dept, semester } })),
   getSubjectSkills: (subjectId) =>
     api.get(`/curriculum/subjects/${subjectId}/skills`),
-  suggestSkillMappings: (subjectId) =>
-    api.post(`/curriculum/subjects/${subjectId}/suggest-mappings`),
+  suggestSkillMappings: (subjectId, skillName = null) => {
+    const payload = skillName ? { skill_name: skillName } : {};
+    return api.post(`/curriculum/subjects/${subjectId}/suggest-mappings`, payload);
+  },
 };
 
 // ─── AI Career Copilot ────────────────────────────────────────────

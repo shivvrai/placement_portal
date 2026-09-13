@@ -13,7 +13,7 @@ from app.schemas.analytics import (
     PlacementStatsResponse, DeptPlacementRow,
     SkillDemandRow, CurriculumGapRow,
     RecruiterRow, MonthlyTrendRow, PackageBandRow,
-    YoYPlacementRow, SectorPieRow,
+    YoYPlacementRow, SectorPieRow, DepartmentOverviewResponse,
 )
 from app.services import analytics_service
 
@@ -100,3 +100,13 @@ async def get_curriculum_gaps(
     db: AsyncSession = Depends(get_db),
 ):
     return await analytics_service.get_curriculum_gaps(db, department_code, semester_number)
+
+
+@router.get("/departments/{department_code}", response_model=DepartmentOverviewResponse, summary="Department analytics overview (Faculty Dashboard)")
+async def get_department_overview(
+    department_code: str,
+    current_user: User = Depends(_tpo_or_faculty),
+    db: AsyncSession = Depends(get_db),
+):
+    return await analytics_service.get_department_overview(db, department_code)
+

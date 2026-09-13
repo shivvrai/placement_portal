@@ -7,7 +7,7 @@ Accessible by:
 
 import uuid
 from typing import Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
@@ -20,7 +20,7 @@ from app.models.skill import StudentSkill
 from app.models.academic import AcademicRecord
 from app.schemas.student import (
     StudentProfile, StudentSummary, StudentUpdateRequest,
-    ConsentUpdateRequest, AcademicRecordResponse,
+    ConsentUpdateRequest, AcademicRecordResponse, AddStudentSkillRequest,
 )
 from app.schemas.skill import StudentSkillResponse
 from app.schemas.common import MessageResponse, PaginatedResponse, PaginationMeta
@@ -29,7 +29,7 @@ from app.services import student_service
 router = APIRouter(prefix="/students", tags=["Students"])
 
 
-_tpo_admin = RoleChecker(["tpo", "admin"])
+_tpo_admin = RoleChecker(["tpo", "admin", "faculty", "hod"])
 _student_or_tpo = RoleChecker(["student", "tpo", "faculty", "hod", "admin"])
 
 
@@ -107,6 +107,28 @@ async def get_my_skills(
 ):
     skills = await student_service.get_student_skills(db, current_user.id)
     return skills
+
+
+@router.post("/me/skills", response_model=StudentSkillResponse, summary="Add a skill to my profile")
+async def add_my_skill(
+    data: AddStudentSkillRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add or update a manual skill on the student's profile."""
+    return await student_service.add_student_skill(db, current_user.id, data)
+
+
+@router.delete("/me/skills/{skill_id}", response_model=MessageResponse, summary="Remove a skill from my profile")
+async def delete_my_skill(
+    skill_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a skill from the student's profile."""
+    await student_service.delete_student_skill(db, current_user.id, skill_id)
+    return MessageResponse(message="Skill removed successfully")
+
 
 
 # ─── TPO / Admin endpoints ────────────────────────────────────────────────────
@@ -222,29 +244,64 @@ async def list_students(
 
 
 
-@router.get("/{student_id}", response_model=StudentProfile, summary="Get student by ID (TPO)")
+@router.get("/{student_id}", response_model=StudentProfile, summary="Get student by ID (TPO or self)")
 async def get_student(
     student_id: uuid.UUID,
-    current_user: User = Depends(_tpo_admin),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if current_user.role not in ("tpo", "admin") and current_user.id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     student = await student_service.get_student_full(db, student_id)
     return _build_profile(student)
 
 
-@router.get("/{student_id}/skills", response_model=list[StudentSkillResponse])
-async def get_student_skills(
+@router.patch("/{student_id}", response_model=StudentProfile, summary="Update student profile (TPO or self)")
+async def update_student(
     student_id: uuid.UUID,
-    current_user: User = Depends(_tpo_admin),
+    data: StudentUpdateRequest,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if current_user.role not in ("tpo", "admin") and current_user.id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    student = await student_service.get_student_full(db, student_id)
+    student = await student_service.update_student_profile(db, student, data)
+    return _build_profile(student)
+
+
+@router.patch("/{student_id}/consent", response_model=MessageResponse, summary="Update student consent (TPO or self)")
+async def update_student_consent(
+    student_id: uuid.UUID,
+    data: ConsentUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.role not in ("tpo", "admin") and current_user.id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    student = await student_service.get_student_by_user_id(db, student_id)
+    await student_service.update_consent(db, student, data)
+    return MessageResponse(message="Consent preferences updated")
+
+
+@router.get("/{student_id}/skills", response_model=list[StudentSkillResponse], summary="Get student skills (TPO or self)")
+async def get_student_skills(
+    student_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.role not in ("tpo", "admin") and current_user.id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return await student_service.get_student_skills(db, student_id)
 
 
-@router.get("/{student_id}/academic-records", response_model=list[AcademicRecordResponse])
+@router.get("/{student_id}/academic-records", response_model=list[AcademicRecordResponse], summary="Get student academic records (TPO or self)")
 async def get_student_academic_records(
     student_id: uuid.UUID,
-    current_user: User = Depends(_tpo_admin),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if current_user.role not in ("tpo", "admin") and current_user.id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return await student_service.get_academic_records(db, student_id)
+
