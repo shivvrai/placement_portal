@@ -48,6 +48,59 @@ export default function TPOAnalytics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Accreditation state
+  const [accrYear, setAccrYear] = useState('2026-27');
+  const [accrData, setAccrData] = useState(null);
+  const [accrLoading, setAccrLoading] = useState(false);
+  const [accrExporting, setAccrExporting] = useState(false);
+
+  const fetchAccreditation = async (year) => {
+    try {
+      setAccrLoading(true);
+      const res = await analyticsApi.getAccreditationPreview(year);
+      setAccrData(res.data);
+    } catch (e) {
+      console.warn('Accreditation preview error:', e);
+    } finally {
+      setAccrLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAccreditation(accrYear);
+  }, [accrYear]);
+
+  const handleExportJSON = async () => {
+    try {
+      const res = await analyticsApi.getAccreditationReport(accrYear);
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nirf_naac_dossier_${accrYear}.json`;
+      a.click();
+    } catch (e) {
+      alert('Failed to export JSON dossier');
+    }
+  };
+
+  const handleDownloadCSV = async () => {
+    try {
+      setAccrExporting(true);
+      const res = await analyticsApi.downloadAccreditationCSV(accrYear);
+      const blob = new Blob([res.data], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nirf_naac_report_${accrYear}.csv`;
+      a.click();
+    } catch (e) {
+      alert('Failed to download CSV');
+    } finally {
+      setAccrExporting(false);
+    }
+  };
+
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
@@ -466,6 +519,101 @@ export default function TPOAnalytics() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* ─── Accreditation & NIRF Dossier ─────────────────────────────── */}
+          <div className="card" style={{ borderTop: '3px solid #6366f1' }}>
+            {/* Header row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)' }}>🏛️ Accreditation &amp; NIRF Dossier</div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 2 }}>
+                  NIRF Metric 1A (Placement), 1C (Sector Diversity) &amp; NAAC 1.1.3 (Remediation)
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <select
+                  id="nirf-year-select"
+                  value={accrYear}
+                  onChange={e => setAccrYear(e.target.value)}
+                  style={{
+                    background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)', borderRadius: 'var(--border-radius-sm)',
+                    padding: '6px 12px', fontSize: 'var(--font-size-sm)', cursor: 'pointer',
+                  }}
+                >
+                  {['2023-24', '2024-25', '2025-26', '2026-27'].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+                <button
+                  id="nirf-export-json-btn"
+                  className="btn btn-secondary"
+                  onClick={handleExportJSON}
+                  style={{ fontSize: 'var(--font-size-xs)', height: 34 }}
+                >
+                  📤 Export Dossier (JSON)
+                </button>
+                <button
+                  id="nirf-download-csv-btn"
+                  className="btn btn-primary"
+                  onClick={handleDownloadCSV}
+                  disabled={accrExporting}
+                  style={{ fontSize: 'var(--font-size-xs)', height: 34 }}
+                >
+                  {accrExporting ? '⏳ Generating...' : '📥 Download NIRF CSV'}
+                </button>
+              </div>
+            </div>
+
+            {accrLoading ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)' }}>
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} style={{ background: 'var(--bg-tertiary)', borderRadius: 8, height: 80, animation: 'pulse 1.5s infinite' }} />
+                ))}
+              </div>
+            ) : accrData ? (
+              <>
+                {/* Stat cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
+                  {[
+                    { label: 'Placement Rate', value: `${accrData.placement_pct ?? 0}%`, icon: '📈', color: '#22c55e' },
+                    { label: 'Median CTC', value: accrData.median_ctc_lpa ? `₹${accrData.median_ctc_lpa}L` : '—', icon: '💰', color: '#6366f1' },
+                    { label: 'Top 10% CTC', value: accrData.top10_ctc_lpa ? `₹${accrData.top10_ctc_lpa}L` : '—', icon: '🏆', color: '#f59e0b' },
+                    { label: 'Students Placed', value: accrData.placed_count ?? '—', icon: '✅', color: '#06b6d4' },
+                  ].map(card => (
+                    <div key={card.label} style={{
+                      background: 'var(--bg-tertiary)', borderRadius: 10,
+                      padding: 'var(--space-4)', borderLeft: `4px solid ${card.color}`,
+                    }}>
+                      <div style={{ fontSize: '1.4rem', marginBottom: 4 }}>{card.icon}</div>
+                      <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: card.color }}>{card.value}</div>
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 2 }}>{card.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Gender breakdown */}
+                <div style={{ display: 'flex', gap: 'var(--space-6)', marginBottom: 'var(--space-5)', fontSize: 'var(--font-size-sm)' }}>
+                  <div style={{ color: 'var(--text-muted)' }}>Gender breakdown (placed):</div>
+                  {Object.entries(accrData.gender_breakdown || {}).map(([g, count]) => (
+                    <span key={g} style={{ fontWeight: 600, textTransform: 'capitalize' }}>
+                      {g}: <span style={{ color: 'var(--accent-primary)' }}>{count}</span>
+                    </span>
+                  ))}
+                </div>
+
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', padding: 'var(--space-3)', background: 'var(--bg-tertiary)', borderRadius: 6, marginTop: 4 }}>
+                  📋 Academic Year: <strong>{accrData.academic_year}</strong> &nbsp;·&nbsp;
+                  Total Graduating: <strong>{accrData.total_graduating}</strong> &nbsp;·&nbsp;
+                  Avg CTC: <strong>{accrData.avg_ctc_lpa ? `₹${accrData.avg_ctc_lpa}L` : '—'}</strong>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-muted)' }}>
+                No accreditation data available. Create placement drives and record offers to generate NIRF metrics.
+              </div>
+            )}
           </div>
 
         </div>

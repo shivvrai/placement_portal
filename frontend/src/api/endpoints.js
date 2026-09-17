@@ -144,6 +144,16 @@ export const analyticsApi = {
   getSectorDistribution: () =>
     mockOr('sector_dist.json', () => api.get('/analytics/sectors')),
   getSkillTrends: () => api.get('/analytics/skills/trends'),
+  // ─── Accreditation ──────────────────────────────────────────────
+  getAccreditationPreview: (year = '2026-27') =>
+    api.get('/analytics/accreditation/preview', { params: { academic_year: year } }),
+  getAccreditationReport: (year = '2026-27') =>
+    api.get('/analytics/accreditation/report', { params: { academic_year: year, format: 'json' } }),
+  downloadAccreditationCSV: (year = '2026-27') =>
+    api.get('/analytics/accreditation/report', {
+      params: { academic_year: year, format: 'csv' },
+      responseType: 'blob',
+    }),
 };
 
 
@@ -197,5 +207,10 @@ export const assessmentsApi = {
   start: (topic, difficulty) => api.post('/assessments/start', { topic, difficulty }),
   submit: (sessionId, answers) => api.post(`/assessments/${sessionId}/submit`, { answers }),
   getHistory: () => api.get('/assessments/history'),
+};
+
+// ─── System & Audit ───────────────────────────────────────────────
+export const systemApi = {
+  getAuditLogs: (params) => api.get('/system/audit-logs', { params }),
 };
 

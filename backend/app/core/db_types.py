@@ -9,8 +9,9 @@ and switch back to PostgreSQL (with pgvector) just by changing the env var.
 
 import os
 from sqlalchemy import types as sa_types
+from app.core.config import get_settings
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./ccip_dev.db")
+DATABASE_URL = os.getenv("DATABASE_URL") or get_settings().DATABASE_URL
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
 

@@ -7,6 +7,9 @@ on UNIQUE constraints. The DB is a single file-based SQLite that is reset
 once per session (via setup_db autouse fixture).
 """
 
+import os
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_ccip.db"
+
 import asyncio
 import uuid
 

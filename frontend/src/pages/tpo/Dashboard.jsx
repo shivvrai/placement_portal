@@ -8,7 +8,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from 'recharts';
-import { analyticsApi, placementApi } from '../../api/endpoints';
+import { analyticsApi, placementApi, systemApi } from '../../api/endpoints';
 
 const SECTOR_COLORS = {
   Product: '#6366f1',
@@ -44,6 +44,15 @@ export default function TPODashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Audit drawer state
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditFilter, setAuditFilter] = useState('');
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [expandedLog, setExpandedLog] = useState(null);
+
   const fetchDashboard = async () => {
     try {
       setLoading(true);
@@ -73,6 +82,52 @@ export default function TPODashboard() {
     fetchDashboard();
   }, []);
 
+  // ─── Audit helpers ───────────────────────────────────────────────
+  const EVENT_COLORS = {
+    DRIVE_CREATE: '#22c55e',
+    DRIVE_UPDATE: '#f59e0b',
+    DRIVE_CANCEL: '#ef4444',
+    APPLICATION_STATUS_CHANGE: '#ef4444',
+    OFFER_RECORDED: '#22c55e',
+    UMS_SYNC_TRIGGERED: '#06b6d4',
+    SKILL_VERIFIED: '#22c55e',
+    STUDENT_PROFILE_UPDATE: '#f59e0b',
+    SHORTLIST_GENERATED: '#6366f1',
+    ACCREDITATION_REPORT_EXPORTED: '#8b5cf6',
+  };
+
+  function timeAgo(isoDate) {
+    if (!isoDate) return '';
+    const diff = (Date.now() - new Date(isoDate).getTime()) / 1000;
+    if (diff < 60) return `${Math.floor(diff)}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+    if (diff < 172800) return 'Yesterday';
+    return new Date(isoDate).toLocaleDateString();
+  }
+
+  const fetchAuditLogs = async (page = 1, eventType = '') => {
+    try {
+      setAuditLoading(true);
+      const params = { page, page_size: 20 };
+      if (eventType) params.event_type = eventType;
+      const res = await systemApi.getAuditLogs(params);
+      const body = res.data;
+      setAuditLogs(body.data || []);
+      setAuditTotal(body.meta?.total || 0);
+      setAuditPage(page);
+    } catch (err) {
+      console.error('Audit fetch failed:', err);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  const openAuditDrawer = () => {
+    setAuditOpen(true);
+    fetchAuditLogs(1, auditFilter);
+  };
+
   const deptChartData = deptStats.map(d => ({
     dept: d.department_code,
     total: d.total,
@@ -87,14 +142,24 @@ export default function TPODashboard() {
           <h1>TPO Dashboard</h1>
           <p>Placement intelligence for Academic Year {stats?.academic_year || '2025–26'}</p>
         </div>
-        <button
-          className="btn btn-secondary"
-          onClick={fetchDashboard}
-          disabled={loading}
-          style={{ fontSize: 'var(--font-size-xs)' }}
-        >
-          {loading ? 'Refreshing...' : '🔄 Refresh Data'}
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <button
+            id="audit-trail-btn"
+            className="btn btn-secondary"
+            onClick={openAuditDrawer}
+            style={{ fontSize: 'var(--font-size-xs)' }}
+          >
+            📋 Activity &amp; Audit Trail
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={fetchDashboard}
+            disabled={loading}
+            style={{ fontSize: 'var(--font-size-xs)' }}
+          >
+            {loading ? 'Refreshing...' : '🔄 Refresh Data'}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -318,6 +383,142 @@ export default function TPODashboard() {
 
           </div>
         </div>
+      )}
+
+      {/* ─── Audit Trail Drawer ──────────────────────────────────────────── */}
+      {auditOpen && (
+        <>
+          {/* Dark overlay */}
+          <div
+            onClick={() => setAuditOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+              zIndex: 200, cursor: 'pointer',
+            }}
+          />
+
+          {/* Drawer panel */}
+          <div style={{
+            position: 'fixed', top: 0, right: 0, bottom: 0, width: 500,
+            background: 'var(--bg-secondary)', borderLeft: '1px solid var(--border-color)',
+            zIndex: 201, display: 'flex', flexDirection: 'column',
+            boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+            animation: 'slideInRight 0.25s ease',
+          }}>
+            {/* Drawer header */}
+            <div style={{
+              padding: 'var(--space-5) var(--space-5) var(--space-4)',
+              borderBottom: '1px solid var(--border-color)',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)' }}>📋 Activity &amp; Audit Trail</div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 2 }}>
+                  {auditTotal} events recorded
+                </div>
+              </div>
+              <button
+                onClick={() => setAuditOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}
+              >✕</button>
+            </div>
+
+            {/* Filter bar */}
+            <div style={{ padding: 'var(--space-3) var(--space-5)', borderBottom: '1px solid var(--border-color)' }}>
+              <select
+                id="audit-event-type-filter"
+                value={auditFilter}
+                onChange={e => {
+                  setAuditFilter(e.target.value);
+                  fetchAuditLogs(1, e.target.value);
+                }}
+                style={{
+                  width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)', borderRadius: 'var(--border-radius-sm)',
+                  padding: '7px 12px', fontSize: 'var(--font-size-sm)',
+                }}
+              >
+                <option value="">All Event Types</option>
+                {['DRIVE_CREATE','DRIVE_UPDATE','DRIVE_CANCEL','APPLICATION_STATUS_CHANGE','OFFER_RECORDED','UMS_SYNC_TRIGGERED','ACCREDITATION_REPORT_EXPORTED','SHORTLIST_GENERATED'].map(e => (
+                  <option key={e} value={e}>{e.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Log list */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-3) var(--space-5)' }}>
+              {auditLoading ? (
+                <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-muted)' }}>
+                  ⏳ Loading audit logs...
+                </div>
+              ) : auditLogs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-muted)' }}>
+                  No audit events recorded yet. Events are logged when TPOs create drives, sync students, or export reports.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                  {auditLogs.map(log => {
+                    const color = EVENT_COLORS[log.event_type] || '#6366f1';
+                    const isExpanded = expandedLog === log.id;
+                    return (
+                      <div key={log.id} style={{
+                        padding: 'var(--space-3) var(--space-4)',
+                        background: 'var(--bg-tertiary)',
+                        borderRadius: 8,
+                        borderLeft: `4px solid ${color}`,
+                        cursor: 'pointer',
+                      }} onClick={() => setExpandedLog(isExpanded ? null : log.id)}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <span style={{
+                            fontSize: 'var(--font-size-xs)', fontWeight: 700,
+                            background: `${color}22`, color: color,
+                            padding: '2px 8px', borderRadius: 999,
+                          }}>
+                            {log.event_type}
+                          </span>
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                            {timeAgo(log.created_at)}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 'var(--font-size-sm)', marginTop: 4 }}>
+                          {log.resource_type} <span style={{ color: 'var(--text-muted)' }}>#{log.resource_id?.slice(0, 8)}</span>
+                        </div>
+                        {log.ip_address && (
+                          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 2 }}>
+                            IP: {log.ip_address}
+                          </div>
+                        )}
+                        {isExpanded && (
+                          <pre style={{
+                            marginTop: 'var(--space-2)', fontSize: 11, lineHeight: 1.5,
+                            background: 'var(--bg-primary)', borderRadius: 4,
+                            padding: 'var(--space-2)', color: 'var(--text-secondary)',
+                            overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                          }}>
+                            {JSON.stringify(log.details, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Load more */}
+              {!auditLoading && auditLogs.length > 0 && auditTotal > auditPage * 20 && (
+                <div style={{ textAlign: 'center', marginTop: 'var(--space-4)' }}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => fetchAuditLogs(auditPage + 1, auditFilter)}
+                    style={{ fontSize: 'var(--font-size-xs)' }}
+                  >
+                    Load More ({auditTotal - auditPage * 20} remaining)
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

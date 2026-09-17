@@ -14,6 +14,7 @@ engine_kwargs = {"echo": settings.DATABASE_ECHO}
 if not IS_SQLITE:
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
+    engine_kwargs["connect_args"] = {"statement_cache_size": 0}
 else:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 
@@ -24,6 +25,7 @@ AsyncSessionLocal = async_sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False,
 )
+async_sessionmaker_db = AsyncSessionLocal
 
 
 class Base(DeclarativeBase):

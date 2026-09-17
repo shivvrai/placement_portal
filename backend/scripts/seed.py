@@ -20,6 +20,12 @@ Creates:
 import asyncio
 import os
 import sys
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 import uuid
 import random
 from decimal import Decimal
@@ -35,7 +41,7 @@ from app.core.security import hash_password
 # ─── Helpers ────────────────────────────────────────────────────────
 
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 def rand_cgpa():
     return Decimal(str(round(random.uniform(6.0, 9.6), 1)))
@@ -394,27 +400,41 @@ async def seed():
 
     print("🌱 Seeding data...")
     async with AsyncSessionLocal() as db:
+        from sqlalchemy import select
+
+        # Idempotency check: if comprehensive data is already present, skip
+        existing_tpo = (await db.execute(select(User).where(User.email == "tpo@ccip.edu"))).scalar_one_or_none()
+        if existing_tpo:
+            print("  ℹ️ Comprehensive seed data already exists in database (tpo@ccip.edu found). Skipping.")
+            return
+
         # ── 1. Departments ────────────────────────────────
         print("  📁 Departments...")
         departments = {}
         for code, name in DEPARTMENT_DATA:
-            dept = Department(code=code, name=name)
-            db.add(dept)
+            res = await db.execute(select(Department).where((Department.code == code) | (Department.name == name)))
+            dept = res.scalar_one_or_none()
+            if not dept:
+                dept = Department(code=code, name=name)
+                db.add(dept)
+                await db.flush()
             departments[code] = dept
-        await db.flush()
 
         # ── 2. Skills Taxonomy ────────────────────────────
         print("  🧠 Skills taxonomy...")
         skills = {}
         for name, category in SKILL_DATA:
-            skill = Skill(
-                name=name,
-                normalized_name=name.lower(),
-                category=category,
-            )
-            db.add(skill)
+            res = await db.execute(select(Skill).where(Skill.name == name))
+            skill = res.scalar_one_or_none()
+            if not skill:
+                skill = Skill(
+                    name=name,
+                    normalized_name=name.lower(),
+                    category=category,
+                )
+                db.add(skill)
+                await db.flush()
             skills[name] = skill
-        await db.flush()
 
         # ── 3. TPO User ──────────────────────────────────
         print("  👤 TPO + Faculty users...")
@@ -571,7 +591,7 @@ async def seed():
                 title=title,
                 description=f"Campus recruitment drive by {COMPANY_DATA[comp_idx][0]}.",
                 drive_date=drive_date,
-                registration_deadline=datetime.combine(deadline, datetime.min.time(), tzinfo=timezone.utc) if deadline else None,
+                registration_deadline=datetime.combine(deadline, datetime.min.time()) if deadline else None,
                 min_cgpa=Decimal(str(min_cgpa)),
                 eligible_departments=depts,
                 max_backlogs=0 if min_cgpa >= 7.0 else 1,

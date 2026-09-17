@@ -15,7 +15,7 @@ from app.core.db_types import UUIDType, JSONB
 
 
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class Resource(Base):

@@ -15,7 +15,7 @@ from app.core.db_types import UUIDType, ARRAY
 
 
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PlacementDrive(Base):
@@ -60,6 +60,15 @@ class Application(Base):
     applied_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
+    # Offer details — populated by TPO after candidate is selected
+    offer_ctc_lpa: Mapped[float | None] = mapped_column(Numeric(8, 2))
+    offer_fixed_lpa: Mapped[float | None] = mapped_column(Numeric(8, 2))
+    offer_variable_lpa: Mapped[float | None] = mapped_column(Numeric(8, 2))
+    offer_designation: Mapped[str | None] = mapped_column(String(200))
+    offer_joining_date: Mapped[date | None] = mapped_column(Date)
+    offer_reference_number: Mapped[str | None] = mapped_column(String(100))
+    offer_recorded_at: Mapped[datetime | None] = mapped_column(DateTime)
+
     student: Mapped["Student"] = relationship(back_populates="applications")
     drive: Mapped["PlacementDrive"] = relationship(back_populates="applications")
     stages: Mapped[list["InterviewStage"]] = relationship(back_populates="application")
@@ -71,6 +80,7 @@ class Application(Base):
             name="ck_application_status",
         ),
     )
+
 
 
 class InterviewStage(Base):

@@ -2,7 +2,7 @@ import asyncio
 import uuid
 from app.core.database import AsyncSessionLocal
 from app.models.skill import Skill
-from app.models.assessment import QuestionBank
+from app.models.assessment import AssessmentQuestionBank
 from sqlalchemy import select
 
 async def seed_questions():
@@ -17,7 +17,7 @@ async def seed_questions():
 
         questions = [
             {
-                "skill_id": skill.id,
+                "topic": "Python",
                 "concept": "Data Types",
                 "difficulty": "beginner",
                 "question_text": "Which of the following is a mutable data type in Python?",
@@ -27,11 +27,11 @@ async def seed_questions():
                     {"id": "C", "text": "List"},
                     {"id": "D", "text": "Integer"}
                 ],
-                "correct_option": "C",
+                "correct_answer": "C",
                 "explanation": "Lists are mutable, meaning they can be changed after creation. Tuples, strings, and integers are immutable."
             },
             {
-                "skill_id": skill.id,
+                "topic": "Python",
                 "concept": "Functions",
                 "difficulty": "beginner",
                 "question_text": "What keyword is used to define a function in Python?",
@@ -41,11 +41,11 @@ async def seed_questions():
                     {"id": "C", "text": "function"},
                     {"id": "D", "text": "define"}
                 ],
-                "correct_option": "B",
+                "correct_answer": "B",
                 "explanation": "The 'def' keyword is used to define a function in Python."
             },
             {
-                "skill_id": skill.id,
+                "topic": "Python",
                 "concept": "Decorators",
                 "difficulty": "intermediate",
                 "question_text": "What does a decorator do in Python?",
@@ -55,13 +55,13 @@ async def seed_questions():
                     {"id": "C", "text": "Automatically handles garbage collection"},
                     {"id": "D", "text": "Encrypts the source code"}
                 ],
-                "correct_option": "A",
+                "correct_answer": "A",
                 "explanation": "A decorator takes in a function, adds some functionality, and returns it."
             }
         ]
 
         for q_data in questions:
-            q = QuestionBank(**q_data)
+            q = AssessmentQuestionBank(**q_data)
             db.add(q)
 
         try:

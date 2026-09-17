@@ -12,7 +12,7 @@ from app.core.db_types import UUIDType, ARRAY, JSONB
 
 
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class Project(Base):

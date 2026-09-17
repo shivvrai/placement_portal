@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user, RoleChecker
+from app.core.audit import record_audit_event
 from app.models.user import User
 from app.adapters.mock_ums_adapter import MockUMSAdapter
 from app.services.ums_sync_service import sync_single_student, sync_department
@@ -126,6 +127,15 @@ async def sync_student(
     adapter = MockUMSAdapter(db)
     result = await sync_single_student(db, adapter, roll_number)
 
+    await record_audit_event(
+        db=db,
+        actor_id=current_user.id,
+        event_type="UMS_SYNC_TRIGGERED",
+        resource_type="Student",
+        resource_id=roll_number,
+        details={"roll_number": roll_number, "success": result.get("success")},
+    )
+
     if not result["success"]:
         raise HTTPException(
             status_code=404,
@@ -147,6 +157,15 @@ async def sync_student_by_body(
 ):
     adapter = MockUMSAdapter(db)
     result = await sync_single_student(db, adapter, payload.roll_number)
+
+    await record_audit_event(
+        db=db,
+        actor_id=current_user.id,
+        event_type="UMS_SYNC_TRIGGERED",
+        resource_type="Student",
+        resource_id=payload.roll_number,
+        details={"roll_number": payload.roll_number, "success": result.get("success")},
+    )
 
     if not result["success"]:
         raise HTTPException(

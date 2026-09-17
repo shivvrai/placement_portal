@@ -1,24 +1,25 @@
 
 services:
-  # ─── PostgreSQL with pgvector ──────────────────────────────────
+  # ─── PostgreSQL + pgvector ──────────────────────────────────────────────────
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ccip-postgres
+    env_file: .env
     environment:
-      POSTGRES_DB: ccip
-      POSTGRES_USER: ccip
-      POSTGRES_PASSWORD: ccip_dev
+      POSTGRES_DB: ${POSTGRES_DB:-ccip}
+      POSTGRES_USER: ${POSTGRES_USER:-ccip}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ccip"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ccip}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
-  # ─── Redis ─────────────────────────────────────────────────────
+  # ─── Redis ──────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: ccip-redis
@@ -30,58 +31,68 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── Backend API ───────────────────────────────────────────────
+  # ─── Backend (Gunicorn + UvicornWorker) ─────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ccip-backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ccip}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ccip}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ENVIRONMENT: production
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
-      - ./uploads:/app/uploads
-    environment:
-      DATABASE_URL: postgresql+asyncpg://ccip:ccip_dev@postgres:5432/ccip
-      REDIS_URL: redis://redis:6379/0
+      - uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    entrypoint: ["/bin/bash", "/app/scripts/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
-  # ─── Celery Worker ─────────────────────────────────────────────
+  # ─── Celery Worker ───────────────────────────────────────────────────────────
   celery_worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ccip-celery
-    volumes:
-      - ./backend:/app
-      - ./uploads:/app/uploads
+    env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://ccip:ccip_dev@postgres:5432/ccip
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ccip}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ccip}
       REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ENVIRONMENT: production
+    volumes:
+      - uploads:/app/uploads
     depends_on:
-      postgres:
+      backend:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: celery -A app.worker worker --loglevel=info
+    command: celery -A app.worker worker --loglevel=info --concurrency=2
 
-  # ─── Frontend (dev server) ─────────────────────────────────────
+  # ─── Frontend (Nginx + Vite production build) ────────────────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: ccip-frontend
     ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: npm run dev -- --host
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   pgdata:
+  uploads:
