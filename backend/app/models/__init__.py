@@ -11,6 +11,7 @@ from app.models.placement import PlacementDrive, Application, InterviewStage, Pl
 from app.models.roadmap import Resource, ResourceSkill, Roadmap, RoadmapTask
 from app.models.system import CopilotConversation, AuditLog
 from app.models.assessment import AssessmentQuestionBank, AssessmentSession, AssessmentSessionQuestion
+from app.models.cohort import StudentCohort, Notification
 
 __all__ = [
     # Identity & Auth (4)
@@ -30,6 +31,7 @@ __all__ = [
     # Intelligence & System (2)
     "CopilotConversation", "AuditLog",
     "AssessmentQuestionBank", "AssessmentSession", "AssessmentSessionQuestion",
+    "StudentCohort", "Notification",
 ]
-# Total: 34 tables
+# Total: 36 tables
 

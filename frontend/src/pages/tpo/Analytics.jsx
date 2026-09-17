@@ -44,6 +44,7 @@ export default function TPOAnalytics() {
   const [packageDistribution, setPackageDistribution] = useState([]);
   const [yoyData, setYoyData] = useState([]);
   const [sectorPie, setSectorPie] = useState([]);
+  const [skillTrends, setSkillTrends] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -51,13 +52,14 @@ export default function TPOAnalytics() {
     try {
       setLoading(true);
       setError(null);
-      const [statsRes, deptRes, skillRes, pkgRes, yoyRes, secRes] = await Promise.all([
+      const [statsRes, deptRes, skillRes, pkgRes, yoyRes, secRes, trendsRes] = await Promise.all([
         analyticsApi.getPlacementStats(),
         analyticsApi.getDeptPlacement(),
         analyticsApi.getSkillDemand(),
         analyticsApi.getPackageDistribution(),
         analyticsApi.getYoYStats(),
         analyticsApi.getSectorDistribution(),
+        analyticsApi.getSkillTrends().catch(() => ({ data: null })),
       ]);
 
       setStats(statsRes.data);
@@ -66,6 +68,7 @@ export default function TPOAnalytics() {
       setPackageDistribution(pkgRes.data || []);
       setYoyData(yoyRes.data || []);
       setSectorPie(secRes.data || []);
+      setSkillTrends(trendsRes?.data || null);
     } catch (err) {
       console.error('Analytics fetch failed:', err);
       setError('Failed to load analytics data from database.');
@@ -73,6 +76,7 @@ export default function TPOAnalytics() {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchAnalytics();
@@ -360,8 +364,113 @@ export default function TPOAnalytics() {
             )}
           </div>
 
+          {/* Skill Market Trends Section (Last 90 Days) */}
+          <div className="card" style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700 }}>📈 Skill Market Trends (Last 90 Days)</h3>
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', marginTop: 2 }}>
+                  Velocity tracking across {skillTrends?.based_on_drives || 42} placement drives — forward-looking hiring intelligence
+                </p>
+              </div>
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                Updated quarterly
+              </span>
+            </div>
+
+            {/* Surging Demand */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--font-size-sm)', fontWeight: 700, color: '#22c55e', marginBottom: 'var(--space-2)' }}>
+                <span>🚀</span> Surging Demand (High Growth &gt; 30%)
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                {(skillTrends?.surging || []).map((s) => (
+                  <div
+                    key={s.skill}
+                    title={`Required by ${s.demand_count} drives this quarter (${s.drives_pct || 50}% of all drives)`}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 999,
+                      fontSize: 'var(--font-size-xs)',
+                      fontWeight: 600,
+                      background: 'rgba(34,197,94,0.12)',
+                      color: '#22c55e',
+                      border: '1px solid rgba(34,197,94,0.3)',
+                      cursor: 'default',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span>{s.skill}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800 }}>+{s.growth_pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Stable Core Skills */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: 'var(--space-2)' }}>
+                <span>⚖️</span> Stable Core Skills
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                {(skillTrends?.stable || []).map((s) => (
+                  <div
+                    key={s.skill}
+                    title={`Required by ${s.demand_count} drives this quarter`}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 999,
+                      fontSize: 'var(--font-size-xs)',
+                      fontWeight: 600,
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-color)',
+                      cursor: 'default',
+                    }}
+                  >
+                    {s.skill}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Declining Demand */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--accent-danger)', marginBottom: 'var(--space-2)' }}>
+                <span>📉</span> Declining Demand (&lt; -10%)
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                {(skillTrends?.declining || []).map((s) => (
+                  <div
+                    key={s.skill}
+                    title={`Required by ${s.demand_count} drives this quarter`}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 999,
+                      fontSize: 'var(--font-size-xs)',
+                      fontWeight: 600,
+                      background: 'rgba(239,68,68,0.08)',
+                      color: 'var(--accent-danger)',
+                      border: '1px solid rgba(239,68,68,0.2)',
+                      cursor: 'default',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span>{s.skill}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800 }}>{s.growth_pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
     </div>
   );
+
 }

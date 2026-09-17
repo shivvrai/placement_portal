@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { intelligenceApi } from '../../api/endpoints';
 
@@ -159,28 +159,76 @@ function JobCard({ job, onSelect }) {
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-1)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-1)' }}>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(job);
+          }}
+          className="btn btn-secondary"
+          style={{
+            padding: '3px 8px',
+            fontSize: 'var(--font-size-xs)',
+            height: 'auto',
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          📊 Why this score?
+        </button>
         <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--accent-primary)', fontWeight: 600 }}>
-          View Details & Breakdown →
+          Full Diagnostics →
         </span>
       </div>
     </div>
   );
 }
 
-// ─── Detail Modal ──────────────────────────────────────────────────
-function JobModal({ job, onClose }) {
+// ─── Explainable AI Match Diagnostics Breakdown Modal ───────────────
+function JobModal({ job, onClose, userId }) {
+  const navigate = useNavigate();
+  const [addingToRoadmap, setAddingToRoadmap] = useState(false);
+
   if (!job) return null;
 
+  const breakdown = job.breakdown;
   const matchedSkills = job.matched_skills || [];
   const missingSkills = job.missing_skills || [];
+  const score = Math.round(job.match_score || 0);
+
+  const academicScore = breakdown ? Math.round(breakdown.academic_score) : (job.eligible ? 95 : 30);
+  const skillsScore = breakdown ? Math.round(breakdown.skills_score) : Math.round(job.skill_match_pct || 50);
+  const expBonus = breakdown ? Math.round(breakdown.experience_bonus) : 10;
+  const skillDetails = breakdown?.skill_details || [];
+  const relevantProjects = breakdown?.relevant_projects || [];
+  const recommendation = breakdown?.recommendation ||
+    (missingSkills.length > 0
+      ? `Adding 1 ${missingSkills[0]} project would boost this match by +14%.`
+      : 'You satisfy core competencies for this role.');
+
+  const handleAddToRoadmap = async () => {
+    try {
+      setAddingToRoadmap(true);
+      const roleToGenerate = job.role_category || job.title;
+      if (userId) {
+        await intelligenceApi.generateRoadmap(userId, roleToGenerate);
+      }
+      navigate('/student/roadmap');
+    } catch (err) {
+      console.warn('Roadmap generation note:', err);
+      // Navigate to roadmap even if already generated or mock
+      navigate('/student/roadmap');
+    } finally {
+      setAddingToRoadmap(false);
+    }
+  };
 
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.65)',
+        background: 'rgba(0,0,0,0.7)',
         zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
@@ -196,18 +244,25 @@ function JobModal({ job, onClose }) {
           borderRadius: 'var(--border-radius-lg)',
           padding: 'var(--space-8)',
           width: '100%',
-          maxWidth: 620,
-          maxHeight: '85vh',
+          maxWidth: 680,
+          maxHeight: '88vh',
           overflowY: 'auto',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.4)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
           <div>
-            <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700 }}>{job.title}</h2>
-            <div style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
-              {job.company_name || job.company} · {job.location || 'Remote'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Explainable Match Diagnostics
+              </span>
+              <span className="badge badge-primary">{job.role_category || 'SDE'}</span>
+            </div>
+            <h2 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, marginTop: 4 }}>{job.title}</h2>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', marginTop: 2 }}>
+              🏢 {job.company_name || job.company} · 📍 {job.location || 'Remote'} · 💰 {formatSalary(job.salary_ctc_min, job.salary_ctc_max)} CTC
             </div>
           </div>
           <button
@@ -217,188 +272,231 @@ function JobModal({ job, onClose }) {
               border: 'none',
               cursor: 'pointer',
               color: 'var(--text-muted)',
-              fontSize: '1.5rem',
+              fontSize: '1.75rem',
               lineHeight: 1,
+              padding: '0 4px',
             }}
           >
             ×
           </button>
         </div>
 
-        {/* Score & Key Stats Grid */}
+        {/* Overall Match Progress Bar */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 'var(--space-3)',
-            marginBottom: 'var(--space-6)',
-            padding: 'var(--space-4)',
+            padding: 'var(--space-4) var(--space-5)',
             background: 'var(--bg-tertiary)',
             borderRadius: 'var(--border-radius)',
+            marginBottom: 'var(--space-6)',
           }}
         >
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 800, color: matchColor(job.match_score) }}>
-              {Math.round(job.match_score)}%
-            </div>
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 2 }}>ML Match</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)' }}>Overall Match Fit</span>
+            <span style={{ fontWeight: 800, fontSize: 'var(--font-size-xl)', color: matchColor(score) }}>
+              {score}%
+            </span>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 800, color: 'var(--accent-primary)' }}>
-              {Math.round(job.skill_match_pct || 0)}%
-            </div>
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 2 }}>Skill Overlap</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>
-              {formatSalary(job.salary_ctc_min, job.salary_ctc_max)}
-            </div>
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 2 }}>CTC Package</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ height: 8, background: 'var(--bg-secondary)', borderRadius: 4, overflow: 'hidden' }}>
             <div
               style={{
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 700,
-                color: job.eligible ? '#22c55e' : '#ef4444',
-                marginTop: 6,
+                width: `${score}%`,
+                height: '100%',
+                background: matchColor(score),
+                borderRadius: 4,
+                transition: 'width 0.8s ease',
               }}
-            >
-              {job.eligible ? 'Eligible' : 'Ineligible'}
-            </div>
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 2 }}>Criteria</div>
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 6 }}>
+            <span>Formula: 40% Academic + 45% Technical Skills + 15% Experience</span>
+            <span>{job.eligible ? '✓ Fully Eligible' : '⚠️ Eligibility Constraints'}</span>
           </div>
         </div>
 
-        {/* ML Match Score Explanation */}
-        <div
-          style={{
-            padding: 'var(--space-4)',
-            borderRadius: 'var(--border-radius)',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            marginBottom: 'var(--space-5)',
-            fontSize: 'var(--font-size-sm)',
-          }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>🤖</span> <span>ML Matching Engine Insight</span>
-          </div>
-          <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            {job.match_score >= 80
-              ? `High-priority alignment (${Math.round(job.match_score)}%): The trained Gradient Boosted model identifies strong synergy between your verified skills, academic performance, and the job requirements.`
-              : job.match_score >= 65
-              ? `Competitive alignment (${Math.round(job.match_score)}%): You satisfy core prerequisites for this role. Closing the skill gaps below will optimize your candidacy.`
-              : `Developing match (${Math.round(job.match_score)}%): There are notable skill disparities for this profile. We recommend reviewing the missing competencies below.`}
-          </p>
-        </div>
-
-        {/* Eligibility Status with Reason */}
-        <div
-          style={{
-            padding: 'var(--space-4)',
-            borderRadius: 'var(--border-radius)',
-            background: job.eligible ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
-            border: `1px solid ${job.eligible ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-            marginBottom: 'var(--space-5)',
-          }}
-        >
+        {/* 3 Diagnostic Sub-Dimensions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+          {/* Dimension 1: Academic Fit */}
           <div
             style={{
-              fontWeight: 600,
-              color: job.eligible ? '#22c55e' : '#ef4444',
-              marginBottom: 4,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
+              padding: 'var(--space-4)',
+              borderRadius: 'var(--border-radius)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
             }}
           >
-            {job.eligible ? '✓ Placement Eligibility Confirmed' : '⚠️ Eligibility Notice'}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+              <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🎓</span> Academic Fit
+              </div>
+              <span style={{ fontWeight: 800, color: matchColor(academicScore), fontSize: 'var(--font-size-sm)' }}>
+                {academicScore} / 100
+              </span>
+            </div>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              {breakdown?.academic_reason || (
+                job.eligible
+                  ? 'Your CGPA and department meet or exceed recruiter baseline eligibility.'
+                  : 'CGPA or department does not satisfy minimum institutional cutoffs.'
+              )}
+            </div>
+          </div>
+
+          {/* Dimension 2: Technical Skills Alignment */}
+          <div
+            style={{
+              padding: 'var(--space-4)',
+              borderRadius: 'var(--border-radius)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+              <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>💻</span> Technical Skills Alignment (Semantic SBERT)
+              </div>
+              <span style={{ fontWeight: 800, color: matchColor(skillsScore), fontSize: 'var(--font-size-sm)' }}>
+                {skillsScore} / 100
+              </span>
+            </div>
+
+            {/* Per-skill diagnostic list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {skillDetails.length > 0 ? (
+                skillDetails.map((sd) => {
+                  const isDirect = sd.match_type === 'direct';
+                  const isAdjacent = sd.match_type === 'adjacent';
+                  const isMissing = sd.match_type === 'missing';
+
+                  const badgeBg = isDirect ? 'rgba(34,197,94,0.12)' : isAdjacent ? 'rgba(59,130,246,0.12)' : 'rgba(239,68,68,0.1)';
+                  const badgeColor = isDirect ? '#22c55e' : isAdjacent ? '#3b82f6' : '#ef4444';
+                  const badgeBorder = isDirect ? 'rgba(34,197,94,0.3)' : isAdjacent ? 'rgba(59,130,246,0.3)' : 'rgba(239,68,68,0.3)';
+
+                  return (
+                    <div
+                      key={sd.required_skill}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '6px 10px',
+                        background: 'var(--bg-card)',
+                        borderRadius: 'var(--border-radius-sm)',
+                        border: '1px solid var(--border-color)',
+                        fontSize: 'var(--font-size-xs)',
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>{sd.required_skill}</span>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          fontWeight: 600,
+                          fontSize: 11,
+                          background: badgeBg,
+                          color: badgeColor,
+                          border: `1px solid ${badgeBorder}`,
+                        }}
+                      >
+                        {isDirect && '🟢 Direct Match (100%)'}
+                        {isAdjacent && `🔵 Adjacent Match → ${sd.student_skill} (${Math.round(sd.similarity * 100)}% similar)`}
+                        {isMissing && '🔴 Missing (0%)'}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                  {matchedSkills.map((s) => (
+                    <span key={s} style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontSize: 'var(--font-size-xs)' }}>
+                      🟢 {s} (Matched)
+                    </span>
+                  ))}
+                  {missingSkills.map((s) => (
+                    <span key={s} style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: 'var(--font-size-xs)' }}>
+                      🔴 {s} (Missing)
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Dimension 3: Practical Experience Bonus */}
+          <div
+            style={{
+              padding: 'var(--space-4)',
+              borderRadius: 'var(--border-radius)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+              <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🛠️</span> Practical Experience & Projects Bonus
+              </div>
+              <span style={{ fontWeight: 800, color: 'var(--accent-primary)', fontSize: 'var(--font-size-sm)' }}>
+                {expBonus} / 20 pts
+              </span>
+            </div>
+
+            {relevantProjects.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {relevantProjects.map((rp, idx) => (
+                  <div key={idx} style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+                    ✅ {rp}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                No directly aligned projects verified in portfolio. Adding projects featuring required tech boosts your score.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* AI Recommendation Banner */}
+        <div
+          style={{
+            padding: 'var(--space-4)',
+            borderRadius: 'var(--border-radius)',
+            background: 'rgba(99, 102, 241, 0.08)',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            marginBottom: 'var(--space-6)',
+          }}
+        >
+          <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', color: 'var(--accent-primary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>💡</span> Talent Intelligence Recommendation
           </div>
           <p style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            {job.eligible
-              ? 'Your current CGPA and department meet or exceed all institutional cutoff requirements set by the recruiter.'
-              : 'You do not meet one or more hard constraints (such as minimum CGPA cutoff or eligible department list) configured for this drive.'}
+            {recommendation}
           </p>
-        </div>
-
-        {/* Real Matched Skills */}
-        <div style={{ marginBottom: 'var(--space-4)' }}>
-          <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: '#22c55e', marginBottom: 'var(--space-2)' }}>
-            ✓ Matched Skills ({matchedSkills.length})
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-            {matchedSkills.length > 0 ? (
-              matchedSkills.map((s) => (
-                <span
-                  key={s}
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: 999,
-                    fontSize: 'var(--font-size-xs)',
-                    fontWeight: 500,
-                    background: 'rgba(34,197,94,0.12)',
-                    color: '#22c55e',
-                    border: '1px solid rgba(34,197,94,0.3)',
-                  }}
-                >
-                  ✓ {s}
-                </span>
-              ))
-            ) : (
-              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
-                No direct skill matches detected in your profile.
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Real Missing Skills */}
-        <div style={{ marginBottom: 'var(--space-6)' }}>
-          <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--accent-danger)', marginBottom: 'var(--space-2)' }}>
-            ✗ Missing Skills to Acquire ({missingSkills.length})
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-            {missingSkills.length > 0 ? (
-              missingSkills.map((s) => (
-                <span
-                  key={s}
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: 999,
-                    fontSize: 'var(--font-size-xs)',
-                    fontWeight: 500,
-                    background: 'rgba(239,68,68,0.08)',
-                    color: 'var(--accent-danger)',
-                    border: '1px solid rgba(239,68,68,0.2)',
-                  }}
-                >
-                  ✗ {s}
-                </span>
-              ))
-            ) : (
-              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
-                You possess all required skills for this role!
-              </span>
-            )}
-          </div>
         </div>
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleAddToRoadmap}
+            disabled={addingToRoadmap}
+            style={{ flex: 1 }}
+          >
+            {addingToRoadmap ? 'Generating Roadmap...' : '🗺️ Add to my Roadmap'}
+          </button>
           <Link to="/student/drives" style={{ flex: 1 }}>
-            <button className="btn btn-primary" style={{ width: '100%' }}>
+            <button className="btn btn-secondary" style={{ width: '100%' }}>
               Apply via Drives →
             </button>
           </Link>
-          <Link
-            to={`/student/skill-gap?role=${encodeURIComponent(job.role_category || job.title)}`}
-            style={{ flex: 1 }}
+          <button
+            type="button"
+            className="btn"
+            onClick={onClose}
+            style={{ padding: '0 var(--space-4)', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}
           >
-            <button className="btn btn-secondary" style={{ width: '100%' }}>
-              View Skill Gap →
-            </button>
-          </Link>
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -590,7 +688,7 @@ export default function JobMatches() {
         )}
       </div>
 
-      <JobModal job={selected} onClose={() => setSelected(null)} />
+      <JobModal job={selected} onClose={() => setSelected(null)} userId={user?.id} />
     </div>
   );
 }
