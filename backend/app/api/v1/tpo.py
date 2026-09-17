@@ -1,4 +1,4 @@
-"""
+﻿"""
 TPO Operations API — Talent pool cohort builder, smart recruitment search,
 cohort CSV export, and batch drive invitations.
 """

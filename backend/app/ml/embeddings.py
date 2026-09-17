@@ -108,7 +108,13 @@ class SkillEmbedder:
         if sa == sb:
             return 1.0
 
-        # ── Domain-specific curated tech skill adjacency dictionary ──
+        vec_a = self.encode_skill(skill_a)
+        vec_b = self.encode_skill(skill_b)
+        if vec_a is not None and vec_b is not None:
+            raw_dot = float(np.dot(vec_a, vec_b))
+            return max(0.0, min(1.0, round(raw_dot, 4)))
+
+        # ── Domain-specific heuristic fallback ──
         adjacent_pairs = {
             ("fastapi", "flask"): 0.84, ("flask", "fastapi"): 0.84,
             ("postgresql", "mysql"): 0.79, ("mysql", "postgresql"): 0.79,
@@ -130,12 +136,6 @@ class SkillEmbedder:
         }
         if (sa, sb) in adjacent_pairs:
             return adjacent_pairs[(sa, sb)]
-
-        vec_a = self.encode_skill(skill_a)
-        vec_b = self.encode_skill(skill_b)
-        if vec_a is not None and vec_b is not None:
-            raw_dot = float(np.dot(vec_a, vec_b))
-            return max(0.0, min(1.0, round(raw_dot, 4)))
 
         if sa in sb or sb in sa:
             return 0.72
