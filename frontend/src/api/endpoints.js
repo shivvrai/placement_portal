@@ -143,7 +143,9 @@ export const analyticsApi = {
     mockOr('yoy_stats.json', () => api.get('/analytics/yoy')),
   getSectorDistribution: () =>
     mockOr('sector_dist.json', () => api.get('/analytics/sectors')),
+  getSkillTrends: () => api.get('/analytics/skills/trends'),
 };
+
 
 
 // ─── Curriculum ───────────────────────────────────────────────────
@@ -178,7 +180,16 @@ export const tpoApi = {
   getStudents: (params) => mockOr('students_list.json', () => api.get('/students', { params })),
   getStudent: (id) => api.get(`/students/${id}`),
   syncUMS: (rollNumber) => api.post('/ums/sync', { roll_number: rollNumber }),
+  // Cohort Builder & Recruiter Search
+  queryStudents: (query, params) => api.post('/tpo/cohorts/query', query, { params }),
+  saveCohort: (data) => api.post('/tpo/cohorts', data),
+  getCohorts: () => api.get('/tpo/cohorts'),
+  exportCohortCSV: (cohortId) => api.get(`/tpo/cohorts/${cohortId}/export`, { responseType: 'blob' }),
+  inviteCohortToDrive: (cohortId, driveId) =>
+    api.post(`/tpo/cohorts/${cohortId}/invite-to-drive`, null, { params: { drive_id: driveId } }),
+  archiveCohort: (cohortId) => api.delete(`/tpo/cohorts/${cohortId}`),
 };
+
 
 // ─── Assessments ──────────────────────────────────────────────────
 export const assessmentsApi = {

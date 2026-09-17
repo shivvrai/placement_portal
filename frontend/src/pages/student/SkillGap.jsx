@@ -4,9 +4,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { intelligenceApi } from '../../api/endpoints';
+import { intelligenceApi, analyticsApi, studentApi } from '../../api/endpoints';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -130,22 +130,32 @@ function CustomTooltip({ active, payload, label }) {
 // ─── Main Component ────────────────────────────────────────────────
 export default function SkillGap() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const targetRole = searchParams.get('role') || 'Software Engineer';
 
   const [gapData, setGapData] = useState(null);
+  const [marketTrends, setMarketTrends] = useState(null);
+  const [mySkills, setMySkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
 
   useEffect(() => {
     async function fetchGap() {
       try {
         setLoading(true);
         setError(null);
-        // This calls the ML gap engine
-        const res = await intelligenceApi.getSkillGap(user.id, targetRole);
-        setGapData(res.data);
+        // Concurrent fetch: ML gap engine + Skill demand trends + student verified skills
+        const [gapRes, trendsRes, skillsRes] = await Promise.all([
+          intelligenceApi.getSkillGap(user.id, targetRole),
+          analyticsApi.getSkillTrends().catch(() => ({ data: null })),
+          studentApi.getMySkills().catch(() => ({ data: [] })),
+        ]);
+        setGapData(gapRes.data);
+        setMarketTrends(trendsRes?.data || null);
+        setMySkills(skillsRes?.data || []);
       } catch (err) {
         console.error('Skill gap fetch failed:', err);
         setError(err.response?.data?.detail || 'Failed to compute skill gap analysis');
@@ -161,6 +171,22 @@ export default function SkillGap() {
   const handleRoleChange = (role) => {
     setSearchParams({ role });
   };
+
+  const handleAddSurgingToRoadmap = async () => {
+    try {
+      setGeneratingRoadmap(true);
+      if (user?.id) {
+        await intelligenceApi.generateRoadmap(user.id, targetRole);
+      }
+      navigate('/student/roadmap');
+    } catch (err) {
+      console.warn('Roadmap redirect note:', err);
+      navigate('/student/roadmap');
+    } finally {
+      setGeneratingRoadmap(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -217,6 +243,38 @@ export default function SkillGap() {
     Required: Math.round(data.requiredSum / data.count),
   }));
 
+  // Derive student owned skills for Market Radar cross-referencing
+  const ownedSkillNames = new Set([
+    ...mySkills.map((s) => (s.skill?.name || s.skill_name || '').toLowerCase().trim()),
+    ...gaps.filter((g) => g.current >= 35).map((g) => g.skill.toLowerCase().trim()),
+  ]);
+
+  const marketRadarItems = [
+    ...(marketTrends?.surging || []).slice(0, 2).map((s) => ({
+      ...s,
+      icon: '🚀',
+      desc: s.drives_pct ? `In ${s.drives_pct}% of tech drives` : `+${s.growth_pct}% growth`,
+    })),
+    ...(marketTrends?.stable || []).slice(0, 2).map((s) => ({
+      ...s,
+      icon: '⚖️',
+      desc: s.drives_pct ? `In ${s.drives_pct}% of all drives` : 'Core baseline',
+    })),
+    ...(marketTrends?.declining || []).slice(0, 1).map((s) => ({
+      ...s,
+      icon: '📉',
+      desc: s.drives_pct ? `Only in ${s.drives_pct}% of drives` : `${s.growth_pct}% velocity`,
+    })),
+  ];
+
+  const studentSurgingOwned = (marketTrends?.surging || [])
+    .filter((s) => ownedSkillNames.has(s.skill.toLowerCase().trim()))
+    .map((s) => s.skill);
+
+  const studentSurgingGaps = (marketTrends?.surging || [])
+    .filter((s) => !ownedSkillNames.has(s.skill.toLowerCase().trim()))
+    .map((s) => s.skill);
+
   return (
     <div>
       <div className="page-header">
@@ -242,8 +300,8 @@ export default function SkillGap() {
           ))}
         </div>
 
-        {/* Top row: score ring + category bar chart */}
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 'var(--space-6)' }}>
+        {/* Top row: score ring + category bar chart + Market Radar */}
+        <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 290px', gap: 'var(--space-5)', alignItems: 'stretch' }}>
           {/* Score card */}
           <div
             className="card"
@@ -275,17 +333,19 @@ export default function SkillGap() {
           </div>
 
           {/* Category bar chart */}
-          <div className="card">
-            <div style={{ fontWeight: 600, marginBottom: 'var(--space-4)' }}>Skills by Category</div>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={chartData} margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
-                <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="Current" fill="#6366f1" radius={[4, 4, 0, 0]} name="Current" />
-                <Bar dataKey="Required" fill="rgba(99,102,241,0.2)" radius={[4, 4, 0, 0]} name="Required" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: 'var(--space-4)' }}>Skills by Category</div>
+              <ResponsiveContainer width="100%" height={210}>
+                <BarChart data={chartData} margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
+                  <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                  <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="Current" fill="#6366f1" radius={[4, 4, 0, 0]} name="Current" />
+                  <Bar dataKey="Required" fill="rgba(99,102,241,0.2)" radius={[4, 4, 0, 0]} name="Required" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
             <div style={{ display: 'flex', gap: 'var(--space-6)', marginTop: 'var(--space-2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
                 <div style={{ width: 12, height: 12, background: '#6366f1', borderRadius: 2 }} />
@@ -297,7 +357,107 @@ export default function SkillGap() {
               </div>
             </div>
           </div>
+
+          {/* 📡 Market Radar — What's Hot Panel */}
+          <div
+            className="card"
+            style={{
+              padding: 'var(--space-4)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: 'var(--space-3)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+                <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>📡</span> Market Radar
+                </div>
+                <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(99,102,241,0.1)', color: 'var(--accent-primary)', borderRadius: 4, fontWeight: 700 }}>
+                  LIVE
+                </span>
+              </div>
+
+              {/* Demand Velocity List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 'var(--space-3)' }}>
+                {marketRadarItems.map((item) => {
+                  const isOwned = ownedSkillNames.has(item.skill.toLowerCase().trim());
+                  return (
+                    <div
+                      key={item.skill}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: 'var(--font-size-xs)',
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                        <span>{item.icon}</span>
+                        <span>{item.skill}</span>
+                        {isOwned && <span style={{ color: '#22c55e', fontSize: 11 }}>✓</span>}
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        {item.desc}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Personalized Cross-Reference Box */}
+              <div
+                style={{
+                  padding: 'var(--space-3)',
+                  borderRadius: 'var(--border-radius-sm)',
+                  background: 'var(--bg-tertiary)',
+                  fontSize: 11,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}
+              >
+                {studentSurgingOwned.length > 0 && (
+                  <div style={{ color: '#22c55e' }}>
+                    💡 <strong>You have:</strong> {studentSurgingOwned.slice(0, 3).join(' ✓, ')} ✓
+                  </div>
+                )}
+                {studentSurgingGaps.length > 0 ? (
+                  <div style={{ color: '#f59e0b' }}>
+                    ⚠️ <strong>Hot Gaps:</strong> {studentSurgingGaps.slice(0, 2).join(', ')}
+                  </div>
+                ) : (
+                  <div style={{ color: '#22c55e' }}>
+                    ✓ You cover all trending hot skills!
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action CTA */}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleAddSurgingToRoadmap}
+              disabled={generatingRoadmap}
+              style={{
+                width: '100%',
+                fontSize: 11,
+                padding: '6px 8px',
+                height: 'auto',
+                color: 'var(--accent-primary)',
+                borderColor: 'var(--accent-primary)',
+                fontWeight: 600,
+              }}
+            >
+              {generatingRoadmap ? 'Updating Roadmap...' : '→ Add Hot Skills to Roadmap'}
+            </button>
+          </div>
         </div>
+
 
         {/* Skill table */}
         <div className="card">

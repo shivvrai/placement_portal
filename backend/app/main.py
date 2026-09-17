@@ -23,6 +23,7 @@ from app.api.v1.resume import router as resume_router
 from app.api.v1.assessments import router as assessments_router
 from app.api.v1.ums import router as ums_router
 from app.api.v1.curriculum import router as curriculum_router
+from app.api.v1.tpo import router as tpo_router
 
 # Import all models so SQLAlchemy registers them with Base.metadata
 import app.models.user  # noqa: F401
@@ -33,6 +34,7 @@ import app.models.industry  # noqa: F401
 import app.models.placement  # noqa: F401
 import app.models.roadmap  # noqa: F401
 import app.models.system  # noqa: F401
+import app.models.cohort  # noqa: F401
 
 settings = get_settings()
 
@@ -99,4 +101,5 @@ app.include_router(resume_router, prefix=settings.API_V1_PREFIX)
 app.include_router(assessments_router, prefix=settings.API_V1_PREFIX)
 app.include_router(ums_router, prefix=settings.API_V1_PREFIX)
 app.include_router(curriculum_router, prefix=settings.API_V1_PREFIX)
+app.include_router(tpo_router, prefix=settings.API_V1_PREFIX)
 
