@@ -372,6 +372,8 @@ pytest tests/test_matching.py
 
 ---
 
-## 📄 License
+## 📄 License & Copyright
 
-Academic and institutional project. All rights reserved.
+Copyright (c) 2026 shivvrai. All rights reserved.
+
+This project and all associated source code, designs, and documentation are **Proprietary and Confidential**. Unauthorized copying, distribution, modification, reverse engineering, or commercial use of this software, in whole or in part, is strictly prohibited without prior written consent from the copyright holder. See the [LICENSE](LICENSE) file for complete terms.

@@ -19,4 +19,16 @@ export default defineConfig({
     // Make env variables available to browser code
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
   },
+  build: {
+    // Prevent browser DevTools from exposing raw source code in production
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        // Obfuscate chunk names from revealing exact source file paths
+        chunkFileNames: 'assets/[hash].js',
+        entryFileNames: 'assets/[hash].js',
+        assetFileNames: 'assets/[hash].[ext]',
+      },
+    },
+  },
 })
