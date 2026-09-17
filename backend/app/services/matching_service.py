@@ -15,12 +15,14 @@ from sqlalchemy.orm import selectinload
 from app.models.skill import StudentSkill, Skill
 from app.models.industry import Job, JobSkill
 from app.models.user import Student
+from app.models.portfolio import Project
 
 from app.ml.gap_engine import compute_gap_scores
-from app.ml.matcher import predict_match_score
+from app.ml.matcher import predict_match_score, compute_breakdown
 
 from app.schemas.skill import SkillGapItem, SkillGapResponse
 from app.schemas.matching import JobMatchResponse
+
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +121,19 @@ async def compute_job_matches(
         for ss in skill_result.scalars().all()
     }
 
+    # Load student projects for experience bonus
+    proj_result = await db.execute(
+        select(Project).where(Project.student_id == student_id)
+    )
+    student_projects = [
+        {
+            "title": p.title,
+            "technologies": p.technologies or [],
+            "description": p.description or "",
+        }
+        for p in proj_result.scalars().all()
+    ]
+
     # Load active jobs with their skills
     job_result = await db.execute(
         select(Job)
@@ -150,6 +165,17 @@ async def compute_job_matches(
             eligible_depts=eligible_depts or None,
         )
 
+        # Compute diagnostic breakdown
+        breakdown = compute_breakdown(
+            student_skills=student_skills,
+            job_skills=job_skills_dict,
+            student_cgpa=student_cgpa,
+            job_min_cgpa=float(job.min_cgpa) if job.min_cgpa else None,
+            student_dept=student_dept_code,
+            eligible_depts=eligible_depts or None,
+            student_projects=student_projects,
+        )
+
         # Eligibility check (hard constraint)
         eligible = True
         if job.min_cgpa and student_cgpa and student_cgpa < float(job.min_cgpa):
@@ -178,6 +204,7 @@ async def compute_job_matches(
             matched_skills=matched_skills,
             missing_skills=missing_skills,
             eligible=eligible,
+            breakdown=breakdown,
         ))
 
     # Sort by match score, penalise ineligible
