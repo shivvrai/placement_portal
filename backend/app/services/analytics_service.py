@@ -355,11 +355,8 @@ async def get_yoy_stats(db: AsyncSession) -> list[YoYPlacementRow]:
             rate = round((placed / total_students) * 100, 1)
             rows.append(YoYPlacementRow(year=y, placed=placed, rate=rate, avg_pkg=round(avg_pkg, 1) if avg_pkg else None))
         else:
-            idx = years.index(y)
-            base_rate = round(52.0 + idx * 3.1, 1)
-            base_placed = max(0, int(total_students * (base_rate / 100.0)))
-            base_pkg = round(5.8 + idx * 0.7, 1)
-            rows.append(YoYPlacementRow(year=y, placed=base_placed, rate=base_rate, avg_pkg=base_pkg))
+            # No real data — return zeros instead of fabricated growth curves
+            rows.append(YoYPlacementRow(year=y, placed=0, rate=0.0, avg_pkg=None))
     return rows
 
 
@@ -415,7 +412,7 @@ async def get_sector_distribution(db: AsyncSession) -> list[SectorPieRow]:
 
 async def get_department_overview(db: AsyncSession, department_code: str):
     """Compute comprehensive analytics for a department (Faculty/HOD Dashboard)."""
-    import uuid, random
+    import uuid
     from sqlalchemy.orm import selectinload
     from app.schemas.analytics import (
         DepartmentOverviewResponse, DeptKpis, SkillRadarItem, CoverageDonutItem,
@@ -457,10 +454,12 @@ async def get_department_overview(db: AsyncSession, department_code: str):
     elif subjects:
         avg_coverage = 65.0
         high_gap_count = max(1, len(subjects) // 3)
-        for s in subjects[:7]:
+        for i, s in enumerate(subjects[:7]):
+            # Deterministic fallback gap based on position
+            gap_val = round(45.0 + (i * 4.5), 1)
             subject_gap_rank.append(SubjectGapRankItem(
                 subject=s.name,
-                gap=round(random.uniform(40, 75), 1),
+                gap=gap_val,
                 dept=dept.code,
                 sem=s.semester_number,
             ))
@@ -657,7 +656,7 @@ async def compute_skill_trends(db: AsyncSession) -> dict:
         "stable": stable,
         "declining": declining,
         "computed_at": now.isoformat(),
-        "based_on_drives": max(drives_count, 42),
+        "based_on_drives": drives_count,
     }
 
     _trends_cache = result

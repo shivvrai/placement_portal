@@ -25,6 +25,13 @@ async def get_my_roadmap(
     db: AsyncSession = Depends(get_db),
 ):
     target_id = student_id if student_id else current_user.id
+    # Authorization: only self, TPO, or admin can access another student's roadmap
+    if target_id != current_user.id and current_user.role not in ("tpo", "admin"):
+        from fastapi import HTTPException, status as http_status
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view another student's roadmap",
+        )
     return await roadmap_service.get_student_roadmap(db, target_id)
 
 

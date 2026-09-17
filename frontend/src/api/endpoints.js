@@ -173,9 +173,10 @@ export const curriculumApi = {
 // ─── AI Career Copilot ────────────────────────────────────────────
 export const copilotApi = {
   getConversations: () => api.get('/copilot/conversations'),
-  createConversation: () => api.post('/copilot/conversations'),
+  createConversation: (title, initialMessage) =>
+    api.post('/copilot/conversations', { title: title || undefined, initial_message: initialMessage || undefined }),
   sendMessage: (convId, message) =>
-    api.post(`/copilot/conversations/${convId}/messages`, { message }),
+    api.post(`/copilot/conversations/${convId}/messages`, { content: message }),
   getHistory: (convId) => api.get(`/copilot/conversations/${convId}`),
 };
 

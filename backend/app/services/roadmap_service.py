@@ -160,7 +160,7 @@ async def update_task_status(
         select(RoadmapTask).where(RoadmapTask.roadmap_id == roadmap.id)
     )
     all_tasks_list = all_tasks.scalars().all()
-    completed = sum(1 for t in all_tasks_list if t.status == "completed" or t.id == task_id and data.status == "completed")
+    completed = sum(1 for t in all_tasks_list if t.status == "completed")
     roadmap.progress_pct = round(completed / len(all_tasks_list) * 100, 1) if all_tasks_list else 0.0
 
     await db.commit()

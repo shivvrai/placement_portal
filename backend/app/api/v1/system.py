@@ -78,11 +78,11 @@ async def get_audit_logs(
         conditions.append(AuditLog.created_at <= date_to)
 
     # Count total matching rows
-    count_stmt = select(AuditLog)
+    from sqlalchemy import func as sqfunc
+    count_stmt = select(sqfunc.count(AuditLog.id))
     if conditions:
         count_stmt = count_stmt.where(and_(*conditions))
-    count_result = await db.execute(count_stmt)
-    total = len(count_result.scalars().all())
+    total = (await db.execute(count_stmt)).scalar_one()
 
     # Fetch page
     stmt = (

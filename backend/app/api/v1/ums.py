@@ -137,6 +137,7 @@ async def sync_student(
     )
 
     if not result["success"]:
+        await db.commit()  # persist audit event before raising
         raise HTTPException(
             status_code=404,
             detail=result.get("error", "Sync failed"),
@@ -168,6 +169,7 @@ async def sync_student_by_body(
     )
 
     if not result["success"]:
+        await db.commit()  # persist audit event before raising
         raise HTTPException(
             status_code=404,
             detail=result.get("error", "Sync failed"),
