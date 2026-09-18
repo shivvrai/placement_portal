@@ -101,7 +101,7 @@ function Message({ msg }) {
           ? '0 2px 8px rgba(99,102,241,0.3)'
           : 'var(--shadow-sm)',
       }}>
-        <MessageContent content={msg.content || ''} />
+        <ScorecardRenderer content={msg.content || ''} />
 
         <div style={{
           fontSize: 10,
@@ -114,6 +114,70 @@ function Message({ msg }) {
       </div>
     </div>
   );
+}
+
+// ─── Scorecard Renderer ─────────────────────────────────────────────
+function ScorecardRenderer({ content }) {
+  // If the content is purely a JSON block of a final scorecard, render it nicely.
+  const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+  
+  if (jsonMatch) {
+    let parsedData = null;
+    try {
+      parsedData = JSON.parse(jsonMatch[1]);
+    } catch(e) {}
+    
+    if (parsedData && parsedData["Technical Knowledge"]) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 15, padding: 5 }}>
+          <h3 style={{ margin: 0, color: 'var(--accent-primary)', fontSize: '1.1rem' }}>🏆 Interview Scorecard</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ background: 'var(--bg-secondary)', padding: 10, borderRadius: 8 }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Technical Knowledge</div>
+              <div style={{ fontWeight: 600 }}>{parsedData["Technical Knowledge"]}</div>
+            </div>
+            <div style={{ background: 'var(--bg-secondary)', padding: 10, borderRadius: 8 }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Communication</div>
+              <div style={{ fontWeight: 600 }}>{parsedData["Communication"]}</div>
+            </div>
+            <div style={{ background: 'var(--bg-secondary)', padding: 10, borderRadius: 8 }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Problem Solving</div>
+              <div style={{ fontWeight: 600 }}>{parsedData["Problem Solving"]}</div>
+            </div>
+            <div style={{ background: 'var(--bg-secondary)', padding: 10, borderRadius: 8, background: 'rgba(34,197,94,0.1)', color: '#16a34a' }}>
+              <div style={{ fontSize: '0.75rem' }}>Overall Readiness</div>
+              <div style={{ fontWeight: 600 }}>{parsedData["Overall Readiness"]}</div>
+            </div>
+          </div>
+          
+          <div>
+            <div style={{ fontWeight: 600, color: '#16a34a', marginBottom: 4 }}>📈 Key Strengths</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {parsedData["Key Strengths"]?.map((s, i) => <li key={i}>{s}</li>)}
+            </ul>
+          </div>
+          
+          <div>
+            <div style={{ fontWeight: 600, color: '#d97706', marginBottom: 4 }}>🎯 Areas to Improve</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {parsedData["Areas to Improve"]?.map((s, i) => <li key={i}>{s}</li>)}
+            </ul>
+          </div>
+          
+          <div style={{ marginTop: 5 }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>📚 Recommended Resources</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {parsedData["Recommended Resources"]?.map((s, i) => <li key={i}>{s}</li>)}
+            </ul>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // Fallback to markdown renderer
+  return <MessageContent content={content} />;
 }
 
 // ─── Typing Indicator ───────────────────────────────────────────────
@@ -184,6 +248,12 @@ export default function Copilot() {
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState('qa'); // 'qa' | 'mock'
+  
+  // Mock Interview Setup State
+  const [miRole, setMiRole] = useState('Software Engineer');
+  const [miDifficulty, setMiDifficulty] = useState('Junior SDE');
+  const [miQuestions, setMiQuestions] = useState(4);
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -328,23 +398,28 @@ export default function Copilot() {
       );
 
       const token = localStorage.getItem('token');
-      const baseUrl =
-        import.meta.env.VITE_API_BASE_URL ||
-        'http://localhost:8000';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      
+      const isMockInterview = activeConv?.messages?.[0]?.mock_interview;
+      
+      const endpointDetails = isMockInterview
+        ? {
+            url: `${baseUrl}/api/v1/copilot/mock-interview/${conversationId}/respond`,
+            body: { content: userText }
+          }
+        : {
+            url: `${baseUrl}/api/v1/copilot/conversations/${conversationId}/messages`,
+            body: { content: userText } // Fast API schema looks for content too
+          };
 
-      const response = await fetch(
-        `${baseUrl}/api/v1/copilot/conversations/${conversationId}/messages`,
-        {
+      const response = await fetch(endpointDetails.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            message: userText
-          })
-        }
-      );
+          body: JSON.stringify(endpointDetails.body)
+      });
 
       if (!response.ok) {
         throw new Error('API Error');
@@ -442,6 +517,81 @@ export default function Copilot() {
         })
       );
     } finally {
+      if (activeConv?.messages?.[0]?.mock_interview) {
+        // Scroll once more for scorecard expansion
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 500); 
+      }
+      setTyping(false);
+    }
+  };
+
+  const startMockInterview = async () => {
+    try {
+      setTyping(true);
+      const token = localStorage.getItem('token');
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      
+      const payload = {
+        role: miRole,
+        difficulty: miDifficulty,
+        total_questions: miQuestions
+      };
+      
+      const response = await fetch(`${baseUrl}/api/v1/copilot/mock-interview/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) throw new Error("Failed to start mock interview");
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let isFirstChunk = true;
+      let newConvId = activeId;
+      
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        let chunk = decoder.decode(value, { stream: true });
+        
+        if (isFirstChunk && chunk.includes(':::CONV_ID:')) {
+            const parts = chunk.split(':::');
+            newConvId = parts[1].replace('CONV_ID:', '').trim();
+            chunk = parts[2] || '';
+            isFirstChunk = false;
+            
+            // Push an empty shell conversation temporarily
+            const newConv = {
+                id: newConvId,
+                title: `[Mock Interview] ${miRole}`,
+                messages: [
+                    { role: 'system', content: 'Interview Config', mock_interview: payload },
+                    { role: 'assistant', content: chunk, ts: now() }
+                ]
+            };
+            setConversations(prev => [newConv, ...prev]);
+            setActiveId(newConvId);
+        }
+        
+        fullText += chunk;
+        setConversations(prev =>
+            prev.map(c => {
+                if (c.id !== newConvId) return c;
+                const m = [...c.messages];
+                m[m.length - 1] = { ...m[m.length - 1], content: fullText };
+                return { ...c, messages: m };
+            })
+        );
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
       setTyping(false);
     }
   };
@@ -478,12 +628,11 @@ export default function Copilot() {
   if (loading) {
     return (
       <div>
-        <div className="page-header">
-          <h1>AI Career Copilot</h1>
-          <p>
-            Your personal AI advisor for career planning,
-            interview prep, and skill guidance
-          </p>
+        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1>AI Career Copilot</h1>
+            <p>Your personal AI advisor for career planning, interview prep, and skill guidance</p>
+          </div>
         </div>
 
         <div className="page-body">
@@ -499,12 +648,28 @@ export default function Copilot() {
       height: 'calc(100vh - var(--header-height, 0px))',
       flexDirection: 'column'
     }}>
-      <div className="page-header">
-        <h1>AI Career Copilot</h1>
-        <p>
-          Your personal AI advisor for career planning,
-          interview prep, and skill guidance
-        </p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1>AI Career Copilot</h1>
+          <p>Your personal AI advisor for career planning, interview prep, and skill guidance</p>
+        </div>
+        
+        <div style={{ display: 'flex', background: 'var(--bg-secondary)', borderRadius: 8, padding: 4, border: '1px solid var(--border-color)' }}>
+          <button 
+            className={`btn ${mode === 'qa' ? 'btn-primary' : ''}`}
+            onClick={() => { setMode('qa'); setActiveId(null); }}
+            style={{ borderRadius: 6, fontSize: '0.8rem', padding: '6px 12px', background: mode === 'qa' ? 'var(--accent-primary)' : 'transparent', color: mode === 'qa' ? 'white' : 'var(--text-primary)' }}
+          >
+            💬 Career Q&A
+          </button>
+          <button 
+            className={`btn ${mode === 'mock' ? 'btn-primary' : ''}`}
+            onClick={() => { setMode('mock'); setActiveId(null); }}
+            style={{ borderRadius: 6, fontSize: '0.8rem', padding: '6px 12px', background: mode === 'mock' ? 'var(--accent-primary)' : 'transparent', color: mode === 'mock' ? 'white' : 'var(--text-primary)' }}
+          >
+            🎯 Mock Interview
+          </button>
+        </div>
       </div>
 
       <div style={{
@@ -601,90 +766,54 @@ export default function Copilot() {
           <div style={{
             flex: 1,
             overflowY: 'auto',
-            padding:
-              'var(--space-6) var(--space-8)'
+            padding: 'var(--space-6) var(--space-8)'
           }}>
-            {activeConv?.messages?.length === 0 ? (
-              /* Empty state */
+            {activeConv?.messages && activeConv.messages.length > 0 ? (
+              <>
+                {activeConv.messages.map((msg, i) => {
+                  if (msg.role === 'system') return null;
+                  return <Message key={i} msg={msg} />;
+                })}
+
+                {typing && <TypingIndicator />}
+                <div ref={bottomRef} />
+              </>
+            ) : mode === 'qa' ? (
+              /* Empty state Q&A */
               <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                gap: 'var(--space-6)'
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                justifyContent: 'center', height: '100%', gap: 'var(--space-6)'
               }}>
-                <div style={{
-                  fontSize: '3rem'
-                }}>
-                  🤖
-                </div>
-
-                <div style={{
-                  textAlign: 'center'
-                }}>
-                  <h2 style={{
-                    fontWeight: 700,
-                    marginBottom: 'var(--space-2)'
-                  }}>
-                    How can I help you today?
-                  </h2>
-
-                  <p style={{
-                    color: 'var(--text-muted)',
-                    fontSize: 'var(--font-size-sm)'
-                  }}>
-                    Ask me anything about your career,
-                    skills, or placement preparation.
+                <div style={{ fontSize: '3rem' }}>🤖</div>
+                <div style={{ textAlign: 'center' }}>
+                  <h2 style={{ fontWeight: 700, marginBottom: 'var(--space-2)' }}>How can I help you today?</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                    Ask me anything about your career, skills, or placement preparation.
                   </p>
                 </div>
 
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns:
-                    '1fr 1fr',
-                  gap: 'var(--space-3)',
-                  width: '100%',
-                  maxWidth: 600
+                  display: 'grid', gridTemplateColumns: '1fr 1fr',
+                  gap: 'var(--space-3)', width: '100%', maxWidth: 600
                 }}>
                   {SUGGESTED_PROMPTS.map(p => (
                     <button
-                      key={p}
-                      onClick={() => sendMessage(p)}
+                      key={p} onClick={() => sendMessage(p)}
                       style={{
-                        padding:
-                          'var(--space-3) var(--space-4)',
-                        background:
-                          'var(--bg-card)',
-                        border:
-                          '1px solid var(--border-color)',
-                        borderRadius:
-                          'var(--border-radius)',
-                        cursor: 'pointer',
-                        fontSize:
-                          'var(--font-size-sm)',
-                        color:
-                          'var(--text-secondary)',
-                        textAlign: 'left',
-                        transition:
-                          'all var(--transition-fast)',
-                        lineHeight: 1.4,
+                        padding: 'var(--space-3) var(--space-4)', background: 'var(--bg-card)',
+                        border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)',
+                        cursor: 'pointer', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)',
+                        textAlign: 'left', transition: 'all var(--transition-fast)', lineHeight: 1.4,
                       }}
                       onMouseOver={e => {
-                        e.currentTarget.style.background =
-                          'var(--bg-card-hover)';
-                        e.currentTarget.style.borderColor =
-                          'var(--accent-primary)';
-                        e.currentTarget.style.color =
-                          'var(--text-primary)';
+                        e.currentTarget.style.background = 'var(--bg-card-hover)';
+                        e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                        e.currentTarget.style.color = 'var(--text-primary)';
                       }}
                       onMouseOut={e => {
-                        e.currentTarget.style.background =
-                          'var(--bg-card)';
-                        e.currentTarget.style.borderColor =
-                          'var(--border-color)';
-                        e.currentTarget.style.color =
-                          'var(--text-secondary)';
+                        e.currentTarget.style.background = 'var(--bg-card)';
+                        e.currentTarget.style.borderColor = 'var(--border-color)';
+                        e.currentTarget.style.color = 'var(--text-secondary)';
                       }}
                     >
                       {p}
@@ -693,37 +822,59 @@ export default function Copilot() {
                 </div>
               </div>
             ) : (
-              <>
-                {activeConv?.messages?.map(
-                  (msg, i) => (
-                    <Message
-                      key={i}
-                      msg={msg}
-                    />
-                  )
-                )}
-
-                {typing && <TypingIndicator />}
-
-                <div ref={bottomRef} />
-              </>
+              /* Empty state Mock Interview Setup */
+              <div style={{
+                display: 'flex', flexDirection: 'column',
+                justifyContent: 'center', height: '100%', gap: 'var(--space-6)', maxWidth: 600, margin: '0 auto'
+              }}>
+                <div style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)', paddingBottom: 15 }}>
+                  <h2 style={{ fontWeight: 700 }}>🎯 Setup Mock Interview</h2>
+                  <p style={{ color: 'var(--text-muted)' }}>Configure your automated technical interview session.</p>
+                </div>
+                
+                <div className="form-group">
+                  <label>Target Role</label>
+                  <input type="text" className="form-control" value={miRole} onChange={e => setMiRole(e.target.value)} placeholder="e.g. Data Analyst, MLE" />
+                </div>
+                
+                <div className="form-group">
+                  <label>Difficulty</label>
+                  <select className="form-control" value={miDifficulty} onChange={e => setMiDifficulty(e.target.value)}>
+                    <option value="Intern">Intern</option>
+                    <option value="Junior SDE">Junior SDE</option>
+                    <option value="Mid-Level SDE">Mid-Level SDE</option>
+                  </select>
+                </div>
+                
+                <div className="form-group">
+                  <label>Questions: {miQuestions}</label>
+                  <input type="range" min="3" max="6" value={miQuestions} onChange={e => setMiQuestions(Number(e.target.value))} style={{ width: '100%' }} />
+                </div>
+                
+                <button 
+                  className="btn btn-primary" 
+                  disabled={typing}
+                  style={{ width: '100%', padding: 12, fontSize: '1rem', marginTop: 10 }}
+                  onClick={startMockInterview}
+                >
+                  🚀 Begin Mock Interview
+                </button>
+              </div>
             )}
           </div>
 
           {/* Input bar */}
-          <div style={{
-            padding:
-              'var(--space-4) var(--space-6)',
-            borderTop:
-              '1px solid var(--border-color)',
-            background:
-              'var(--bg-secondary)',
-          }}>
+          {(activeConv || mode === 'qa') && (
             <div style={{
-              display: 'flex',
-              gap: 'var(--space-3)',
-              alignItems: 'flex-end'
+              padding: 'var(--space-4) var(--space-6)',
+              borderTop: '1px solid var(--border-color)',
+              background: 'var(--bg-secondary)',
             }}>
+              <div style={{
+                display: 'flex',
+                gap: 'var(--space-3)',
+                alignItems: 'flex-end'
+              }}>
               <textarea
                 ref={inputRef}
                 value={input}
@@ -790,6 +941,7 @@ export default function Copilot() {
               Shift+Enter for new line · Enter to send · Powered by Gemini
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

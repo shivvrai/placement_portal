@@ -40,3 +40,13 @@ class RoadmapGenerateRequest(BaseModel):
 
 class TaskStatusUpdateRequest(BaseModel):
     status: str = Field(..., pattern="^(pending|in_progress|completed|skipped)$")
+
+class RemedialTaskCreate(BaseModel):
+    title: str
+    description: str
+    phase: int = 1
+    hours_estimated: float = 3.0
+    resources: list[dict]
+    source: str = "quiz_remediation"
+    assessment_topic: str
+    assessment_score: float

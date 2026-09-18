@@ -14,6 +14,7 @@ from app.schemas.copilot import (
     ConversationResponse, ConversationSummary,
     NewMessageRequest, NewConversationRequest, ChatMessage,
 )
+from pydantic import BaseModel
 from app.services import copilot_service
 
 router = APIRouter(prefix="/copilot", tags=["AI Copilot"])
@@ -92,4 +93,37 @@ async def send_message(
     """
     # copilot_service.add_message_stream returns an AsyncGenerator of strings
     generator = copilot_service.add_message_stream(db, conversation_id, current_user.id, data)
+    return StreamingResponse(generator, media_type="text/plain")
+
+
+class MockInterviewStartRequest(BaseModel):
+    role: str
+    difficulty: str
+    total_questions: int
+
+
+@router.post("/mock-interview/start")
+async def start_mock_interview(
+    data: MockInterviewStartRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Start a Mock Interview and yield the first question.
+    """
+    generator = copilot_service.start_mock_interview_stream(db, current_user.id, data.role, data.difficulty, data.total_questions)
+    return StreamingResponse(generator, media_type="text/plain")
+
+
+@router.post("/mock-interview/{conversation_id}/respond")
+async def respond_mock_interview(
+    conversation_id: uuid.UUID,
+    data: NewMessageRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Respond to an interview question and yield the evaluation+next question or scorecard.
+    """
+    generator = copilot_service.respond_mock_interview_stream(db, conversation_id, current_user.id, data)
     return StreamingResponse(generator, media_type="text/plain")

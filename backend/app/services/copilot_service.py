@@ -139,6 +139,137 @@ async def add_message_stream(
     await db.commit()
 
 
+async def start_mock_interview_stream(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    role: str,
+    difficulty: str,
+    total_questions: int,
+) -> AsyncGenerator[str, None]:
+    
+    # 1. Store the persistent config at messages[0]
+    config_msg = {
+        "role": "system",
+        "content": "Interview Config",
+        "mock_interview": {
+            "role": role,
+            "difficulty": difficulty,
+            "total_questions": total_questions
+        }
+    }
+    
+    conv = CopilotConversation(
+        student_id=student_id,
+        title=f"[Mock Interview] {role}",
+        messages=[config_msg],
+        message_count=1,
+    )
+    db.add(conv)
+    await db.commit()
+    await db.refresh(conv)
+
+    # 2. Yield the conversation ID as the first chunk so the frontend can bind to it
+    yield f":::CONV_ID:{str(conv.id)}:::\n"
+
+    # 3. Stream the first question
+    system_prompt = (
+        f"You are Alex, an expert technical interviewer for a {difficulty} {role} position. "
+        "This is a mock interview. Introduce yourself briefly, and then ask the VERY FIRST technical question. "
+        "Ask EXACTLY ONE question. Do not provide the answer."
+    )
+    
+    full_response = ""
+    if is_gemini_configured():
+        async for chunk in stream_chat(system_prompt, [], "Start the interview."):
+            full_response += chunk
+            yield chunk
+    else:
+        reply = "Hi, I'm Alex. To start, can you explain a complex project you worked on recently?"
+        full_response = reply
+        yield reply
+
+    # 4. Save the assistant's first question
+    now_resp = datetime.now(timezone.utc).isoformat()
+    messages = list(conv.messages)
+    messages.append({"role": "assistant", "content": full_response, "timestamp": now_resp})
+    conv.messages = messages
+    conv.message_count = len(messages)
+    conv.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+
+
+async def respond_mock_interview_stream(
+    db: AsyncSession,
+    conversation_id: uuid.UUID,
+    student_id: uuid.UUID,
+    data: NewMessageRequest,
+) -> AsyncGenerator[str, None]:
+    result = await db.execute(
+        select(CopilotConversation)
+        .where(
+            CopilotConversation.id == conversation_id,
+            CopilotConversation.student_id == student_id,
+        )
+    )
+    conv = result.scalar_one_or_none()
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found")
+
+    messages = list(conv.messages or [])
+    
+    config = messages[0].get("mock_interview", {})
+    role = config.get("role", "Software Engineer")
+    difficulty = config.get("difficulty", "Junior SDE")
+    total_questions = config.get("total_questions", 4)
+
+    # Count how many times the user has responded:
+    current_question = sum(1 for m in messages if m.get("role") == "user") + 1 # +1 for the current answer
+
+    now = datetime.now(timezone.utc).isoformat()
+    messages.append({"role": "user", "content": data.content, "timestamp": now})
+    
+    history = [m for m in messages[1:-1]] # Exclude the system config [0] and the new user msg [-1]
+
+    if current_question < total_questions:
+        system_prompt = (
+            f"You are Alex, interviewing a candidate for a {difficulty} {role} role. "
+            f"We are on question {current_question} of {total_questions}. "
+            "EVALUATE the candidate's last answer. You MUST structure your response strictly as follows:\n\n"
+            "**Strengths:** <what they did well>\n"
+            "**Missing Concepts / Gaps:** <what they missed>\n"
+            "**Score:** <1-10>\n\n"
+            "After the evaluation, ask EXACTLY ONE next technical question."
+        )
+    else:
+        system_prompt = (
+            f"You are Alex, interviewing a candidate for a {difficulty} {role} role. "
+            f"The candidate has just answered the final question ({total_questions} of {total_questions}). "
+            "DO NOT ask any more questions. "
+            "You MUST output exactly a JSON block containing the Final Scorecard evaluating the ENTIRE interview. "
+            "Wrap the JSON in ```json and ```. The JSON MUST have exactly these keys: "
+            '"Technical Knowledge", "Communication", "Problem Solving", "Overall Readiness", '
+            '"Key Strengths" (list of strings), "Areas to Improve" (list of strings), "Recommended Resources" (list of strings).'
+        )
+
+    full_response = ""
+    if is_gemini_configured():
+        async for chunk in stream_chat(system_prompt, history, data.content):
+            full_response += chunk
+            yield chunk
+    else:
+        reply = "Evaluation: Good answer. Missing some depth. Score: 7/10.\n\nNext question: What is polymorphism?" if current_question < total_questions else "```json\n{\"Technical Knowledge\": \"Solid\", \"Communication\": \"Clear\", \"Problem Solving\": \"Good approach\", \"Overall Readiness\": \"Ready\", \"Key Strengths\": [\"Clear communication\"], \"Areas to Improve\": [\"Depth\"], \"Recommended Resources\": [\"LeetCode\"]}\n```"
+        full_response = reply
+        yield reply
+
+    now_resp = datetime.now(timezone.utc).isoformat()
+    messages.append({"role": "assistant", "content": full_response, "timestamp": now_resp})
+
+    conv.messages = messages
+    conv.message_count = len(messages)
+    conv.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+
+
 async def get_conversation(
     db: AsyncSession,
     conversation_id: uuid.UUID,

@@ -16,6 +16,7 @@ from app.models.user import User, Department
 from app.models.academic import Subject
 from app.models.skill import Skill, CurriculumSkill
 from app.schemas.skill import SubjectWithSkillsResponse, CurriculumSkillResponse, SkillResponse, ApplySuggestionRequest
+from app.services.curriculum_proposal_service import curriculum_proposal_service
 
 router = APIRouter(prefix="/curriculum", tags=["Curriculum"])
 
@@ -217,3 +218,21 @@ async def apply_suggested_mappings(
         "applied_skills": applied_names,
         "subject_id": str(subject.id),
     }
+
+@router.post("/subjects/{subject_id}/generate-proposal")
+async def generate_bos_proposal(
+    subject_id: uuid.UUID,
+    current_user: User = Depends(_faculty_or_tpo),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Generates an AI-powered Board of Studies syllabus modernization proposal
+    for the specified subject.
+    """
+    try:
+        proposal = await curriculum_proposal_service.generate(subject_id, db)
+        return proposal
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate proposal: {e}")

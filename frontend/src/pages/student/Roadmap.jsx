@@ -4,7 +4,7 @@
  * Tasks are expandable with status toggles.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { intelligenceApi } from '../../api/endpoints';
 
 // ─── Target Roles ──────────────────────────────────────────────────
@@ -89,14 +89,27 @@ function mapRoadmapToPhases(data) {
         }
         return a.order_in_week - b.order_in_week;
       })
-      .map(task => ({
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        hours: task.estimated_hours || 0,
-        status: task.status,
-        week_number: task.week_number,
-      }));
+      .map(task => {
+        let meta = null;
+        let cleanDesc = task.description || '';
+        const match = cleanDesc.match(/<!-- REMEDIATION_META:(.*?) -->/);
+        if (match) {
+          try {
+            meta = JSON.parse(match[1]);
+            cleanDesc = cleanDesc.replace(match[0], '').trim();
+          } catch(e) {}
+        }
+        return {
+          id: task.id,
+          title: task.title,
+          description: cleanDesc,
+          meta: meta,
+          isRemedial: !!meta,
+          hours: task.estimated_hours || 0,
+          status: task.status,
+          week_number: task.week_number,
+        };
+      });
 
     const done = tasks.filter(
       task => task.status === 'completed'
@@ -269,7 +282,9 @@ function PhaseCard({ phase, onToggleTask }) {
                   background:
                     task.status === 'in_progress'
                       ? 'rgba(245,158,11,0.04)'
-                      : 'transparent',
+                      : task.isRemedial
+                        ? 'rgba(245,158,11,0.06)'
+                        : 'transparent',
                   transition: 'background 0.2s',
                 }}
               >
@@ -316,8 +331,11 @@ function PhaseCard({ phase, onToggleTask }) {
                     color:
                       task.status === 'completed'
                         ? 'var(--text-muted)'
-                        : 'var(--text-primary)',
+                        : task.isRemedial
+                          ? '#d97706' // amber/orange for remediation
+                          : 'var(--text-primary)',
                   }}>
+                    {task.isRemedial && <span style={{ marginRight: 6 }} title="Quiz Remediation Task">🎯</span>}
                     {task.title}
                   </div>
 
@@ -325,9 +343,36 @@ function PhaseCard({ phase, onToggleTask }) {
                     <div style={{
                       fontSize: 'var(--font-size-xs)',
                       color: 'var(--text-muted)',
-                      marginTop: 4
+                      marginTop: 4,
+                      lineHeight: 1.4
                     }}>
                       {task.description}
+                    </div>
+                  )}
+
+                  {task.isRemedial && task.meta && (
+                    <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(245,158,11,0.1)', borderRadius: 6, border: '1px solid rgba(245,158,11,0.2)' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#b45309', marginBottom: 4 }}>
+                        <strong>Triggered by:</strong> {task.meta.assessment_topic} Assessment (Score: {Math.round(task.meta.assessment_score * 100)}%)
+                      </div>
+                      {task.meta.resources && task.meta.resources.length > 0 && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                          {task.meta.resources.map((res, i) => (
+                            <a
+                              key={i}
+                              href={res.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                fontSize: '0.75rem', padding: '4px 8px', background: 'white', border: '1px solid #fcd34d',
+                                borderRadius: 4, color: '#d97706', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4
+                              }}
+                            >
+                              {res.type === 'tool' ? '🛠' : res.type === 'article' ? '📄' : '💻'} {res.title}
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -367,10 +412,22 @@ function PhaseCard({ phase, onToggleTask }) {
 // ─── Main ──────────────────────────────────────────────────────────
 export default function Roadmap() {
   const [role, setRole] = useState('Data Analyst');
-  const [roadmap, setRoadmap] = useState(null);
+  const [rawRoadmap, setRawRoadmap] = useState(null);
+  const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
+
+  const roadmap = useMemo(() => {
+    if (!rawRoadmap) return null;
+    let filteredData = { ...rawRoadmap, tasks: rawRoadmap.tasks };
+    if (filter === 'regular') {
+      filteredData.tasks = filteredData.tasks.filter(t => !(t.description || '').includes('REMEDIATION_META'));
+    } else if (filter === 'remediation') {
+      filteredData.tasks = filteredData.tasks.filter(t => (t.description || '').includes('REMEDIATION_META'));
+    }
+    return mapRoadmapToPhases(filteredData);
+  }, [rawRoadmap, filter]);
 
   // Fetch existing roadmap
   useEffect(() => {
@@ -381,7 +438,7 @@ export default function Roadmap() {
 
         if (response.data) {
           setRole(response.data.target_role);
-          setRoadmap(mapRoadmapToPhases(response.data));
+          setRawRoadmap(response.data);
         }
       } catch (err) {
         console.error('Failed to load roadmap:', err);
@@ -403,7 +460,8 @@ export default function Roadmap() {
       const response =
         await intelligenceApi.generateRoadmap(role);
 
-      setRoadmap(mapRoadmapToPhases(response.data));
+      setRawRoadmap(response.data);
+      setFilter('all');
     } catch (err) {
       console.error('Failed to generate roadmap:', err);
       setError('Failed to generate roadmap.');
@@ -419,16 +477,11 @@ export default function Roadmap() {
     try {
       await intelligenceApi.updateTask(taskId, nextStatus);
 
-      setRoadmap(prev => ({
+      setRawRoadmap(prev => ({
         ...prev,
-        phases: prev.phases.map(phase => ({
-          ...phase,
-          tasks: phase.tasks.map(task =>
-            task.id === taskId
-              ? { ...task, status: nextStatus }
-              : task
-          ),
-        })),
+        tasks: prev.tasks.map(task =>
+          task.id === taskId ? { ...task, status: nextStatus } : task
+        ),
       }));
     } catch (err) {
       console.error('Failed to update task:', err);
@@ -548,6 +601,24 @@ export default function Roadmap() {
               ? 'Generating...'
               : 'Generate Roadmap'}
           </button>
+        </div>
+
+        {/* Task Filter */}
+        <div style={{
+          display: 'flex',
+          gap: 'var(--space-2)',
+          marginTop: '-var(--space-2)'
+        }}>
+          {['all', 'regular', 'remediation'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`btn ${filter === f ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '4px 12px', fontSize: '12px', borderRadius: 20 }}
+            >
+              {f === 'all' ? 'All Tasks' : f === 'regular' ? 'Regular Tasks' : 'Remediation Only'}
+            </button>
+          ))}
         </div>
 
         {error && (
