@@ -1,0 +1,55 @@
+{
+  "unread_count": 2,
+  "items": [
+    {
+      "id": "n1a10000-0000-0000-0000-000000000001",
+      "user_id": "u1a10000-0000-0000-0000-000000000001",
+      "type": "APPLICATION_SHORTLISTED",
+      "title": "Application Shortlisted!",
+      "message": "Congratulations! Your profile has been shortlisted for Amazon SDE-I Technical Round 1.",
+      "link": "/student/drives",
+      "is_read": false,
+      "created_at": "2026-09-19T06:30:00Z"
+    },
+    {
+      "id": "n1a10000-0000-0000-0000-000000000002",
+      "user_id": "u1a10000-0000-0000-0000-000000000001",
+      "type": "NEW_DRIVE_POSTED",
+      "title": "New Campus Drive: Google India",
+      "message": "Google has announced Associate SWE campus recruitment for 2026 batch. Registration open.",
+      "link": "/student/drives",
+      "is_read": false,
+      "created_at": "2026-09-19T04:15:00Z"
+    },
+    {
+      "id": "n1a10000-0000-0000-0000-000000000003",
+      "user_id": "u1a10000-0000-0000-0000-000000000001",
+      "type": "DRIVE_DEADLINE_WARNING",
+      "title": "Registration Closing Soon: Deloitte",
+      "message": "Only 24 hours left to complete your registration for Deloitte Technology Analyst drive.",
+      "link": "/student/drives",
+      "is_read": true,
+      "created_at": "2026-09-18T18:00:00Z"
+    },
+    {
+      "id": "n1a10000-0000-0000-0000-000000000004",
+      "user_id": "u1a10000-0000-0000-0000-000000000001",
+      "type": "COMMUNITY_UPDATE",
+      "title": "New Senior Interview Experience",
+      "message": "Rohan M. just shared interview questions and preparation tips for Amazon SDE-I.",
+      "link": "/student/experiences",
+      "is_read": true,
+      "created_at": "2026-09-18T12:00:00Z"
+    },
+    {
+      "id": "n1a10000-0000-0000-0000-000000000005",
+      "user_id": "u1a10000-0000-0000-0000-000000000001",
+      "type": "INTERVIEW_SCHEDULED",
+      "title": "Mock Interview Simulation Available",
+      "message": "AI Copilot Mock Interview Simulator is now live. Practice tailored technical rounds.",
+      "link": "/student/copilot",
+      "is_read": true,
+      "created_at": "2026-09-17T09:30:00Z"
+    }
+  ]
+}

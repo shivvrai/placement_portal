@@ -1,0 +1,68 @@
+{
+  "id": "d1a10000-0000-0000-0000-000000000001",
+  "company": {
+    "id": "c1a10000-0000-0000-0000-000000000001",
+    "name": "Amazon India",
+    "industry": "Cloud & E-Commerce",
+    "location": "Bengaluru / Hyderabad",
+    "website": "https://amazon.jobs",
+    "about": "Amazon is guided by four principles: customer obsession rather than competitor focus, passion for invention, commitment to operational excellence, and long-term thinking."
+  },
+  "title": "Amazon Campus Recruitment 2026",
+  "description": "Recruiting Software Development Engineers (SDE-I) for AWS, Prime Video, and Core Retail engineering organizations. Candidates should have strong algorithms and problem solving abilities.",
+  "drive_date": "2026-10-15",
+  "registration_deadline": "2026-10-05T23:59:59Z",
+  "min_cgpa": 7.5,
+  "eligible_departments": ["CSE", "IT", "ECE"],
+  "max_backlogs": 0,
+  "roles_offered": ["SDE-I (Cloud & Infrastructure)", "SDE-I (Full Stack)"],
+  "salary_ctc": 28.5,
+  "salary_fixed": 24.0,
+  "salary_variable": 4.5,
+  "bond_terms": "No bond requirement",
+  "probation_period": "6 Months",
+  "status": "open",
+  "academic_year": "2025-2026",
+  "registered_count": 84,
+  "shortlisted_count": 22,
+  "selected_count": 6,
+  "has_applied": false,
+  "rounds": [
+    {
+      "round_number": 1,
+      "name": "Online Assessment (OA)",
+      "format": "Online Coding & Aptitude",
+      "platform": "HackerRank Assessment Suite",
+      "duration": "90 Minutes",
+      "scheduled_at": "2026-10-08T10:00:00Z",
+      "details": "2 Coding questions (Data Structures & Algorithms) + 20 MCQs on OS, DBMS, Networks, and Amazon Leadership Principles."
+    },
+    {
+      "round_number": 2,
+      "name": "Technical Interview Round I",
+      "format": "Virtual Video Call",
+      "platform": "Amazon Chime / Google Meet",
+      "duration": "60 Minutes",
+      "scheduled_at": "2026-10-12T14:30:00Z",
+      "details": "Problem solving and coding live on shared editor. Deep dive into Trees, Graphs, and HashMaps with complexity optimization."
+    },
+    {
+      "round_number": 3,
+      "name": "Technical Interview Round II & LLD",
+      "format": "Virtual Video Call",
+      "platform": "Amazon Chime",
+      "duration": "60 Minutes",
+      "scheduled_at": "2026-10-13T11:00:00Z",
+      "details": "Low Level System Design (Object Oriented Design patterns) + review of undergraduate projects and database schemas."
+    },
+    {
+      "round_number": 4,
+      "name": "Bar Raiser & Leadership Discussion",
+      "format": "Virtual Video Call",
+      "platform": "Amazon Chime",
+      "duration": "45 Minutes",
+      "scheduled_at": "2026-10-14T16:00:00Z",
+      "details": "In-depth behavioral interview evaluating Amazon's 16 Leadership Principles with concrete past project examples."
+    }
+  ]
+}

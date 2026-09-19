@@ -12,6 +12,7 @@ from app.models.roadmap import Resource, ResourceSkill, Roadmap, RoadmapTask
 from app.models.system import CopilotConversation, AuditLog
 from app.models.assessment import AssessmentQuestionBank, AssessmentSession, AssessmentSessionQuestion
 from app.models.cohort import StudentCohort, Notification
+from app.models.experiences import InterviewExperience
 
 __all__ = [
     # Identity & Auth (4)
@@ -32,6 +33,7 @@ __all__ = [
     "CopilotConversation", "AuditLog",
     "AssessmentQuestionBank", "AssessmentSession", "AssessmentSessionQuestion",
     "StudentCohort", "Notification",
+    "InterviewExperience",
 ]
 # Total: 36 tables
 

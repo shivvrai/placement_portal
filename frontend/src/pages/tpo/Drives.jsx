@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { placementApi } from '../../api/endpoints';
 
 const STATUS_CFG = {
@@ -609,6 +610,13 @@ function DriveCard({ drive, onViewShortlist, onEdit }) {
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+        <Link
+          to={`/tpo/drives/${drive.id}`}
+          className="btn btn-secondary"
+          style={{ height: 34, fontSize: 'var(--font-size-xs)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+        >
+          📋 Details & Roster
+        </Link>
         <button
           className="btn btn-primary"
           style={{ height: 34, fontSize: 'var(--font-size-xs)' }}

@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { placementApi, studentApi } from '../../api/endpoints';
 
 const STATUS_COLORS = {
@@ -160,7 +161,14 @@ function DriveCard({ drive, profile, onApply, applying }) {
       </div>
 
       {/* Action button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-2)' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 'var(--space-2)' }}>
+        <Link
+          to={`/student/drives/${drive.id}`}
+          className="btn btn-secondary"
+          style={{ textDecoration: 'none' }}
+        >
+          View Details & Schedule 📋
+        </Link>
         {hasApplied ? (
           <button
             className="btn btn-secondary"

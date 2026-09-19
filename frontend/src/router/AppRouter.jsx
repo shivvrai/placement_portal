@@ -18,6 +18,8 @@ import JobMatches from '../pages/student/JobMatches';
 import SkillGap from '../pages/student/SkillGap';
 import Roadmap from '../pages/student/Roadmap';
 import PlacementDrives from '../pages/student/PlacementDrives';
+import DriveDetail from '../pages/student/DriveDetail';
+import InterviewExperiences from '../pages/student/InterviewExperiences';
 import Copilot from '../pages/student/Copilot';
 import AssessmentsList from '../pages/student/AssessmentsList';
 import AssessmentTake from '../pages/student/AssessmentTake';
@@ -94,6 +96,8 @@ export function AppRouter() {
           <Route path="skill-gap" element={<SkillGap />} />
           <Route path="roadmap" element={<Roadmap />} />
           <Route path="drives" element={<PlacementDrives />} />
+          <Route path="drives/:id" element={<DriveDetail />} />
+          <Route path="experiences" element={<InterviewExperiences />} />
           <Route path="copilot" element={<Copilot />} />
           <Route path="assessments" element={<AssessmentsList />} />
           <Route path="assessments/:id/take" element={<AssessmentTake />} />
@@ -112,6 +116,7 @@ export function AppRouter() {
           <Route path="dashboard" element={<TPODashboard />} />
           <Route path="students" element={<TPOStudents />} />
           <Route path="drives" element={<TPODrives />} />
+          <Route path="drives/:id" element={<DriveDetail />} />
           <Route path="analytics" element={<TPOAnalytics />} />
           <Route path="bi-studio" element={<BIStudio />} />
         </Route>

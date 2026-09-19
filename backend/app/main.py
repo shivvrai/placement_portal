@@ -26,6 +26,8 @@ from app.api.v1.curriculum import router as curriculum_router
 from app.api.v1.tpo import router as tpo_router
 from app.api.v1.system import router as system_router
 from app.api.v1.superset_bi import router as bi_router
+from app.api.v1.experiences import router as experiences_router
+from app.api.v1.notifications import router as notifications_router
 
 # Import all models so SQLAlchemy registers them with Base.metadata
 import app.models.user  # noqa: F401
@@ -37,6 +39,7 @@ import app.models.placement  # noqa: F401
 import app.models.roadmap  # noqa: F401
 import app.models.system  # noqa: F401
 import app.models.cohort  # noqa: F401
+import app.models.experiences  # noqa: F401
 
 settings = get_settings()
 
@@ -106,4 +109,6 @@ app.include_router(curriculum_router, prefix=settings.API_V1_PREFIX)
 app.include_router(tpo_router, prefix=settings.API_V1_PREFIX)
 app.include_router(system_router, prefix=settings.API_V1_PREFIX)
 app.include_router(bi_router, prefix=settings.API_V1_PREFIX)
+app.include_router(experiences_router, prefix=settings.API_V1_PREFIX)
+app.include_router(notifications_router, prefix=settings.API_V1_PREFIX)
 

@@ -238,3 +238,17 @@ export const systemApi = {
   getAuditLogs: (params) => api.get('/system/audit-logs', { params }),
 };
 
+// ─── Interview Experiences & Questions ─────────────────────────────
+export const experiencesApi = {
+  getExperiences: (params) => mockOr('experiences.json', () => api.get('/experiences', { params })),
+  submitExperience: (data) => api.post('/experiences', data),
+  upvoteExperience: (id) => api.post(`/experiences/${id}/upvote`),
+};
+
+// ─── In-App Notifications ─────────────────────────────────────────
+export const notificationsApi = {
+  getMine: (params) => mockOr('notifications.json', () => api.get('/notifications/mine', { params })),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllRead: () => api.patch('/notifications/read-all'),
+};
+

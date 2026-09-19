@@ -1,0 +1,114 @@
+{
+  "total": 6,
+  "page": 1,
+  "per_page": 12,
+  "items": [
+    {
+      "id": "e1a10000-0000-0000-0000-000000000001",
+      "student_name": "Rohan M.",
+      "department": "Computer Science & Engineering",
+      "company_name": "Amazon",
+      "role": "Software Development Engineer (SDE-I)",
+      "difficulty": "Hard",
+      "verdict": "Selected",
+      "overall_experience": "The online assessment had 2 coding questions (DP and Graph BFS) plus an Amazon Leadership Principles behavioral evaluation. Round 1 and 2 were technical with deep dive into system design basics and data structures. Round 3 was bar raiser with the hiring manager discussing trade-offs.",
+      "questions_asked": [
+        "Design a high-throughput URL shortener with low latency caching",
+        "Find the shortest path in a weighted grid with dynamic obstacle elimination",
+        "Tell me about a time you had to make a decision without complete data"
+      ],
+      "tips_for_juniors": "Master Amazon 16 Leadership Principles with STAR format examples. For technical rounds, practice explaining your thought process out loud before writing any code on the shared editor.",
+      "upvotes": 48,
+      "created_at": "2026-08-14T10:30:00Z"
+    },
+    {
+      "id": "e1a10000-0000-0000-0000-000000000002",
+      "student_name": "Ananya S.",
+      "department": "Information Technology",
+      "company_name": "Google",
+      "role": "Associate Software Engineer",
+      "difficulty": "Hard",
+      "verdict": "Selected",
+      "overall_experience": "Initial screening on HackerEarth followed by 3 rounds of 45-minute Google Meet coding interviews. Every round started with a warm-up string/array question and quickly scaled to tree traversals and dynamic programming optimization.",
+      "questions_asked": [
+        "Implement Trie with prefix search and wildcard match",
+        "Given stream of integers, output the median in real-time with O(log N) insert",
+        "Detect cycle in directed graph using Kahn's algorithm"
+      ],
+      "tips_for_juniors": "Clean modular code and time/space complexity analysis matter as much as solving the problem. Do not rush into coding; clarify edge cases first.",
+      "upvotes": 62,
+      "created_at": "2026-08-20T14:15:00Z"
+    },
+    {
+      "id": "e1a10000-0000-0000-0000-000000000003",
+      "student_name": "Kartik V.",
+      "department": "Electronics & Communication",
+      "company_name": "Deloitte",
+      "role": "Technology Analyst",
+      "difficulty": "Medium",
+      "verdict": "Selected",
+      "overall_experience": "Round 1 was quantitative aptitude and SQL debugging. Round 2 was technical interview with focus on REST APIs, relational databases, and my final year capstone project. Round 3 was partner interview focused on client consulting scenarios.",
+      "questions_asked": [
+        "Difference between inner join, outer join, and cross join with practical examples",
+        "Explain ACID properties and how PostgreSQL ensures isolation",
+        "How would you explain cloud microservices to a non-technical client?"
+      ],
+      "tips_for_juniors": "Prepare your resume projects thoroughly. Be ready to justify why you chose specific libraries or tech stack over alternatives.",
+      "upvotes": 31,
+      "created_at": "2026-09-02T09:00:00Z"
+    },
+    {
+      "id": "e1a10000-0000-0000-0000-000000000004",
+      "student_name": "Pooja B.",
+      "department": "Computer Science & Engineering",
+      "company_name": "TCS",
+      "role": "Digital Cadre SDE",
+      "difficulty": "Medium",
+      "verdict": "Selected",
+      "overall_experience": "NQT Exam had Advanced Coding section with 2 problems (Matrix manipulation and Greedy approach). The interview was conducted on TCS iON platform with 3 panelists (Technical, Managerial, HR) questioning simultaneously.",
+      "questions_asked": [
+        "Write code to reverse linked list in groups of K",
+        "Difference between monolithic and microservices architecture",
+        "Are you willing to relocate across India?"
+      ],
+      "tips_for_juniors": "Score high in NQT Advanced Section to get upgraded to Digital/Prime package interviews instead of standard Ninja track.",
+      "upvotes": 25,
+      "created_at": "2026-09-05T16:45:00Z"
+    },
+    {
+      "id": "e1a10000-0000-0000-0000-000000000005",
+      "student_name": "Siddharth K.",
+      "department": "Information Technology",
+      "company_name": "Infosys",
+      "role": "Specialist Programmer (Power Programmer)",
+      "difficulty": "Hard",
+      "verdict": "In Progress",
+      "overall_experience": "HackWithInfy contest qualified candidates for the SP role. Round 1 coding had 3 tough competitive programming problems. Interview had live whiteboard problem solving on graphs and dynamic programming.",
+      "questions_asked": [
+        "Longest Increasing Subsequence in O(N log N) using binary search",
+        "Bridges in an undirected graph using Tarjan's algorithm"
+      ],
+      "tips_for_juniors": "Focus on standard competitive programming algorithms like Segment Trees and Fenwick Trees to crack the 9.5 LPA SP band.",
+      "upvotes": 19,
+      "created_at": "2026-09-10T11:20:00Z"
+    },
+    {
+      "id": "e1a10000-0000-0000-0000-000000000006",
+      "student_name": "Meera T.",
+      "department": "Computer Science & Engineering",
+      "company_name": "Microsoft",
+      "role": "Software Engineer",
+      "difficulty": "Hard",
+      "verdict": "Rejected",
+      "overall_experience": "Reached Round 3. Round 1 and 2 went exceptionally well with binary tree questions and caching logic. Round 3 focused heavily on OS concurrency and low-level thread synchronization where I struggled with deadlocks.",
+      "questions_asked": [
+        "Serialize and deserialize a binary tree with negative values",
+        "Implement thread-safe Producer-Consumer queue with condition variables",
+        "Explain cache coherence protocols (MESI)"
+      ],
+      "tips_for_juniors": "Do not ignore core computer science fundamentals (OS, Concurrency, DBMS internals). Top-tier product companies test system depth.",
+      "upvotes": 54,
+      "created_at": "2026-09-12T15:00:00Z"
+    }
+  ]
+}
