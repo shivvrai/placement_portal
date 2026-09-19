@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
-from app.schemas.roadmap import RoadmapResponse, RoadmapGenerateRequest, TaskStatusUpdateRequest
+from app.schemas.roadmap import RoadmapResponse, RoadmapGenerateRequest, TaskStatusUpdateRequest, RemedialTaskCreate, RoadmapTaskResponse
 from app.schemas.common import MessageResponse
 from app.services import roadmap_service
 
@@ -54,3 +54,16 @@ async def update_task_status(
 ):
     await roadmap_service.update_task_status(db, task_id=task_id, data=data, student_id=current_user.id)
     return MessageResponse(message=f"Task status updated to '{data.status}'")
+
+
+@router.post("/me/tasks", response_model=RoadmapTaskResponse)
+async def inject_remedial_task(
+    data: RemedialTaskCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Injects a remedial task into the student's active roadmap.
+    If no roadmap exists yet, create a minimal roadmap with this task.
+    """
+    return await roadmap_service.inject_remedial_task(db, current_user.id, data)

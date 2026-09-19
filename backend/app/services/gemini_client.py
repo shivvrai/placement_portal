@@ -65,3 +65,31 @@ async def stream_chat(
         logger.error(f"Gemini API Error: {e}")
         yield f"\n\n**Error:** An issue occurred while contacting the AI: {str(e)}"
 
+
+# ======== TASK 1: Curriculum Proposal ========
+
+def _sync_generate_content(system_prompt: str, prompt: str) -> str:
+    """Synchronous helper for single generation."""
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        logger.warning("google-generativeai is not installed.")
+        raise RuntimeError("google-generativeai is not installed.")
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+    
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=system_prompt,
+    )
+    
+    response = model.generate_content(prompt)
+    return response.text
+
+
+async def generate_curriculum_proposal(system_prompt: str, prompt: str) -> str:
+    """Async wrapper to call Gemini non-streaming for a JSON output."""
+    if not is_gemini_configured():
+        raise Exception("Gemini API key is not configured.")
+        
+    response = await asyncio.to_thread(_sync_generate_content, system_prompt, prompt)
+    return response
