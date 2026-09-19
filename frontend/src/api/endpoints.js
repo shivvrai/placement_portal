@@ -111,6 +111,8 @@ export const intelligenceApi = {
     api.post('/roadmap/me/tasks', payload),
 };
 
+export const roadmapApi = intelligenceApi;
+
 // ─── Placement Drives ─────────────────────────────────────────────
 export const placementApi = {
   getDrives: (params) => mockOr('drives.json', () => api.get('/drives', { params })),
