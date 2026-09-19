@@ -1,0 +1,89 @@
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "name": "Riya Sharma",
+  "roll_number": "R2024CS001",
+  "branch": "B.Tech Computer Science",
+  "department": "Computer Science & Engineering",
+  "graduation_year": 2026,
+  "cgpa": 8.4,
+  "verified_skills": [
+    "Python",
+    "React",
+    "FastAPI",
+    "PostgreSQL",
+    "Docker",
+    "Machine Learning",
+    "Kubernetes",
+    "REST APIs",
+    "Git",
+    "SQL"
+  ],
+  "projects": [
+    {
+      "title": "Real-time Chat App",
+      "description": "A scalable real-time messaging app with WebSocket support, end-to-end typing indicators, and room-based chat channels.",
+      "technologies": [
+        "React",
+        "FastAPI",
+        "PostgreSQL",
+        "Socket.io"
+      ],
+      "github_url": "https://github.com/riya/chat-app",
+      "live_url": "https://chat-demo.vercel.app",
+      "start_date": "2026-08-01",
+      "end_date": null,
+      "is_featured": true
+    },
+    {
+      "title": "ML Price Predictor",
+      "description": "Supervised machine learning pipeline evaluating real-estate pricing trends with regression metrics and feature importance.",
+      "technologies": [
+        "Python",
+        "scikit-learn",
+        "Streamlit"
+      ],
+      "github_url": "https://github.com/riya/price-pred",
+      "live_url": null,
+      "start_date": "2026-08-01",
+      "end_date": "2026-10-01",
+      "is_featured": false
+    }
+  ],
+  "certifications": [
+    {
+      "name": "AWS Solutions Architect \u2013 Associate",
+      "issuing_organization": "Amazon Web Services",
+      "issue_date": "2026-03-15",
+      "expiration_date": "2028-03-15",
+      "credential_id": "AWS-SAA-2026-R4891",
+      "credential_url": "https://aws.amazon.com/verification"
+    },
+    {
+      "name": "Google Data Analytics Professional Certificate",
+      "issuing_organization": "Google",
+      "issue_date": "2026-01-10",
+      "expiration_date": null,
+      "credential_id": "G-DA-2026-0921",
+      "credential_url": "https://coursera.org/verify/professional-cert"
+    }
+  ],
+  "work_experience": [
+    {
+      "company_name": "Razorpay",
+      "role": "Software Engineering Intern",
+      "location": "Bengaluru, IN",
+      "employment_type": "Internship",
+      "start_date": "2026-07-01",
+      "end_date": "2026-09-30",
+      "is_current": false,
+      "description": "Built the merchant dashboard analytics module using React and optimized internal API response times by 35%.",
+      "skills_used": [
+        "React",
+        "TypeScript",
+        "REST APIs"
+      ]
+    }
+  ],
+  "college_name": "University Placement Cell",
+  "last_updated": "2026-09-12T10:00:00Z"
+}

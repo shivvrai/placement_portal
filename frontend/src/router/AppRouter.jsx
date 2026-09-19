@@ -23,6 +23,7 @@ import InterviewExperiences from '../pages/student/InterviewExperiences';
 import Copilot from '../pages/student/Copilot';
 import AssessmentsList from '../pages/student/AssessmentsList';
 import AssessmentTake from '../pages/student/AssessmentTake';
+import PublicPortfolio from '../pages/student/PublicPortfolio';
 
 // TPO portal
 import TPOLayout from '../layouts/TPOLayout';
@@ -69,6 +70,8 @@ export function AppRouter() {
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/portfolio/:studentId" element={<PublicPortfolio />} />
+        <Route path="/student/portfolio/:studentId" element={<PublicPortfolio />} />
 
         {/* Root redirect based on role */}
         <Route

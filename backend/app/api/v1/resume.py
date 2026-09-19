@@ -20,7 +20,11 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.config import get_settings
 from app.models.user import User, Student
+from app.models.skill import Skill, StudentSkill
 from app.nlp.pipeline import process_resume
+from app.nlp.resume_parser import parse_resume
+from app.nlp.skill_extractor import extract_skills_from_sections
+from app.nlp.taxonomy_matcher import match_skills_to_db
 from app.schemas.common import MessageResponse
 
 router = APIRouter(prefix="/resume", tags=["Resume"])
@@ -47,21 +51,45 @@ async def _run_parse_pipeline(
     overwrite: bool = True,
 ):
     """Run in background after file is saved."""
-    from app.core.database import AsyncSessionLocal
-    async with AsyncSessionLocal() as db:
-        content = file_path.read_bytes()
-        result = await process_resume(
-            db=db,
-            student_id=student_id,
-            file_content=content,
-            filename=file_path.name,
-            overwrite_existing=overwrite,
-        )
-        if result.errors:
-            import logging
-            logging.getLogger(__name__).warning(
-                "Resume parse errors for %s: %s", student_id, result.errors
-            )
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        from app.main import app
+        from app.core.database import get_db, AsyncSessionLocal
+
+        if get_db in getattr(app, "dependency_overrides", {}):
+            override_gen = app.dependency_overrides[get_db]()
+            db = await override_gen.__anext__()
+            try:
+                content = file_path.read_bytes()
+                result = await process_resume(
+                    db=db,
+                    student_id=student_id,
+                    file_content=content,
+                    filename=file_path.name,
+                    overwrite_existing=overwrite,
+                )
+                if result.errors:
+                    logger.warning("Resume parse errors for %s: %s", student_id, result.errors)
+            finally:
+                try:
+                    await override_gen.aclose()
+                except Exception:
+                    pass
+        else:
+            async with AsyncSessionLocal() as db:
+                content = file_path.read_bytes()
+                result = await process_resume(
+                    db=db,
+                    student_id=student_id,
+                    file_content=content,
+                    filename=file_path.name,
+                    overwrite_existing=overwrite,
+                )
+                if result.errors:
+                    logger.warning("Resume parse errors for %s: %s", student_id, result.errors)
+    except Exception as exc:
+        logger.warning("Background resume pipeline error for student %s: %s", student_id, exc)
 
 
 @router.post(
@@ -118,11 +146,39 @@ async def upload_resume(
         overwrite=True,
     )
 
+    # Extract preview skills for interactive human review
+    extracted_skills = []
+    try:
+        raw_text = parse_resume(content, file.filename or f"resume{ext}")
+        if raw_text and raw_text.strip():
+            extraction_result = extract_skills_from_sections(raw_text)
+            raw_skills = extraction_result.get("combined", [])
+            if raw_skills:
+                matched = await match_skills_to_db(raw_skills, db)
+                seen_names = set()
+                for raw, skill_obj, conf in matched:
+                    name = skill_obj.name if skill_obj else raw.strip().title()
+                    if not name or name.lower() in seen_names:
+                        continue
+                    seen_names.add(name.lower())
+                    score = round(min(conf / 100.0, 1.0), 2) if conf > 1.0 else round(conf, 2)
+                    if score == 0.0 and skill_obj is None:
+                        score = 0.65
+                    extracted_skills.append({
+                        "name": name,
+                        "confidence": score,
+                        "raw": raw,
+                    })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Error extracting preview skills: %s", e)
+
     return {
-        "message": "Resume uploaded. NLP parsing started in background.",
+        "message": "Resume uploaded. Review and confirm extracted skills.",
         "filename": file.filename,
         "size_bytes": len(content),
         "status": "processing",
+        "extracted_skills": extracted_skills,
     }
 
 
@@ -137,10 +193,33 @@ async def get_resume_status(
     if not student:
         raise HTTPException(status_code=404, detail="Student profile not found")
 
+    # Fetch any extracted resume skills
+    skills_q = await db.execute(
+        select(StudentSkill, Skill)
+        .join(Skill, StudentSkill.skill_id == Skill.id)
+        .where(
+            StudentSkill.student_id == student.id,
+            StudentSkill.source.in_(["resume", "resume_verified"]),
+        )
+    )
+    extracted_skills = []
+    for ss, sk in skills_q.all():
+        raw_text = ss.evidence_text or ""
+        if raw_text.startswith("Extracted from resume: '") and raw_text.endswith("'"):
+            raw_val = raw_text[len("Extracted from resume: '"):-1]
+        else:
+            raw_val = raw_text
+        extracted_skills.append({
+            "name": sk.name,
+            "confidence": ss.confidence if ss.confidence is not None else 0.85,
+            "raw": raw_val,
+        })
+
     return {
         "resume_url": student.resume_url,
         "resume_parsed": student.resume_parsed,
         "consent_resume_analysis": student.consent_resume_analysis,
+        "extracted_skills": extracted_skills,
     }
 
 

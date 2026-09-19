@@ -23,6 +23,7 @@ class StudentSkillResponse(BaseModel):
     confidence: float
     source: str
     proficiency_level: Optional[str] = None
+    is_verified: bool = False
     last_updated: datetime
 
     model_config = {"from_attributes": True}

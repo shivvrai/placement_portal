@@ -44,12 +44,44 @@ import app.models.experiences  # noqa: F401
 settings = get_settings()
 
 
+def _migrate_sqlite_columns(sync_conn):
+    from sqlalchemy import text
+    # projects: is_featured
+    res = sync_conn.execute(text("PRAGMA table_info(projects)")).fetchall()
+    cols = [r[1] for r in res]
+    if "is_featured" not in cols and cols:
+        sync_conn.execute(text("ALTER TABLE projects ADD COLUMN is_featured BOOLEAN DEFAULT 0"))
+
+    # certifications: credential_id
+    res = sync_conn.execute(text("PRAGMA table_info(certifications)")).fetchall()
+    cols = [r[1] for r in res]
+    if "credential_id" not in cols and cols:
+        sync_conn.execute(text("ALTER TABLE certifications ADD COLUMN credential_id VARCHAR(200)"))
+
+    # internships: location, employment_type, is_current
+    res = sync_conn.execute(text("PRAGMA table_info(internships)")).fetchall()
+    cols = [r[1] for r in res]
+    if "location" not in cols and cols:
+        sync_conn.execute(text("ALTER TABLE internships ADD COLUMN location VARCHAR(200)"))
+    if "employment_type" not in cols and cols:
+        sync_conn.execute(text("ALTER TABLE internships ADD COLUMN employment_type VARCHAR(50) DEFAULT 'Internship'"))
+    if "is_current" not in cols and cols:
+        sync_conn.execute(text("ALTER TABLE internships ADD COLUMN is_current BOOLEAN DEFAULT 0"))
+
+    # student_skills: is_verified
+    res = sync_conn.execute(text("PRAGMA table_info(student_skills)")).fetchall()
+    cols = [r[1] for r in res]
+    if "is_verified" not in cols and cols:
+        sync_conn.execute(text("ALTER TABLE student_skills ADD COLUMN is_verified BOOLEAN DEFAULT 0"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan — create tables for SQLite, ensure vector ext for PostgreSQL."""
     if IS_SQLITE:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(_migrate_sqlite_columns)
     else:
         from sqlalchemy import text
         async with engine.begin() as conn:

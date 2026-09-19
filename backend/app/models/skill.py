@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
     String, Integer, Numeric, Text, DateTime, ForeignKey,
-    UniqueConstraint, Index, CheckConstraint,
+    UniqueConstraint, Index, CheckConstraint, Boolean,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
@@ -78,6 +78,7 @@ class StudentSkill(Base):
     source: Mapped[str] = mapped_column(String(30), nullable=False)
     proficiency_level: Mapped[str | None] = mapped_column(String(20))
     evidence_text: Mapped[str | None] = mapped_column(Text)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     last_updated: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     student: Mapped["Student"] = relationship(back_populates="skills")
@@ -86,7 +87,7 @@ class StudentSkill(Base):
     __table_args__ = (
         UniqueConstraint("student_id", "skill_id", "source", name="uq_student_skill_source"),
         CheckConstraint(
-            "source IN ('resume','academic','project','certification','internship','manual','assessment')",
+            "source IN ('resume','academic','project','certification','internship','manual','assessment','resume_verified')",
             name="ck_student_skill_source",
         ),
         CheckConstraint("confidence >= 0 AND confidence <= 1", name="ck_student_skill_confidence"),

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "e5f6a7b8-c9d0-1e2f-3a4b-5c6d7e8f9a0b",
+    "student_id": "00000000-0000-0000-0000-000000000001",
+    "company_name": "Razorpay",
+    "role": "Software Engineering Intern",
+    "location": "Bengaluru, IN",
+    "employment_type": "Internship",
+    "start_date": "2026-07-01",
+    "end_date": "2026-09-30",
+    "is_current": false,
+    "description": "Built the merchant dashboard analytics module using React and FastAPI, decreasing page load latencies by 45%.",
+    "skills_used": ["React", "TypeScript", "REST APIs", "FastAPI"],
+    "created_at": "2026-07-01T09:00:00Z"
+  }
+]

@@ -13,7 +13,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
-from app.core.security import get_current_user, RoleChecker
+from app.core.security import get_current_user, RoleChecker, get_current_student
 from app.models.user import User
 from app.models.placement import PlacementOutcome, Application, PlacementDrive
 from app.models.skill import StudentSkill
@@ -21,6 +21,11 @@ from app.models.academic import AcademicRecord
 from app.schemas.student import (
     StudentProfile, StudentSummary, StudentUpdateRequest,
     ConsentUpdateRequest, AcademicRecordResponse, AddStudentSkillRequest,
+    ProjectCreate, ProjectResponse,
+    CertificationCreate, CertificationResponse,
+    WorkExperienceCreate, WorkExperienceResponse,
+    BulkSkillConfirm,
+    PublicProfileResponse,
 )
 from app.schemas.skill import StudentSkillResponse
 from app.schemas.common import MessageResponse, PaginatedResponse, PaginationMeta
@@ -128,6 +133,138 @@ async def delete_my_skill(
     """Remove a skill from the student's profile."""
     await student_service.delete_student_skill(db, current_user.id, skill_id)
     return MessageResponse(message="Skill removed successfully")
+
+
+# ─── Projects ─────────────────────────────────────────────────────────────────
+
+@router.get("/me/projects", response_model=list[ProjectResponse], summary="Get my projects")
+async def get_my_projects(
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns all projects for the current student, sorted by start_date DESC."""
+    return await student_service.get_student_projects(db, current_user.id)
+
+
+@router.post("/me/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED, summary="Add a project")
+async def add_project(
+    data: ProjectCreate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Creates a new project entry for the current student."""
+    return await student_service.create_student_project(db, current_user.id, data)
+
+
+@router.delete("/me/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a project")
+async def delete_project(
+    project_id: uuid.UUID,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deletes a project. Returns 403 if project doesn't belong to current student."""
+    await student_service.delete_student_project(db, current_user.id, project_id)
+    return None
+
+
+# ─── Certifications ───────────────────────────────────────────────────────────
+
+@router.get("/me/certifications", response_model=list[CertificationResponse], summary="Get my certifications")
+async def get_my_certifications(
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns all certifications for the current student, sorted by issue_date DESC."""
+    return await student_service.get_student_certifications(db, current_user.id)
+
+
+@router.post("/me/certifications", response_model=CertificationResponse, status_code=status.HTTP_201_CREATED, summary="Add a certification")
+async def add_certification(
+    data: CertificationCreate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Creates a new certification entry for the current student."""
+    return await student_service.create_student_certification(db, current_user.id, data)
+
+
+@router.delete("/me/certifications/{cert_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a certification")
+async def delete_certification(
+    cert_id: uuid.UUID,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deletes a certification. Returns 403 if certification doesn't belong to current student."""
+    await student_service.delete_student_certification(db, current_user.id, cert_id)
+    return None
+
+
+# ─── Work Experience ──────────────────────────────────────────────────────────
+
+@router.get("/me/experience", response_model=list[WorkExperienceResponse], summary="Get my work experience")
+async def get_my_experience(
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns all work experience/internships for the current student, sorted by start_date DESC."""
+    return await student_service.get_student_experience(db, current_user.id)
+
+
+@router.post("/me/experience", response_model=WorkExperienceResponse, status_code=status.HTTP_201_CREATED, summary="Add work experience")
+async def add_experience(
+    data: WorkExperienceCreate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Creates a new work experience entry for the current student."""
+    return await student_service.create_student_experience(db, current_user.id, data)
+
+
+@router.delete("/me/experience/{exp_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete work experience")
+async def delete_experience(
+    exp_id: uuid.UUID,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deletes a work experience entry. Returns 403 if work experience doesn't belong to current student."""
+    await student_service.delete_student_experience(db, current_user.id, exp_id)
+    return None
+
+
+# ─── Bulk Skill Confirmation ───────────────────────────────────────────────────
+
+@router.post("/me/skills/bulk", response_model=list[StudentSkillResponse], summary="Bulk confirm skills")
+async def bulk_confirm_skills(
+    data: BulkSkillConfirm,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Creates StudentSkill rows for all confirmed skills.
+    For each skill name: find or create Skill record, then upsert StudentSkill.
+    Sets source='resume_verified' and is_verified=True on each skill.
+    """
+    return await student_service.bulk_confirm_skills(db, current_user.id, data)
+
+
+# ─── Public Recruiter Profile (No Auth Required) ──────────────────────────────
+
+@router.get("/{student_id}/public-profile", response_model=PublicProfileResponse, summary="Get public recruiter portfolio")
+async def get_public_profile(
+    student_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns a safe subset of student data for public recruiter view.
+    MUST NOT include: email, phone, address, academic records, attendance.
+    MUST include: name, branch, department, graduation_year,
+                  verified skills (source='resume_verified' only),
+                  projects, certifications, work_experience,
+                  CGPA (only if student.consent_profile_visible = True).
+    Returns 404 if student does not exist, 403 if student has disabled public profile.
+    """
+    return await student_service.get_public_profile(db, student_id)
+
 
 
 

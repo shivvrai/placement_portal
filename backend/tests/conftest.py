@@ -188,6 +188,7 @@ async def _get_or_create_student_skills(student: Student, skills: list[Skill]) -
                 select(StudentSkill).where(
                     StudentSkill.student_id == student.id,
                     StudentSkill.skill_id == skill.id,
+                    StudentSkill.source == "manual",
                 )
             )
             ss = r.scalar_one_or_none()

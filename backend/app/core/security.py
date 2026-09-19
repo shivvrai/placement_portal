@@ -113,3 +113,6 @@ class RoleChecker:
                 detail=f"Access denied. Required roles: {self.allowed_roles}",
             )
         return current_user
+
+
+get_current_student = RoleChecker(["student"])

@@ -28,9 +28,26 @@ class Project(Base):
     start_date: Mapped[date | None] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date)
     domain: Mapped[str | None] = mapped_column(String(100))
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     student: Mapped["Student"] = relationship(back_populates="projects")
+
+    @property
+    def tech_stack(self) -> list[str]:
+        return self.technologies or []
+
+    @tech_stack.setter
+    def tech_stack(self, val: list[str]):
+        self.technologies = val
+
+    @property
+    def live_url(self) -> str | None:
+        return self.url
+
+    @live_url.setter
+    def live_url(self, val: str | None):
+        self.url = val
 
 
 class Certification(Base):
@@ -40,12 +57,37 @@ class Certification(Base):
     student_id: Mapped[uuid.UUID] = mapped_column(UUIDType, ForeignKey("students.id"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     issuer: Mapped[str | None] = mapped_column(String(200))
+    credential_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
     credential_url: Mapped[str | None] = mapped_column(String(500))
     issue_date: Mapped[date | None] = mapped_column(Date)
     expiry_date: Mapped[date | None] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     student: Mapped["Student"] = relationship(back_populates="certifications")
+
+    @property
+    def name(self) -> str:
+        return self.title
+
+    @name.setter
+    def name(self, val: str):
+        self.title = val
+
+    @property
+    def issuing_organization(self) -> str | None:
+        return self.issuer
+
+    @issuing_organization.setter
+    def issuing_organization(self, val: str | None):
+        self.issuer = val
+
+    @property
+    def expiration_date(self) -> date | None:
+        return self.expiry_date
+
+    @expiration_date.setter
+    def expiration_date(self, val: date | None):
+        self.expiry_date = val
 
 
 class Internship(Base):
@@ -55,6 +97,9 @@ class Internship(Base):
     student_id: Mapped[uuid.UUID] = mapped_column(UUIDType, ForeignKey("students.id"), nullable=False, index=True)
     company_name: Mapped[str] = mapped_column(String(200), nullable=False)
     role: Mapped[str] = mapped_column(String(200), nullable=False)
+    location: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    employment_type: Mapped[str] = mapped_column(String(50), default="Internship")
+    is_current: Mapped[bool] = mapped_column(Boolean, default=False)
     description: Mapped[str | None] = mapped_column(Text)
     technologies = mapped_column(ARRAY(String), nullable=True)
     start_date: Mapped[date | None] = mapped_column(Date)
@@ -63,6 +108,17 @@ class Internship(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     student: Mapped["Student"] = relationship(back_populates="internships")
+
+    @property
+    def skills_used(self) -> list[str]:
+        return self.technologies or []
+
+    @skills_used.setter
+    def skills_used(self, val: list[str]):
+        self.technologies = val
+
+
+WorkExperience = Internship
 
 
 class CareerGoal(Base):

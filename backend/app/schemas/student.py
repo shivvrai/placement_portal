@@ -1,8 +1,8 @@
 """Pydantic schemas — Student domain."""
 
 import uuid
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, date
+from typing import Optional, Literal
 from pydantic import BaseModel, HttpUrl, Field
 
 
@@ -113,4 +113,148 @@ class AcademicRecordResponse(BaseModel):
     status: str
 
     model_config = {"from_attributes": True}
+
+
+# ─── Portfolio: Projects ────────────────────────────────────────────────────────
+
+class ProjectCreate(BaseModel):
+    title: str = Field(..., min_length=3, max_length=200)
+    description: str = Field(..., min_length=10)
+    tech_stack: list[str] = Field(..., min_length=1, max_length=20)  # e.g. ["React", "FastAPI", "PostgreSQL"]
+    github_url: Optional[str] = Field(None, pattern=r"^https://github\.com/.+")
+    live_url: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    is_featured: bool = False
+
+
+class ProjectResponse(BaseModel):
+    id: uuid.UUID
+    student_id: uuid.UUID
+    title: str
+    description: Optional[str] = None
+    tech_stack: list[str] = []
+    github_url: Optional[str] = None
+    live_url: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    is_featured: bool = False
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ─── Portfolio: Certifications ──────────────────────────────────────────────────
+
+class CertificationCreate(BaseModel):
+    name: str = Field(..., min_length=3, max_length=300)
+    issuing_organization: str = Field(..., min_length=2, max_length=200)
+    issue_date: date
+    expiration_date: Optional[date] = None
+    credential_id: Optional[str] = None
+    credential_url: Optional[str] = None  # URL to verify credential
+
+
+class CertificationResponse(BaseModel):
+    id: uuid.UUID
+    student_id: uuid.UUID
+    name: str
+    issuing_organization: str
+    issue_date: date
+    expiration_date: Optional[date] = None
+    credential_id: Optional[str] = None
+    credential_url: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ─── Portfolio: Work Experience ─────────────────────────────────────────────────
+
+class WorkExperienceCreate(BaseModel):
+    company_name: str = Field(..., min_length=2, max_length=200)
+    role: str = Field(..., min_length=2, max_length=200)
+    location: Optional[str] = None
+    employment_type: Literal["Internship", "Full-Time", "Part-Time", "Contract"] = "Internship"
+    start_date: date
+    end_date: Optional[date] = None    # None means currently working
+    is_current: bool = False
+    description: Optional[str] = None  # Bullet points / responsibilities
+    skills_used: Optional[list[str]] = None
+
+
+class WorkExperienceResponse(BaseModel):
+    id: uuid.UUID
+    student_id: uuid.UUID
+    company_name: str
+    role: str
+    location: Optional[str] = None
+    employment_type: str = "Internship"
+    start_date: date
+    end_date: Optional[date] = None
+    is_current: bool = False
+    description: Optional[str] = None
+    skills_used: list[str] = []
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ─── Bulk Skill Confirmation ───────────────────────────────────────────────────
+
+class BulkSkillConfirm(BaseModel):
+    skills: list[str]           # List of confirmed skill names
+    source: str = "resume_verified"
+
+
+# ─── Public Profile (Recruiter Showcase) ───────────────────────────────────────
+
+class PublicProjectResponse(BaseModel):
+    title: str
+    description: Optional[str] = None
+    technologies: list[str] = []
+    github_url: Optional[str] = None
+    live_url: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    is_featured: bool = False
+
+
+class PublicCertificationResponse(BaseModel):
+    name: str
+    issuing_organization: str
+    issue_date: date
+    expiration_date: Optional[date] = None
+    credential_id: Optional[str] = None
+    credential_url: Optional[str] = None
+
+
+class PublicWorkExperienceResponse(BaseModel):
+    company_name: str
+    role: str
+    location: Optional[str] = None
+    employment_type: str = "Internship"
+    start_date: date
+    end_date: Optional[date] = None
+    is_current: bool = False
+    description: Optional[str] = None
+    skills_used: list[str] = []
+
+
+class PublicProfileResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    roll_number: str
+    branch: str
+    department: str
+    graduation_year: int
+    cgpa: Optional[float] = None
+    verified_skills: list[str] = []
+    projects: list[PublicProjectResponse] = []
+    certifications: list[PublicCertificationResponse] = []
+    work_experience: list[PublicWorkExperienceResponse] = []
+    college_name: str = "University Placement Cell"
+    last_updated: Optional[datetime] = None
+
+
 

@@ -12,8 +12,12 @@ from fastapi import HTTPException, status
 from app.models.user import User, Student, Department
 from app.models.academic import AcademicRecord, Subject
 from app.models.skill import StudentSkill, Skill
+from app.models.portfolio import Project, Certification, Internship, WorkExperience
 from app.models.placement import Application, PlacementOutcome
-from app.schemas.student import StudentUpdateRequest, ConsentUpdateRequest, AddStudentSkillRequest
+from app.schemas.student import (
+    StudentUpdateRequest, ConsentUpdateRequest, AddStudentSkillRequest,
+    ProjectCreate, CertificationCreate, WorkExperienceCreate, BulkSkillConfirm,
+)
 
 
 async def get_student_by_user_id(db: AsyncSession, user_id: uuid.UUID) -> Student:
@@ -333,5 +337,355 @@ async def delete_student_skill(
             return True
 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found for this student")
+
+
+# ─── Projects CRUD ─────────────────────────────────────────────────────────────
+
+async def get_student_projects(db: AsyncSession, student_id: uuid.UUID) -> list[Project]:
+    """Returns all projects for a student sorted by start_date DESC."""
+    res = await db.execute(
+        select(Project)
+        .where(Project.student_id == student_id)
+        .order_by(Project.start_date.desc().nullslast(), Project.created_at.desc())
+    )
+    return list(res.scalars().all())
+
+
+async def create_student_project(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    data: ProjectCreate,
+) -> Project:
+    """Create a new project entry for student."""
+    project = Project(
+        student_id=student_id,
+        title=data.title,
+        description=data.description,
+        technologies=data.tech_stack,
+        url=data.live_url,
+        github_url=data.github_url,
+        start_date=data.start_date,
+        end_date=data.end_date,
+        is_featured=data.is_featured,
+    )
+    db.add(project)
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
+async def delete_student_project(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    project_id: uuid.UUID,
+) -> bool:
+    """Delete a student project, returning 404 or 403 if unauthorized."""
+    res = await db.execute(select(Project).where(Project.id == project_id))
+    project = res.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if project.student_id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this project")
+    await db.delete(project)
+    await db.commit()
+    return True
+
+
+# ─── Certifications CRUD ───────────────────────────────────────────────────────
+
+async def get_student_certifications(db: AsyncSession, student_id: uuid.UUID) -> list[Certification]:
+    """Returns all certifications for a student sorted by issue_date DESC."""
+    res = await db.execute(
+        select(Certification)
+        .where(Certification.student_id == student_id)
+        .order_by(Certification.issue_date.desc().nullslast(), Certification.created_at.desc())
+    )
+    return list(res.scalars().all())
+
+
+async def create_student_certification(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    data: CertificationCreate,
+) -> Certification:
+    """Create a new certification entry for student."""
+    cert = Certification(
+        student_id=student_id,
+        title=data.name,
+        issuer=data.issuing_organization,
+        issue_date=data.issue_date,
+        expiry_date=data.expiration_date,
+        credential_id=data.credential_id,
+        credential_url=data.credential_url,
+    )
+    db.add(cert)
+    await db.commit()
+    await db.refresh(cert)
+    return cert
+
+
+async def delete_student_certification(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    cert_id: uuid.UUID,
+) -> bool:
+    """Delete a student certification, returning 404 or 403 if unauthorized."""
+    res = await db.execute(select(Certification).where(Certification.id == cert_id))
+    cert = res.scalar_one_or_none()
+    if not cert:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certification not found")
+    if cert.student_id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this certification")
+    await db.delete(cert)
+    await db.commit()
+    return True
+
+
+# ─── Work Experience CRUD ──────────────────────────────────────────────────────
+
+async def get_student_experience(db: AsyncSession, student_id: uuid.UUID) -> list[Internship]:
+    """Returns all work experience/internship entries for a student sorted by start_date DESC."""
+    res = await db.execute(
+        select(Internship)
+        .where(Internship.student_id == student_id)
+        .order_by(Internship.start_date.desc().nullslast(), Internship.created_at.desc())
+    )
+    return list(res.scalars().all())
+
+
+async def create_student_experience(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    data: WorkExperienceCreate,
+) -> Internship:
+    """Create a new work experience entry for student."""
+    exp = Internship(
+        student_id=student_id,
+        company_name=data.company_name,
+        role=data.role,
+        location=data.location,
+        employment_type=data.employment_type,
+        start_date=data.start_date,
+        end_date=data.end_date,
+        is_current=data.is_current,
+        description=data.description,
+        technologies=data.skills_used or [],
+    )
+    db.add(exp)
+    await db.commit()
+    await db.refresh(exp)
+    return exp
+
+
+async def delete_student_experience(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    exp_id: uuid.UUID,
+) -> bool:
+    """Delete a student work experience entry, returning 404 or 403 if unauthorized."""
+    res = await db.execute(select(Internship).where(Internship.id == exp_id))
+    exp = res.scalar_one_or_none()
+    if not exp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work experience not found")
+    if exp.student_id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this work experience")
+    await db.delete(exp)
+    await db.commit()
+    return True
+
+
+# ─── Bulk Skill Confirmation ───────────────────────────────────────────────────
+
+async def bulk_confirm_skills(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    data: BulkSkillConfirm,
+) -> list[StudentSkill]:
+    """
+    Creates or updates StudentSkill rows for all confirmed skills.
+    Sets source='resume_verified' (or data.source) and is_verified=True on each skill.
+    """
+    import re
+    from datetime import datetime, timezone
+
+    confirmed_skills: list[StudentSkill] = []
+    source = data.source or "resume_verified"
+    now = datetime.now(timezone.utc)
+
+    for skill_name in data.skills:
+        clean_name = skill_name.strip()
+        if not clean_name:
+            continue
+        normalised = re.sub(r"\s+", " ", clean_name.lower())
+
+        # 1. Find or create Skill record
+        res = await db.execute(select(Skill).where(Skill.normalized_name == normalised))
+        skill = res.scalar_one_or_none()
+        if not skill:
+            skill = Skill(
+                name=clean_name.title(),
+                normalized_name=normalised,
+                category="other",
+                created_at=now,
+            )
+            db.add(skill)
+            await db.flush()
+
+        # 2. Check if StudentSkill already exists for this (student, skill, source)
+        res_ss = await db.execute(
+            select(StudentSkill).where(
+                StudentSkill.student_id == student_id,
+                StudentSkill.skill_id == skill.id,
+                StudentSkill.source == source,
+            )
+        )
+        student_skill = res_ss.scalar_one_or_none()
+
+        if student_skill:
+            student_skill.confidence = 0.9
+            student_skill.is_verified = True
+            student_skill.last_updated = now
+        else:
+            student_skill = StudentSkill(
+                student_id=student_id,
+                skill_id=skill.id,
+                confidence=0.9,
+                source=source,
+                is_verified=True,
+                last_updated=now,
+            )
+            db.add(student_skill)
+            await db.flush()
+
+        confirmed_skills.append(student_skill)
+
+    await db.commit()
+
+    # Re-fetch with loaded relationship
+    if confirmed_skills:
+        skill_ids = [s.id for s in confirmed_skills]
+        res = await db.execute(
+            select(StudentSkill)
+            .where(StudentSkill.id.in_(skill_ids))
+            .options(selectinload(StudentSkill.skill))
+        )
+        return list(res.scalars().all())
+    return []
+
+
+async def get_public_profile(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+) -> dict:
+    """
+    Returns a safe subset of student data for public recruiter view.
+    Raises 404 if student does not exist.
+    Raises 403 if student has disabled public profile visibility.
+    """
+    from datetime import date
+    from fastapi import HTTPException, status
+    from app.models.user import Student
+    from app.models.skill import StudentSkill
+    from sqlalchemy.orm import selectinload
+
+    res = await db.execute(
+        select(Student)
+        .where(Student.id == student_id)
+        .options(
+            selectinload(Student.user),
+            selectinload(Student.department),
+            selectinload(Student.projects),
+            selectinload(Student.certifications),
+            selectinload(Student.internships),
+            selectinload(Student.skills).selectinload(StudentSkill.skill),
+        )
+    )
+    student = res.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    if not student.consent_profile_visible:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This student has disabled public profile visibility.",
+        )
+
+    user = student.user
+    name = f"{user.first_name} {user.last_name}".strip() if user else "Student"
+    dept_name = student.department.name if student.department else "Engineering"
+
+    grad_year = (student.admission_year + 4) if student.admission_year else 2026
+
+    # CGPA only if student consents to sharing
+    can_show_cgpa = bool(student.consent_profile_visible)
+    cgpa_val = float(student.cgpa) if (can_show_cgpa and student.cgpa is not None) else None
+
+    # Verified skills (source='resume_verified' or is_verified)
+    seen_skills = set()
+    verified_skills = []
+    for ss in sorted(student.skills, key=lambda s: s.confidence or 0, reverse=True):
+        if ss.source == "resume_verified" or getattr(ss, "is_verified", False):
+            s_name = ss.skill.name if ss.skill else None
+            if s_name and s_name.lower() not in seen_skills:
+                seen_skills.add(s_name.lower())
+                verified_skills.append(s_name)
+
+    # Public projects
+    public_projects = []
+    for p in sorted(student.projects, key=lambda x: (x.is_featured, x.start_date or date.min), reverse=True):
+        public_projects.append({
+            "title": p.title,
+            "description": p.description,
+            "technologies": p.technologies or [],
+            "github_url": p.github_url,
+            "live_url": p.live_url or p.url,
+            "start_date": p.start_date,
+            "end_date": p.end_date,
+            "is_featured": getattr(p, "is_featured", False),
+        })
+
+    # Public certifications
+    public_certs = []
+    for c in sorted(student.certifications, key=lambda x: x.issue_date or date.min, reverse=True):
+        public_certs.append({
+            "name": c.name or c.title,
+            "issuing_organization": c.issuing_organization or c.issuer,
+            "issue_date": c.issue_date,
+            "expiration_date": c.expiration_date or c.expiry_date,
+            "credential_id": getattr(c, "credential_id", None),
+            "credential_url": c.credential_url,
+        })
+
+    # Public work experience
+    public_exp = []
+    for exp in sorted(student.internships, key=lambda x: x.start_date or date.min, reverse=True):
+        public_exp.append({
+            "company_name": exp.company_name,
+            "role": exp.role,
+            "location": getattr(exp, "location", None),
+            "employment_type": getattr(exp, "employment_type", "Internship"),
+            "start_date": exp.start_date,
+            "end_date": exp.end_date,
+            "is_current": getattr(exp, "is_current", False),
+            "description": exp.description,
+            "skills_used": getattr(exp, "skills_used", None) or exp.technologies or [],
+        })
+
+    return {
+        "id": student.id,
+        "name": name,
+        "roll_number": student.roll_number,
+        "branch": dept_name,
+        "department": dept_name,
+        "graduation_year": grad_year,
+        "cgpa": cgpa_val,
+        "verified_skills": verified_skills,
+        "projects": public_projects,
+        "certifications": public_certs,
+        "work_experience": public_exp,
+        "college_name": "University Placement Cell",
+        "last_updated": student.updated_at or student.created_at,
+    }
+
 
 
