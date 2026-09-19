@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { assessmentsApi } from '../../api/endpoints';
+import { assessmentsApi, intelligenceApi } from '../../api/endpoints';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import './Assessments.css';
@@ -15,6 +15,7 @@ export default function AssessmentTake() {
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [remediationInjected, setRemediationInjected] = useState(false);
   
   // Basic integrity: optional timer
   const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes
@@ -64,13 +65,51 @@ export default function AssessmentTake() {
     
     try {
       const res = await assessmentsApi.submit(id, formattedAnswers);
-      setResult(res.data);
+      const submissionResult = res.data;
+      setResult(submissionResult);
+
+      const scoreNormalized = submissionResult.score / 100;
+      const topic = session.topic;
+
+      if (scoreNormalized < 0.70) {
+        const resources = getRemediationResources(topic, submissionResult.weak_subtopics || []);
+        
+        await intelligenceApi.injectRemedialTask({
+            title: `Remedial Practice: ${topic} (Score: ${Math.round(scoreNormalized * 100)}%)`,
+            description: `Your ${topic} assessment revealed gaps in foundational concepts. Complete these targeted resources before your next attempt.`,
+            assessment_topic: topic,
+            assessment_score: scoreNormalized,
+            hours_estimated: scoreNormalized < 0.4 ? 8.0 : 3.0,
+            resources: resources,
+            source: "quiz_remediation",
+        });
+        
+        setRemediationInjected(true);
+      }
     } catch (err) {
       console.error(err);
       alert('Failed to submit assessment');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const getRemediationResources = (topic, weakSubtopics) => {
+    const RESOURCE_MAP = {
+        "Data Structures": [
+            { title: "Stacks & Queues — Visualized", url: "https://visualgo.net/en/list", type: "tool" },
+            { title: "LeetCode DS Practice Set", url: "https://leetcode.com/tag/array/", type: "practice" },
+        ],
+        "Algorithms": [
+            { title: "Sorting Algorithms Animated", url: "https://www.sorting.at/", type: "tool" },
+        ],
+        "Python": [
+            { title: "Python OOP Crash Course", url: "https://realpython.com/python3-object-oriented-programming/", type: "article" },
+        ]
+    };
+    return RESOURCE_MAP[topic] || [
+        { title: `${topic} — Practice Problems`, url: `https://leetcode.com/search/?q=${encodeURIComponent(topic)}`, type: "practice" }
+    ];
   };
 
   const formatTime = (seconds) => {
@@ -90,9 +129,30 @@ export default function AssessmentTake() {
             <div className="final-score">
               <span className="score-number">{Math.round(result.score)}%</span>
             </div>
-            <p>{result.correct} correct out of {result.total_questions}</p>
+            <p>{result.correct} correct out of {result.total_questions || session.questions.length}</p>
           </div>
           
+          {remediationInjected && (
+            <div style={{
+              margin: '20px 0', padding: '16px 20px', borderRadius: 'var(--border-radius)',
+              background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)',
+              display: 'flex', flexDirection: 'column', gap: 10
+            }}>
+              <div style={{ fontWeight: 600, color: 'var(--accent-primary)', fontSize: '1.05rem' }}>
+                🎯 Remediation tasks added to your Career Roadmap
+              </div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                We've created focused practice tasks to help you improve on <strong>{session.topic}</strong>. 
+                Visit your Roadmap to start working through them.
+              </div>
+              <div style={{ alignSelf: 'flex-start', marginTop: 5 }}>
+                <Button variant="secondary" onClick={() => navigate('/student/roadmap')}>
+                  → Go to Roadmap
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="result-breakdown">
             {result.questions.map((q, i) => (
               <div key={q.id} className={`review-question ${q.is_correct ? 'correct' : 'incorrect'}`}>

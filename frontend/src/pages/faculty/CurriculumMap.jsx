@@ -112,7 +112,7 @@ const coverageBg = (pct) =>
   pct >= 75 ? 'rgba(34,197,94,0.1)' : pct >= 55 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)';
 
 // ─── Subject Card ──────────────────────────────────────────────────
-function SubjectCard({ subject, onApplySuggestions, onApplySingleSuggestion, isApplying, isApplyingSingle }) {
+function SubjectCard({ subject, onApplySuggestions, onApplySingleSuggestion, isApplying, isApplyingSingle, onGenerateBoS, generatingBoSId }) {
   const [expanded, setExpanded] = useState(false);
   const coverage = Math.round(subject.coverage ?? subject.coverage_pct ?? 0);
   const demandScore = Math.round(subject.demand_score ?? 70);
@@ -273,6 +273,32 @@ function SubjectCard({ subject, onApplySuggestions, onApplySingleSuggestion, isA
           </div>
         )}
       </div>
+
+      {/* BoS Proposal Generation */}
+      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-3)' }}>
+        {generatingBoSId === subject.id ? (
+          <div style={{
+            padding: 'var(--space-3)',
+            background: 'var(--bg-card-hover)',
+            borderRadius: 'var(--border-radius-sm)',
+            textAlign: 'center',
+            fontSize: 'var(--font-size-xs)',
+            color: 'var(--text-secondary)'
+          }}>
+            🧠 AI is analyzing industry requirements...
+          </div>
+        ) : (
+          <button
+            className="btn btn-secondary"
+            onClick={() => onGenerateBoS(subject)}
+            style={{ width: '100%', fontSize: 'var(--font-size-sm)', height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            disabled={!subject.id}
+            title={!subject.id ? "Only available for saved subjects" : "Generate Board of Studies Modernization Proposal"}
+          >
+            📄 Generate BoS Modernization Proposal
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -287,6 +313,8 @@ export default function CurriculumMap() {
   const [applyingId, setApplyingId] = useState(null);
   const [applyingSingleKey, setApplyingSingleKey] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [generatingBoSId, setGeneratingBoSId] = useState(null);
+  const [bosProposal, setBosProposal] = useState(null);
 
   const deptCode = user?.department_code || user?.department?.code || 'CS';
 
@@ -392,6 +420,120 @@ export default function CurriculumMap() {
     } finally {
       setApplyingId(null);
     }
+  };
+
+  const handleGenerateBoS = async (subject) => {
+    setGeneratingBoSId(subject.id);
+    try {
+      const res = await curriculumApi.generateBoSProposal(subject.id);
+      setBosProposal(res.data);
+    } catch (err) {
+      console.error('Failed to generate BoS proposal', err);
+      setNotification({
+        type: 'error',
+        message: err.response?.data?.detail || 'Failed to generate proposal. Please try again.',
+      });
+    } finally {
+      setGeneratingBoSId(null);
+    }
+  };
+
+  const downloadBoSDocument = () => {
+    if (!bosProposal) return;
+    
+    const printWindow = window.open('', '_blank');
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>BoS Syllabus Modernization Proposal - ${bosProposal.subject_name}</title>
+        <style>
+          body { font-family: 'Times New Roman', Times, serif; line-height: 1.6; color: #000; padding: 40px; margin: 0; }
+          .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px; }
+          .logo-placeholder { width: 80px; height: 80px; border: 1px solid #ccc; background: #f9f9f9; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: #888; border-radius: 50%; margin-bottom: 10px; }
+          h1 { margin: 0 0 5px 0; font-size: 24px; text-transform: uppercase; }
+          h2 { font-size: 16px; margin: 0 0 5px 0; font-weight: normal; }
+          .meta { font-size: 14px; text-align: right; margin-bottom: 30px; font-style: italic; }
+          h3 { font-size: 18px; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 30px; }
+          .highlight { font-weight: bold; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { border: 1px solid #000; padding: 10px; text-align: left; vertical-align: top; }
+          th { background-color: #f2f2f2; }
+          .module-title { font-weight: bold; }
+          .hours { text-align: center; width: 60px; }
+          ol, ul { margin-top: 5px; margin-bottom: 15px; padding-left: 20px; }
+          @media print {
+            body { padding: 0; }
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo-placeholder">[INS LOGO]</div>
+          <h1>Board of Studies (BoS) Proposal</h1>
+          <h2>Syllabus Modernization & Industry Alignment</h2>
+          <h2>Department of ${deptCode}</h2>
+        </div>
+        
+        <div class="meta">
+          Date: ${new Date().toLocaleDateString('en-IN')}<br>
+          Subject: <span class="highlight">${bosProposal.subject_name}</span>
+        </div>
+
+        <h3>1. Revision Rationale</h3>
+        <p>${bosProposal.revision_rationale}</p>
+        <p><span class="highlight">Industry Alignment Score:</span> ${bosProposal.industry_alignment_score}</p>
+
+        <h3>2. Proposed New Modules</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Module Details</th>
+              <th class="hours">Hours</th>
+              <th>Industry Justification</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bosProposal.proposed_modules?.map(m => `
+              <tr>
+                <td>
+                  <div class="module-title">${m.module_title}</div>
+                  <ul>${m.topics?.map(t => `<li>${t}</li>`).join('') || ''}</ul>
+                </td>
+                <td class="hours">${m.hours}</td>
+                <td>${m.justification}</td>
+              </tr>
+            `).join('') || ''}
+          </tbody>
+        </table>
+
+        <h3>3. Recommended Lab Experiments</h3>
+        <ol>
+          ${bosProposal.recommended_lab_experiments?.map(e => `<li>${e}</li>`).join('') || '<li>None</li>'}
+        </ol>
+
+        <h3>4. Obsolete Topics Recommended for Removal</h3>
+        <ul>
+          ${bosProposal.obsolete_topics_to_remove?.map(o => `
+            <li><span class="highlight">${o.topic}</span><br><em>Reason: ${o.reason}</em></li>
+          `).join('') || '<li>None</li>'}
+        </ul>
+
+        <h3>5. References</h3>
+        <ul>
+          ${bosProposal.references?.map(r => `<li>${r}</li>`).join('') || '<li>None</li>'}
+        </ul>
+        
+        <div style="margin-top: 50px;">
+          <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Print / Save as PDF</button>
+        </div>
+      </body>
+      </html>
+    `;
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   // Auto-dismiss notification after 5 seconds
@@ -537,6 +679,8 @@ export default function CurriculumMap() {
                 onApplySingleSuggestion={handleApplySingleSuggestion}
                 isApplying={applyingId === (sub.id || sub.code)}
                 isApplyingSingle={applyingSingleKey}
+                onGenerateBoS={handleGenerateBoS}
+                generatingBoSId={generatingBoSId}
               />
             ))}
           </div>
@@ -549,6 +693,106 @@ export default function CurriculumMap() {
         )}
 
       </div>
+
+      {/* BoS Proposal Modal */}
+      {bosProposal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div className="card" style={{
+            width: '100%', maxWidth: 800, maxHeight: '90vh', overflowY: 'auto',
+            background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottom: '1px solid var(--border-color)', paddingBottom: 15 }}>
+              <div>
+                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>BoS Modernization Proposal </h2>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                  Subject: {bosProposal.subject_name} | Generated by AI on {new Date().toLocaleDateString()}
+                </div>
+              </div>
+              <button 
+                onClick={downloadBoSDocument}
+                className="btn btn-primary"
+                style={{ fontSize: 'var(--font-size-sm)' }}
+              >
+                📥 Download Document
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: 1 }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', marginBottom: 8, color: 'var(--text-primary)' }}>Revision Rationale</h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  {bosProposal.revision_rationale}
+                </p>
+                <div style={{ marginTop: 10, padding: 10, background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: 4, fontSize: '0.85rem', fontWeight: 600 }}>
+                  Industry Alignment Score: {bosProposal.industry_alignment_score}
+                </div>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: '1rem', marginBottom: 12, color: 'var(--text-primary)' }}>Proposed New Modules</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {bosProposal.proposed_modules?.map((m, i) => (
+                    <div key={i} style={{ border: '1px solid var(--border-color)', borderRadius: 6, padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{m.module_title}</span>
+                        <span className="badge badge-secondary">{m.hours} hours</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>Topics:</strong> {m.topics?.join(' · ')}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        Industry Justification: {m.justification}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div>
+                  <h3 style={{ fontSize: '1rem', marginBottom: 8, color: 'var(--text-primary)' }}>Recommended Lab Experiments</h3>
+                  <ul style={{ paddingLeft: 20, fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {bosProposal.recommended_lab_experiments?.map((e, i) => (
+                      <li key={i}>{e}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1rem', marginBottom: 8, color: 'var(--text-primary)' }}>Topics Recommended for Removal</h3>
+                  <ul style={{ paddingLeft: 20, fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {bosProposal.obsolete_topics_to_remove?.map((o, i) => (
+                      <li key={i}>
+                        <div style={{ fontWeight: 500 }}>{o.topic}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{o.reason}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 20, paddingTop: 15, borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button 
+                onClick={() => setBosProposal(null)} 
+                className="btn btn-secondary"
+              >
+                Close
+              </button>
+              <button 
+                onClick={downloadBoSDocument} 
+                className="btn btn-primary"
+              >
+                📥 Download Formal BoS Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -107,6 +107,8 @@ export const intelligenceApi = {
       : api.post('/roadmap/me/generate', { target_role: roleOrId }),
   updateTask: (taskId, status) =>
     api.patch(`/roadmap/tasks/${taskId}`, { status }),
+  injectRemedialTask: (payload) =>
+    api.post('/roadmap/me/tasks', payload),
 };
 
 // ─── Placement Drives ─────────────────────────────────────────────
@@ -184,6 +186,8 @@ export const curriculumApi = {
     const payload = skillName ? { skill_name: skillName } : {};
     return api.post(`/curriculum/subjects/${subjectId}/suggest-mappings`, payload);
   },
+  generateBoSProposal: (subjectId) => 
+    api.post(`/curriculum/subjects/${subjectId}/generate-proposal`),
 };
 
 // ─── AI Career Copilot ────────────────────────────────────────────
@@ -194,6 +198,7 @@ export const copilotApi = {
   sendMessage: (convId, message) =>
     api.post(`/copilot/conversations/${convId}/messages`, { content: message }),
   getHistory: (convId) => api.get(`/copilot/conversations/${convId}`),
+  startMockInterview: (payload) => api.post('/copilot/mock-interview/start', payload),
 };
 
 // ─── Skills Taxonomy ──────────────────────────────────────────────

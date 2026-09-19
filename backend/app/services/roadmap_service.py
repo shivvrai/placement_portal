@@ -13,7 +13,8 @@ from fastapi import HTTPException, status
 
 from app.models.roadmap import Roadmap, RoadmapTask
 from app.models.user import Student
-from app.schemas.roadmap import RoadmapGenerateRequest, TaskStatusUpdateRequest
+from app.schemas.roadmap import RoadmapGenerateRequest, TaskStatusUpdateRequest, RemedialTaskCreate
+import json
 
 
 # ─── Template Roadmaps ─────────────────────────────────────────────────────────
@@ -166,3 +167,49 @@ async def update_task_status(
     await db.commit()
     await db.refresh(task)
     return task
+
+async def inject_remedial_task(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    data: RemedialTaskCreate,
+) -> RoadmapTask:
+    """
+    Injects a remedial task into the student's active roadmap.
+    If no active roadmap exists, it generates a minimal scaffold roadmap.
+    """
+    active_roadmap = await get_student_roadmap(db, student_id)
+    
+    if not active_roadmap:
+        # Create a targeted minimalist roadmap
+        active_roadmap = Roadmap(
+            student_id=student_id,
+            target_role="Placement Preparation",
+            total_weeks=4,
+            status="active",
+            progress_pct=0.0,
+        )
+        db.add(active_roadmap)
+        await db.flush()
+
+    meta = {
+        "source": data.source,
+        "assessment_topic": data.assessment_topic,
+        "assessment_score": data.assessment_score,
+        "resources": data.resources
+    }
+    encoded_meta = f"<!-- REMEDIATION_META:{json.dumps(meta)} -->\n"
+
+    new_task = RoadmapTask(
+        roadmap_id=active_roadmap.id,
+        title=data.title,
+        description=encoded_meta + data.description,
+        week_number=data.phase,
+        order_in_week=0, # Prepended to the beginning of the phase mapping
+        estimated_hours=data.hours_estimated,
+        status="pending"
+    )
+    db.add(new_task)
+    await db.commit()
+    await db.refresh(new_task)
+    
+    return new_task
