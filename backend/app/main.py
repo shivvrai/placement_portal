@@ -25,6 +25,7 @@ from app.api.v1.ums import router as ums_router
 from app.api.v1.curriculum import router as curriculum_router
 from app.api.v1.tpo import router as tpo_router
 from app.api.v1.system import router as system_router
+from app.api.v1.superset_bi import router as bi_router
 
 # Import all models so SQLAlchemy registers them with Base.metadata
 import app.models.user  # noqa: F401
@@ -104,4 +105,5 @@ app.include_router(ums_router, prefix=settings.API_V1_PREFIX)
 app.include_router(curriculum_router, prefix=settings.API_V1_PREFIX)
 app.include_router(tpo_router, prefix=settings.API_V1_PREFIX)
 app.include_router(system_router, prefix=settings.API_V1_PREFIX)
+app.include_router(bi_router, prefix=settings.API_V1_PREFIX)
 

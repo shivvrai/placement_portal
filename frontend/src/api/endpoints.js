@@ -156,6 +156,22 @@ export const analyticsApi = {
     }),
 };
 
+// ─── BI Studio (Superset + Power BI) ──────────────────────────────────────
+export const biApi = {
+  // Superset integration
+  getEmbedToken: (dashboardId) =>
+    api.get('/bi/embed-token', { params: { dashboard_id: dashboardId } }),
+  getDashboards: () => api.get('/bi/dashboards'),
+  getConfig: () => api.get('/bi/config'),
+
+  // Data export
+  exportData: (entity, format = 'csv') =>
+    api.get(`/bi/export/${entity}`, { params: { format }, responseType: 'blob' }),
+
+  // Entity counts
+  getCounts: () => api.get('/bi/counts'),
+};
+
 
 
 // ─── Curriculum ───────────────────────────────────────────────────

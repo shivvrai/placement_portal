@@ -28,6 +28,7 @@ import TPODashboard from '../pages/tpo/Dashboard';
 import TPOStudents from '../pages/tpo/Students';
 import TPODrives from '../pages/tpo/Drives';
 import TPOAnalytics from '../pages/tpo/Analytics';
+import BIStudio from '../pages/tpo/BIStudio';
 
 // Faculty/HOD portal
 import FacultyLayout from '../layouts/FacultyLayout';
@@ -112,6 +113,7 @@ export function AppRouter() {
           <Route path="students" element={<TPOStudents />} />
           <Route path="drives" element={<TPODrives />} />
           <Route path="analytics" element={<TPOAnalytics />} />
+          <Route path="bi-studio" element={<BIStudio />} />
         </Route>
 
         {/* ─── Faculty/HOD Portal ─── */}

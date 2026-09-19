@@ -23,6 +23,7 @@ const TPO_NAV = [
     label: 'Insights',
     items: [
       { path: '/tpo/analytics', icon: '📈', label: 'Analytics' },
+      { path: '/tpo/bi-studio', icon: '📊', label: 'BI Studio' },
     ],
   },
 ];

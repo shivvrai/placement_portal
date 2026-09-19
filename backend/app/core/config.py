@@ -45,6 +45,15 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # BI Integration — Apache Superset
+    SUPERSET_URL: str = "http://localhost:8088"
+    SUPERSET_PUBLIC_URL: str = "http://localhost:8088"
+    SUPERSET_ADMIN_USERNAME: str = "admin"
+    SUPERSET_ADMIN_PASSWORD: str = "admin"
+
+    # BI Integration — Power BI (optional)
+    POWERBI_EMBED_URL: str = ""  # Published Power BI report embed URL
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

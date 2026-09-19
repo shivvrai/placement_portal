@@ -1,0 +1,66 @@
+{
+  "_comment": "CCIP Placement Overview Dashboard — Superset export. Import via: superset import-dashboards -p placement_overview.json",
+  "dashboards": [
+    {
+      "dashboard_title": "CCIP Placement Overview",
+      "description": "Placement analytics powered by CCIP analytics views — YoY trends, department rankings, package distribution, skill gaps.",
+      "slug": "ccip-placement-overview",
+      "position_json": {},
+      "metadata": {
+        "color_scheme": "supersetColors",
+        "refresh_frequency": 300,
+        "timed_refresh_immune_slices": [],
+        "expanded_slices": {},
+        "default_filters": "{}"
+      },
+      "slices": [
+        {
+          "slice_name": "Placement Rate YoY",
+          "viz_type": "echarts_timeseries_line",
+          "description": "Year-over-year placement rate with growth indicators",
+          "query_context": {
+            "datasource": "v_placement_summary",
+            "metrics": ["placement_rate_pct", "avg_ctc_lpa"],
+            "groupby": ["academic_year"],
+            "orderby": [["academic_year", true]]
+          }
+        },
+        {
+          "slice_name": "Department Performance Ranking",
+          "viz_type": "echarts_timeseries_bar",
+          "description": "Department-wise placement rate with ranking overlay",
+          "query_context": {
+            "datasource": "v_dept_performance",
+            "metrics": ["placement_rate_pct", "avg_ctc_lpa"],
+            "groupby": ["department_code"],
+            "orderby": [["placement_rank", true]]
+          }
+        },
+        {
+          "slice_name": "Skill Demand vs Supply",
+          "viz_type": "echarts_timeseries_bar",
+          "description": "Industry demand vs campus supply gap",
+          "query_context": {
+            "datasource": "v_skill_demand_matrix",
+            "metrics": ["demand_pct", "supply_pct", "gap_score"],
+            "groupby": ["skill_name"],
+            "orderby": [["gap_score", false]],
+            "row_limit": 15
+          }
+        },
+        {
+          "slice_name": "At-Risk Students",
+          "viz_type": "table",
+          "description": "Students with high risk scores needing TPO intervention",
+          "query_context": {
+            "datasource": "v_student_risk_score",
+            "columns": ["roll_number", "full_name", "department_code", "cgpa", "avg_skill_confidence", "risk_score", "risk_tier"],
+            "filters": [{"col": "risk_tier", "op": "IN", "val": ["high", "medium"]}],
+            "orderby": [["risk_score", false]],
+            "row_limit": 50
+          }
+        }
+      ]
+    }
+  ]
+}
