@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import BaseModel, Field
 
 
@@ -95,6 +95,14 @@ class ApplicationResponse(BaseModel):
     applied_at: datetime
     updated_at: datetime
     stages: list[InterviewStageResponse] = []
+    # Offer details
+    offer_ctc_lpa: Optional[float] = None
+    offer_fixed_lpa: Optional[float] = None
+    offer_variable_lpa: Optional[float] = None
+    offer_designation: Optional[str] = None
+    offer_joining_date: Optional[date] = None
+    offer_reference_number: Optional[str] = None
+    offer_recorded_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
@@ -107,8 +115,57 @@ class ApplicationStudentRow(BaseModel):
     first_name: str
     last_name: str
     cgpa: Optional[float] = None
+    department: Optional[str] = None
     status: str
     current_stage: Optional[str] = None
+    feedback: Optional[str] = None
     applied_at: datetime
+    offer_ctc_lpa: Optional[float] = None
+    offer_fixed_lpa: Optional[float] = None
+    offer_variable_lpa: Optional[float] = None
+    offer_designation: Optional[str] = None
+    offer_joining_date: Optional[date] = None
+    offer_reference_number: Optional[str] = None
+    offer_recorded_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ApplicationStageUpdate(BaseModel):
+    status: Optional[Literal["applied", "shortlisted", "in_progress", "selected", "rejected", "withdrawn"]] = None
+    current_stage: Optional[str] = None   # "OA", "Technical Interview 1", "Technical Interview 2", "HR", "Final"
+    stage_status: Optional[Literal["scheduled", "passed", "failed"]] = None
+    feedback: Optional[str] = None        # Internal TPO notes (not shown to student)
+    scheduled_at: Optional[datetime] = None  # Interview scheduled datetime
+    meeting_link: Optional[str] = None    # Virtual meeting URL
+    venue: Optional[str] = None           # Physical venue if in-person
+
+
+class OfferCreate(BaseModel):
+    offer_ctc_lpa: float = Field(..., gt=0, le=200, description="Total CTC in Lakhs Per Annum")
+    offer_fixed_lpa: float = Field(..., gt=0)
+    offer_variable_lpa: float = Field(default=0.0, ge=0)
+    offer_designation: str = Field(..., min_length=3, max_length=200)
+    offer_joining_date: Optional[date] = None
+    offer_reference_number: Optional[str] = None
+
+
+# ─── Announcements ─────────────────────────────────────────────────────────────
+
+class AnnouncementCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=300)
+    message: str = Field(..., min_length=1)
+    urgency: Literal["normal", "important", "urgent"] = "normal"
+
+
+class AnnouncementResponse(BaseModel):
+    id: uuid.UUID
+    drive_id: uuid.UUID
+    author_id: uuid.UUID
+    author_name: Optional[str] = None
+    title: str
+    message: str
+    urgency: str
+    created_at: datetime
 
     model_config = {"from_attributes": True}

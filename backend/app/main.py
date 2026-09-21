@@ -40,6 +40,7 @@ import app.models.roadmap  # noqa: F401
 import app.models.system  # noqa: F401
 import app.models.cohort  # noqa: F401
 import app.models.experiences  # noqa: F401
+import app.models.announcements  # noqa: F401
 
 settings = get_settings()
 
@@ -73,6 +74,25 @@ def _migrate_sqlite_columns(sync_conn):
     cols = [r[1] for r in res]
     if "is_verified" not in cols and cols:
         sync_conn.execute(text("ALTER TABLE student_skills ADD COLUMN is_verified BOOLEAN DEFAULT 0"))
+
+    # applications: offer columns
+    res = sync_conn.execute(text("PRAGMA table_info(applications)")).fetchall()
+    cols = [r[1] for r in res]
+    if cols:
+        if "offer_ctc_lpa" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_ctc_lpa NUMERIC(8, 2)"))
+        if "offer_fixed_lpa" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_fixed_lpa NUMERIC(8, 2)"))
+        if "offer_variable_lpa" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_variable_lpa NUMERIC(8, 2)"))
+        if "offer_designation" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_designation VARCHAR(200)"))
+        if "offer_joining_date" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_joining_date DATE"))
+        if "offer_reference_number" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_reference_number VARCHAR(100)"))
+        if "offer_recorded_at" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_recorded_at DATETIME"))
 
 
 @asynccontextmanager

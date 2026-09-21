@@ -200,6 +200,25 @@ function DriveCard({ drive, profile, onApply, applying }) {
   );
 }
 
+// Cache for drive announcements (5-minute TTL)
+const announcementsCache = new Map();
+
+function formatTimeAgo(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  } catch {
+    return '';
+  }
+}
+
 // ─── Application Card ──────────────────────────────────────────────
 function ApplicationCard({ app }) {
   const sc = APP_STATUS_COLORS[app.status] || APP_STATUS_COLORS.applied;
@@ -207,6 +226,42 @@ function ApplicationCard({ app }) {
   const roleTitle = app.drive_title || app.drive?.title || 'Position';
   const appliedDate = app.applied_at ? new Date(app.applied_at).toLocaleDateString('en-IN') : '—';
   const stages = app.stages || [];
+
+  const [announcements, setAnnouncements] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [showAnnouncements, setShowAnnouncements] = useState(true);
+
+  // Fetch announcements with 5-minute cache
+  useEffect(() => {
+    if (!app.drive_id) return;
+    const cached = announcementsCache.get(app.drive_id);
+    if (cached && Date.now() - cached.timestamp < 300000) {
+      setAnnouncements(cached.data);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchAnnouncements = async () => {
+      try {
+        setLoadingAnnouncements(true);
+        const res = await placementApi.getAnnouncements(app.drive_id);
+        const list = Array.isArray(res.data) ? res.data : [];
+        if (isMounted) {
+          setAnnouncements(list);
+          announcementsCache.set(app.drive_id, { data: list, timestamp: Date.now() });
+        }
+      } catch (err) {
+        console.error('Failed to load drive announcements:', err);
+      } finally {
+        if (isMounted) setLoadingAnnouncements(false);
+      }
+    };
+
+    fetchAnnouncements();
+    return () => { isMounted = false; };
+  }, [app.drive_id]);
+
+  const scheduledStage = stages.find(s => s.status === 'scheduled' || s.scheduled_at);
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -225,6 +280,38 @@ function ApplicationCard({ app }) {
           {sc.label}
         </span>
       </div>
+
+      {/* Official Offer Banner (if selected or offer recorded) */}
+      {(app.status === 'selected' || app.offer_ctc_lpa) && (
+        <div style={{
+          padding: '12px 16px',
+          borderRadius: 'var(--border-radius)',
+          background: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(99,102,241,0.12) 100%)',
+          border: '1px solid rgba(34,197,94,0.35)',
+          display: 'flex', flexDirection: 'column', gap: 6,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <div style={{ fontWeight: 700, color: '#22c55e', fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>🎉</span> Official Offer Letter Recorded
+            </div>
+            {app.offer_ctc_lpa && (
+              <span style={{
+                fontWeight: 700, fontSize: 'var(--font-size-base)', color: '#22c55e',
+                background: 'rgba(34,197,94,0.15)', padding: '2px 10px', borderRadius: 999,
+              }}>
+                ₹{app.offer_ctc_lpa} LPA
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+            Role: <strong style={{ color: 'var(--text-primary)' }}>{app.offer_designation || 'Associate Software Engineer'}</strong>
+            {app.offer_fixed_lpa && ` · Fixed: ₹${app.offer_fixed_lpa} LPA`}
+            {app.offer_variable_lpa != null && ` · Variable: ₹${app.offer_variable_lpa} LPA`}
+            {app.offer_joining_date && ` · Joining Date: ${app.offer_joining_date}`}
+            {app.offer_reference_number && ` · Ref: ${app.offer_reference_number}`}
+          </div>
+        </div>
+      )}
 
       {/* Stage pipeline */}
       <div>
@@ -263,6 +350,95 @@ function ApplicationCard({ app }) {
             borderRadius: 999, background: 'var(--bg-tertiary)', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)',
           }}>
             <span>📋</span> Application under initial screening by TPO
+          </div>
+        )}
+      </div>
+
+      {/* Scheduled Interview Details (if active) */}
+      {scheduledStage && scheduledStage.scheduled_at && (
+        <div style={{
+          padding: '8px 14px', borderRadius: 'var(--border-radius-sm)',
+          background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)',
+          fontSize: 'var(--font-size-xs)', display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)', alignItems: 'center',
+        }}>
+          <span>📅 <strong>Interview Scheduled:</strong> {new Date(scheduledStage.scheduled_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+          {scheduledStage.feedback && (
+            <span style={{ color: 'var(--text-secondary)' }}>ℹ️ {scheduledStage.feedback}</span>
+          )}
+        </div>
+      )}
+
+      {/* ─── Drive Announcements Section ─── */}
+      <div style={{ marginTop: 'var(--space-2)', borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-3)' }}>
+        <div
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: 8 }}
+          onClick={() => setShowAnnouncements(prev => !prev)}
+        >
+          <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>📢</span> Announcements ({announcements.length})
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            {showAnnouncements ? 'Hide ▲' : 'Show ▼'}
+          </span>
+        </div>
+
+        {showAnnouncements && (
+          <div>
+            {loadingAnnouncements ? (
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', padding: '6px 0' }}>
+                Checking for announcements...
+              </div>
+            ) : announcements.length === 0 ? (
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', padding: '4px 0' }}>
+                No announcements posted for this drive yet.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {announcements.map(ann => {
+                  const isUrgent = ann.urgency === 'urgent';
+                  const isImportant = ann.urgency === 'important';
+
+                  const borderColor = isUrgent ? '#ef4444' : isImportant ? '#f59e0b' : 'var(--border-color)';
+                  const icon = isUrgent ? '🔴' : isImportant ? '⚠️' : '📢';
+                  const badgeLabel = isUrgent ? '[URGENT]' : isImportant ? '[IMPORTANT]' : '[NOTICE]';
+                  const badgeColor = isUrgent ? '#ef4444' : isImportant ? '#f59e0b' : 'var(--text-muted)';
+
+                  return (
+                    <div
+                      key={ann.id}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 'var(--border-radius-sm)',
+                        background: isUrgent ? 'rgba(239, 68, 68, 0.06)' : isImportant ? 'rgba(245, 158, 11, 0.06)' : 'var(--bg-tertiary)',
+                        borderLeft: `4px solid ${borderColor}`,
+                        borderTop: '1px solid rgba(255,255,255,0.04)',
+                        borderRight: '1px solid rgba(255,255,255,0.04)',
+                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        boxShadow: isUrgent ? '0 0 12px rgba(239, 68, 68, 0.2)' : 'none',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span>{icon}</span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: badgeColor }}>
+                            {badgeLabel}
+                          </span>
+                          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {ann.title}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {formatTimeAgo(ann.created_at)}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                        {ann.message}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

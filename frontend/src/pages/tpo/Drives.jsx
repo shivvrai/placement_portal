@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { placementApi } from '../../api/endpoints';
+import DriveApplicantReviewer from './DriveApplicantReviewer';
 
 const STATUS_CFG = {
   open:        { color: '#22c55e', bg: 'rgba(34,197,94,0.12)', label: 'Open' },
@@ -544,8 +545,135 @@ function ShortlistModal({ drive, onClose }) {
   );
 }
 
+// ─── Post Announcement Modal ───────────────────────────────────────
+function PostAnnouncementModal({ drive, onClose, onPosted }) {
+  const [form, setForm] = useState({
+    title: '',
+    message: '',
+    urgency: 'normal',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const companyName = drive.company?.name || drive.company || drive.title;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim() || !form.message.trim()) {
+      setError('Title and message are required.');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      setError(null);
+      await placementApi.postAnnouncement(drive.id, {
+        title: form.title.trim(),
+        message: form.message.trim(),
+        urgency: form.urgency,
+      });
+      if (onPosted) onPosted();
+      onClose();
+    } catch (err) {
+      console.error('Failed to post announcement:', err);
+      setError(err.response?.data?.detail || 'Failed to post announcement.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(5, 8, 18, 0.75)',
+        backdropFilter: 'blur(6px)',
+        zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 'var(--space-6)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+          borderRadius: 'var(--border-radius-lg)', padding: 'var(--space-8)',
+          width: '100%', maxWidth: 540, boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '1.3rem' }}>📢</span>
+              <h2 style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)', margin: 0 }}>
+                Post Drive Announcement
+              </h2>
+            </div>
+            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', marginTop: 2, margin: 0 }}>
+              Drive: {companyName} — {drive.title}
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.5rem' }}>×</button>
+        </div>
+
+        {error && (
+          <div style={{ padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: 'var(--border-radius-sm)', marginBottom: 'var(--space-3)', fontSize: 'var(--font-size-xs)' }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          <div className="input-group">
+            <label style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>Announcement Title *</label>
+            <input
+              className="input"
+              required
+              placeholder="e.g. PPT Venue Shift / Interview Shortlist Released"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            />
+          </div>
+
+          <div className="input-group">
+            <label style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>Urgency Level</label>
+            <select
+              className="input"
+              value={form.urgency}
+              onChange={e => setForm(f => ({ ...f, urgency: e.target.value }))}
+            >
+              <option value="normal">Normal (Standard broadcast)</option>
+              <option value="important">Important (Yellow alert badge)</option>
+              <option value="urgent">Urgent (Red priority alert banner)</option>
+            </select>
+          </div>
+
+          <div className="input-group">
+            <label style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>Message Details *</label>
+            <textarea
+              className="input"
+              rows={4}
+              required
+              placeholder="Write the clear announcement message for all student applicants..."
+              value={form.message}
+              onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? 'Broadcasting...' : '📢 Broadcast Announcement'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Drive Card ────────────────────────────────────────────────────
-function DriveCard({ drive, onViewShortlist, onEdit }) {
+function DriveCard({ drive, onViewShortlist, onEdit, onReviewApplicants, onAnnouncement }) {
   const companyName = drive.company?.name || drive.company || 'Unknown Company';
   const location = drive.company?.location || drive.location || 'Remote / Multiple';
   const roles = drive.roles_offered?.length > 0 ? drive.roles_offered.join(', ') : drive.title;
@@ -609,27 +737,41 @@ function DriveCard({ drive, onViewShortlist, onEdit }) {
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+        <button
+          className="btn btn-primary"
+          style={{ height: 34, fontSize: 'var(--font-size-xs)' }}
+          onClick={() => onReviewApplicants(drive)}
+        >
+          👥 Review Applicants
+        </button>
         <Link
           to={`/tpo/drives/${drive.id}`}
           className="btn btn-secondary"
           style={{ height: 34, fontSize: 'var(--font-size-xs)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
         >
-          📋 Details & Roster
+          📋 Logistics & Roster
         </Link>
         <button
-          className="btn btn-primary"
+          className="btn btn-secondary"
+          style={{ height: 34, fontSize: 'var(--font-size-xs)' }}
+          onClick={() => onAnnouncement(drive)}
+        >
+          📢 Announce
+        </button>
+        <button
+          className="btn btn-secondary"
           style={{ height: 34, fontSize: 'var(--font-size-xs)' }}
           onClick={() => onViewShortlist(drive)}
         >
-          👥 View Shortlisted {shortlisted > 0 ? `(${shortlisted})` : ''}
+          Shortlist {shortlisted > 0 ? `(${shortlisted})` : ''}
         </button>
         <button
           className="btn btn-secondary"
           style={{ height: 34, fontSize: 'var(--font-size-xs)' }}
           onClick={() => onEdit(drive)}
         >
-          ✏️ Edit Drive
+          ✏️ Edit
         </button>
       </div>
     </div>
@@ -644,6 +786,9 @@ export default function TPODrives() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingDrive, setEditingDrive] = useState(null);
   const [shortlistDrive, setShortlistDrive] = useState(null);
+  const [reviewingDrive, setReviewingDrive] = useState(null);
+  const [announcementDrive, setAnnouncementDrive] = useState(null);
+  const [toastMsg, setToastMsg] = useState(null);
 
   const fetchDrives = useCallback(async () => {
     try {
@@ -676,6 +821,17 @@ export default function TPODrives() {
         <h1>Placement Drives</h1>
         <p>Create, manage, and track candidate progress across institutional placement drives</p>
       </div>
+
+      {toastMsg && (
+        <div style={{
+          padding: '10px 16px', borderRadius: 'var(--border-radius)',
+          background: 'rgba(34,197,94,0.15)', color: '#22c55e',
+          border: '1px solid rgba(34,197,94,0.4)', marginBottom: 'var(--space-4)',
+          fontSize: 'var(--font-size-sm)', fontWeight: 500,
+        }}>
+          ✓ {toastMsg}
+        </div>
+      )}
 
       <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
 
@@ -743,6 +899,8 @@ export default function TPODrives() {
                 drive={d}
                 onViewShortlist={setShortlistDrive}
                 onEdit={setEditingDrive}
+                onReviewApplicants={setReviewingDrive}
+                onAnnouncement={setAnnouncementDrive}
               />
             ))}
           </div>
@@ -769,6 +927,25 @@ export default function TPODrives() {
         <ShortlistModal
           drive={shortlistDrive}
           onClose={() => setShortlistDrive(null)}
+        />
+      )}
+
+      {reviewingDrive && (
+        <DriveApplicantReviewer
+          drive={reviewingDrive}
+          onClose={() => setReviewingDrive(null)}
+          onDriveUpdated={fetchDrives}
+        />
+      )}
+
+      {announcementDrive && (
+        <PostAnnouncementModal
+          drive={announcementDrive}
+          onClose={() => setAnnouncementDrive(null)}
+          onPosted={() => {
+            setToastMsg('Announcement posted! Broadcast notifications delivered to applicants.');
+            setTimeout(() => setToastMsg(null), 4000);
+          }}
         />
       )}
     </div>

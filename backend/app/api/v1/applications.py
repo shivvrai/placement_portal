@@ -55,5 +55,12 @@ async def get_my_applications(
                 )
                 for s in sorted(app.stages, key=lambda s: s.stage_order)
             ],
+            offer_ctc_lpa=float(app.offer_ctc_lpa) if app.offer_ctc_lpa else None,
+            offer_fixed_lpa=float(app.offer_fixed_lpa) if app.offer_fixed_lpa else None,
+            offer_variable_lpa=float(app.offer_variable_lpa) if app.offer_variable_lpa else None,
+            offer_designation=app.offer_designation,
+            offer_joining_date=app.offer_joining_date,
+            offer_reference_number=app.offer_reference_number,
+            offer_recorded_at=app.offer_recorded_at,
         ))
     return result

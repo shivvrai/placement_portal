@@ -13,6 +13,7 @@ from app.models.system import CopilotConversation, AuditLog
 from app.models.assessment import AssessmentQuestionBank, AssessmentSession, AssessmentSessionQuestion
 from app.models.cohort import StudentCohort, Notification
 from app.models.experiences import InterviewExperience
+from app.models.announcements import DriveAnnouncement
 
 __all__ = [
     # Identity & Auth (4)
@@ -25,8 +26,8 @@ __all__ = [
     "Company", "Job", "JobSkill", "IndustrySkillTrend",
     # Student Portfolio (5)
     "Project", "Certification", "Internship", "CareerGoal", "Resume",
-    # Placement (4)
-    "PlacementDrive", "Application", "InterviewStage", "PlacementOutcome",
+    # Placement (5)
+    "PlacementDrive", "Application", "InterviewStage", "PlacementOutcome", "DriveAnnouncement",
     # Learning & Roadmap (4)
     "Resource", "ResourceSkill", "Roadmap", "RoadmapTask",
     # Intelligence & System (2)

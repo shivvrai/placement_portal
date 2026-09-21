@@ -199,6 +199,11 @@ export const placementApi = {
   createDrive: (data) => api.post('/drives', data),
   updateDrive: (id, data) => api.patch(`/drives/${id}`, data),
   shortlistStudents: (driveId) => api.get(`/drives/${driveId}/shortlisted`),
+  getAllApplicants: (driveId) => api.get(`/drives/${driveId}/applicants`),
+  updateApplicationStage: (driveId, appId, data) => api.patch(`/drives/${driveId}/applications/${appId}`, data),
+  recordOffer: (driveId, appId, data) => api.post(`/drives/${driveId}/applications/${appId}/offer`, data),
+  postAnnouncement: (driveId, data) => api.post(`/drives/${driveId}/announcements`, data),
+  getAnnouncements: (driveId) => api.get(`/drives/${driveId}/announcements`),
 };
 
 // ─── Analytics ────────────────────────────────────────────────────
