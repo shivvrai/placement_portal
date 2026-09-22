@@ -14,6 +14,8 @@ const SUGGESTED_PROMPTS = [
   'What Python projects can I add to my resume?',
   'How do I prepare for a Google SWE interview?',
   'Explain my top skill gap and how to fix it',
+  'What drives am I eligible for right now?',
+  'Compare my profile to peer benchmarks',
 ];
 
 // ─── Markdown-lite renderer ─────────────────────────────────────────
@@ -255,6 +257,11 @@ export default function Copilot() {
   const [miDifficulty, setMiDifficulty] = useState('Junior SDE');
   const [miQuestions, setMiQuestions] = useState(4);
 
+  // V3: Suggestions & Context Inspector
+  const [suggestions, setSuggestions] = useState([]);
+  const [contextData, setContextData] = useState(null);
+  const [showContext, setShowContext] = useState(false);
+
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -296,6 +303,27 @@ export default function Copilot() {
 
     loadConversations();
   }, []);
+
+  // ─── V3: Load proactive suggestions ───────────────────────────────
+  useEffect(() => {
+    copilotApi.getSuggestions()
+      .then(res => setSuggestions(res.data || []))
+      .catch(() => {});
+  }, []);
+
+  // ─── V3: Load context inspector ───────────────────────────────────
+  const loadContext = async () => {
+    if (contextData) { setShowContext(!showContext); return; }
+    try {
+      // Use any conversation ID to get context (it's student-level)
+      const convId = activeId || 'any';
+      const res = await copilotApi.getContext(convId);
+      setContextData(res.data);
+      setShowContext(true);
+    } catch {
+      setShowContext(false);
+    }
+  };
 
   // ─── Load conversation history ───────────────────────────────────
   const loadHistory = async (conversationId) => {
@@ -669,8 +697,58 @@ export default function Copilot() {
           >
             🎯 Mock Interview
           </button>
+          <button 
+            onClick={loadContext}
+            style={{ borderRadius: 6, fontSize: '0.8rem', padding: '6px 12px', background: showContext ? 'var(--accent-primary)' : 'transparent', color: showContext ? 'white' : 'var(--text-primary)', marginLeft: 4 }}
+          >
+            🔍 AI Context
+          </button>
         </div>
       </div>
+
+      {/* V3: Proactive Suggestions */}
+      {suggestions.length > 0 && !activeConv?.messages?.length && (
+        <div style={{ display: 'flex', gap: 10, padding: '0 var(--space-4) var(--space-3)', overflowX: 'auto' }}>
+          {suggestions.map((s, i) => (
+            <div key={i} style={{
+              minWidth: 220, padding: '14px 16px', borderRadius: 12,
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+              cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0,
+            }}
+              onClick={() => { if (s.action_link) window.location.href = s.action_link; }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-primary)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+            >
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{s.title}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: 8 }}>{s.message}</div>
+              <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontWeight: 600 }}>{s.action_label} →</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* V3: Context Inspector Panel */}
+      {showContext && contextData && (
+        <div style={{
+          padding: 'var(--space-3) var(--space-4)', background: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-color)', maxHeight: 200, overflowY: 'auto',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
+            🧠 What the AI knows about you ({contextData.token_estimate || 0} tokens)
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {(contextData.context_items || []).map((item, i) => (
+              <div key={i} style={{
+                padding: '4px 10px', borderRadius: 6, background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)', fontSize: 11,
+              }}>
+                <span style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>{item.category}: </span>
+                <span style={{ color: 'var(--text-primary)' }}>{item.data}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{
         display: 'flex',

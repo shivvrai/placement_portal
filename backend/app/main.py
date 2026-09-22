@@ -28,6 +28,7 @@ from app.api.v1.system import router as system_router
 from app.api.v1.superset_bi import router as bi_router
 from app.api.v1.experiences import router as experiences_router
 from app.api.v1.notifications import router as notifications_router
+from app.api.v1.mock_interviews import router as mock_interviews_router
 
 # Import all models so SQLAlchemy registers them with Base.metadata
 import app.models.user  # noqa: F401
@@ -41,6 +42,8 @@ import app.models.system  # noqa: F401
 import app.models.cohort  # noqa: F401
 import app.models.experiences  # noqa: F401
 import app.models.announcements  # noqa: F401
+import app.models.interview_session  # noqa: F401
+import app.models.curriculum_proposal  # noqa: F401
 
 settings = get_settings()
 
@@ -163,4 +166,5 @@ app.include_router(system_router, prefix=settings.API_V1_PREFIX)
 app.include_router(bi_router, prefix=settings.API_V1_PREFIX)
 app.include_router(experiences_router, prefix=settings.API_V1_PREFIX)
 app.include_router(notifications_router, prefix=settings.API_V1_PREFIX)
+app.include_router(mock_interviews_router, prefix=settings.API_V1_PREFIX)
 

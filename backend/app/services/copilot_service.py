@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from fastapi import HTTPException, status
 
 from app.models.system import CopilotConversation
@@ -286,3 +286,184 @@ async def get_conversation(
     if not conv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
     return conv
+
+
+# ─── V3: Context Inspector ───────────────────────────────────────────
+
+async def get_context_summary(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+) -> dict:
+    """Returns a human-readable summary of what context the AI copilot sees."""
+    from app.services.prompt_builder import copilot_context_builder
+    context_str = await copilot_context_builder.build_full_context(db, student_id)
+    lines = context_str.split("\n")
+    items = []
+    for line in lines:
+        if ":" in line:
+            key, _, value = line.partition(":")
+            items.append({"category": key.strip(), "data": value.strip()})
+        elif line.strip():
+            items.append({"category": "Info", "data": line.strip()})
+    return {
+        "context_items": items,
+        "raw_context": context_str,
+        "token_estimate": len(context_str.split()),
+    }
+
+
+# ─── V3: Proactive Suggestions ──────────────────────────────────────
+
+async def generate_suggestions(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+) -> list[dict]:
+    """
+    Generate 3 proactive suggestions based on the student's profile.
+    Uses heuristic rules (no Gemini call) for instant response.
+    """
+    from app.models.user import Student
+    from app.models.skill import StudentSkill
+    from app.models.placement import PlacementDrive, Application
+    from app.models.assessment import AssessmentSession
+    from sqlalchemy.orm import selectinload
+
+    suggestions = []
+
+    # Load student
+    result = await db.execute(
+        select(Student)
+        .where(Student.id == student_id)
+        .options(selectinload(Student.department))
+    )
+    student = result.scalar_one_or_none()
+    if not student:
+        return []
+
+    dept_code = student.department.code if student.department else ""
+
+    # 1. Check for high-match eligible drives without application
+    try:
+        drives_result = await db.execute(
+            select(PlacementDrive)
+            .where(PlacementDrive.status.in_(["upcoming", "open"]))
+            .options(selectinload(PlacementDrive.company))
+            .limit(10)
+        )
+        drives = drives_result.scalars().all()
+
+        apps_result = await db.execute(
+            select(Application.drive_id)
+            .where(Application.student_id == student_id)
+        )
+        applied_drive_ids = {row[0] for row in apps_result.all()}
+
+        for d in drives:
+            if d.id not in applied_drive_ids:
+                eligible = True
+                if d.min_cgpa and student.cgpa and float(student.cgpa) < float(d.min_cgpa):
+                    eligible = False
+                if d.eligible_departments and dept_code.upper() not in [ed.upper() for ed in d.eligible_departments]:
+                    eligible = False
+                if eligible and d.company:
+                    deadline = ""
+                    if d.registration_deadline:
+                        deadline = f" — apply before {d.registration_deadline.strftime('%b %d')}"
+                    suggestions.append({
+                        "title": f"Apply to {d.company.name}",
+                        "message": f"You're eligible for the {d.title} drive{deadline}. Don't miss out!",
+                        "action_label": "View Drive",
+                        "action_link": f"/student/drives/{d.id}",
+                        "priority": "high",
+                    })
+                    if len(suggestions) >= 1:
+                        break
+    except Exception:
+        pass
+
+    # 2. Check for unverified skills that are in-demand
+    try:
+        skill_result = await db.execute(
+            select(StudentSkill)
+            .where(StudentSkill.student_id == student_id, StudentSkill.is_verified == False)
+            .options(selectinload(StudentSkill.skill))
+            .limit(5)
+        )
+        unverified = skill_result.scalars().all()
+        if unverified:
+            skill = unverified[0]
+            suggestions.append({
+                "title": f"Verify your {skill.skill.name} skill",
+                "message": f"Take a quick assessment to get your {skill.skill.name} skill verified — verified badges boost your profile visibility.",
+                "action_label": "Take Assessment",
+                "action_link": "/student/assessments",
+                "priority": "medium",
+            })
+    except Exception:
+        pass
+
+    # 3. Check application count vs peers
+    try:
+        app_count_result = await db.execute(
+            select(func.count(Application.id))
+            .where(Application.student_id == student_id)
+        )
+        my_apps = app_count_result.scalar() or 0
+
+        peer_avg_result = await db.execute(
+            select(func.avg(func.count(Application.id)))
+            .where(Application.student_id.in_(
+                select(Student.id).where(Student.department_id == student.department_id)
+            ))
+            .group_by(Application.student_id)
+        )
+        # Simplified: just check if student has fewer than 3 applications
+        if my_apps < 3:
+            suggestions.append({
+                "title": "Submit more applications",
+                "message": f"You've applied to {my_apps} drive(s). Most successful students apply to 4+ drives — check available opportunities.",
+                "action_label": "Browse Drives",
+                "action_link": "/student/drives",
+                "priority": "medium",
+            })
+    except Exception:
+        # Fallback suggestion
+        suggestions.append({
+            "title": "Complete your profile",
+            "message": "A complete profile with verified skills increases your match score with companies.",
+            "action_label": "Update Profile",
+            "action_link": "/student/profile",
+            "priority": "low",
+        })
+
+    # 4. Check roadmap progress
+    if len(suggestions) < 3:
+        try:
+            from app.models.roadmap import Roadmap
+            roadmap_res = await db.execute(
+                select(Roadmap)
+                .where(Roadmap.student_id == student_id, Roadmap.status == "active")
+                .limit(1)
+            )
+            roadmap = roadmap_res.scalar_one_or_none()
+            if roadmap and float(roadmap.progress_pct) < 50:
+                suggestions.append({
+                    "title": "Continue your learning roadmap",
+                    "message": f"Your {roadmap.target_role} roadmap is {int(roadmap.progress_pct)}% complete. Keep the momentum going!",
+                    "action_label": "View Roadmap",
+                    "action_link": "/student/roadmap",
+                    "priority": "medium",
+                })
+            elif not roadmap:
+                suggestions.append({
+                    "title": "Generate a learning roadmap",
+                    "message": "Get a personalized AI-generated study plan based on your skill gaps and target role.",
+                    "action_label": "Create Roadmap",
+                    "action_link": "/student/roadmap",
+                    "priority": "medium",
+                })
+        except Exception:
+            pass
+
+    return suggestions[:3]
+

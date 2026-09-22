@@ -93,3 +93,15 @@ async def generate_curriculum_proposal(system_prompt: str, prompt: str) -> str:
         
     response = await asyncio.to_thread(_sync_generate_content, system_prompt, prompt)
     return response
+
+
+async def generate_json_content(system_prompt: str, prompt: str) -> str:
+    """
+    Generic async wrapper for Gemini non-streaming JSON generation.
+    Used by mock interview reports, remediation plans, copilot suggestions, etc.
+    """
+    if not is_gemini_configured():
+        raise Exception("Gemini API key is not configured.")
+
+    response = await asyncio.to_thread(_sync_generate_content, system_prompt, prompt)
+    return response

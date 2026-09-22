@@ -271,6 +271,17 @@ export const curriculumApi = {
   },
   generateBoSProposal: (subjectId) => 
     api.post(`/curriculum/subjects/${subjectId}/generate-proposal`),
+  // V2: Department gap analysis & proposals
+  getGapAnalysis: (dept) => api.get(`/curriculum/gap-analysis/${dept}`),
+  createProposal: (data) => api.post('/curriculum/proposals', data),
+  listProposals: () => api.get('/curriculum/proposals'),
+  getProposal: (id) => api.get(`/curriculum/proposals/${id}`),
+  updateProposalStatus: (id, status, comments) =>
+    api.patch(`/curriculum/proposals/${id}/status`, { status, comments }),
+  downloadProposal: (id) =>
+    api.get(`/curriculum/proposals/${id}/download`, { responseType: 'blob' }),
+  submitProposal: (id) => api.post(`/curriculum/proposals/${id}/submit`),
+  getCoverageHeatmap: (dept) => api.get(`/curriculum/coverage-heatmap/${dept}`),
 };
 
 // ─── AI Career Copilot ────────────────────────────────────────────
@@ -282,6 +293,9 @@ export const copilotApi = {
     api.post(`/copilot/conversations/${convId}/messages`, { content: message }),
   getHistory: (convId) => api.get(`/copilot/conversations/${convId}`),
   startMockInterview: (payload) => api.post('/copilot/mock-interview/start', payload),
+  // V3: Context-aware features
+  getContext: (convId) => api.get(`/copilot/conversations/${convId}/context`),
+  getSuggestions: () => api.get('/copilot/suggestions'),
 };
 
 // ─── Skills Taxonomy ──────────────────────────────────────────────
@@ -312,6 +326,27 @@ export const assessmentsApi = {
   start: (topic, difficulty) => api.post('/assessments/start', { topic, difficulty }),
   submit: (sessionId, answers) => api.post(`/assessments/${sessionId}/submit`, { answers }),
   getHistory: () => api.get('/assessments/history'),
+  // V2: Quiz center features
+  startQuickQuiz: (topic, difficulty) => api.post('/assessments/quiz/quick', { topic, difficulty }),
+  getRecommended: () => api.get('/assessments/quiz/recommended'),
+  generateRemediation: (sessionId) => api.post(`/assessments/quiz/${sessionId}/remediate`),
+  getTrends: () => api.get('/assessments/performance/trends'),
+};
+
+// ─── Mock Interview V2 ───────────────────────────────────────────
+export const mockInterviewApi = {
+  start: (roleTarget, companyStyle = 'Product', difficulty = 'campus') =>
+    api.post('/mock-interviews/start', {
+      role_target: roleTarget,
+      company_style: companyStyle,
+      difficulty: difficulty,
+    }),
+  sendMessage: (sessionId, content) =>
+    api.post(`/mock-interviews/${sessionId}/message`, { content }),
+  getSession: (sessionId) => api.get(`/mock-interviews/${sessionId}`),
+  getReport: (sessionId) => api.get(`/mock-interviews/${sessionId}/report`),
+  getMyHistory: (limit = 20) => api.get('/mock-interviews/my', { params: { limit } }),
+  getMyStats: () => api.get('/mock-interviews/my/stats'),
 };
 
 // ─── System & Audit ───────────────────────────────────────────────

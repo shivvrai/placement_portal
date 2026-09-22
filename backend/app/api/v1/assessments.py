@@ -128,3 +128,84 @@ async def get_assessment_history(
         }
         for session in sessions
     ]
+
+
+# ─── V2: Quick Quiz ──────────────────────────────────────────────────
+
+@router.post("/quiz/quick", response_model=AssessmentSessionResponse)
+async def start_quick_quiz(
+    request: AssessmentStartRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Start a quick 5-question quiz on a specific topic."""
+    # Reuse existing create_assessment_session which already selects random questions
+    session = await create_assessment_session(
+        db=db,
+        student_id=current_user.id,
+        topic=request.topic,
+        difficulty=request.difficulty
+    )
+
+    # Limit to 5 questions for quick quiz
+    questions_response = [
+        {
+            "id": sq.question.id,
+            "question_text": sq.question.question_text,
+            "options": sq.question.options
+        }
+        for sq in session.session_questions[:5]
+    ]
+
+    return {
+        "id": session.id,
+        "topic": session.topic,
+        "difficulty": session.difficulty,
+        "status": session.status,
+        "started_at": session.started_at,
+        "questions": questions_response
+    }
+
+
+# ─── V2: Recommended Quizzes ────────────────────────────────────────
+
+@router.get("/quiz/recommended")
+async def get_recommended_quizzes(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """AI-recommended quiz topics based on skill gaps and active drive requirements."""
+    from app.services.assessment_engine import get_recommended_quizzes as _get_recommended
+    return await _get_recommended(db, current_user.id)
+
+
+# ─── V2: Remediation Plan ───────────────────────────────────────────
+
+@router.post("/quiz/{session_id}/remediate")
+async def generate_remediation(
+    session_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """After failing a quiz (<60%), generate targeted remediation roadmap tasks."""
+    from app.services.assessment_engine import generate_remediation_plan
+    tasks = await generate_remediation_plan(db, session_id, current_user.id)
+    if not tasks:
+        return {"message": "No remediation needed — score is 60% or above.", "tasks": []}
+    return {
+        "message": f"Generated {len(tasks)} remediation tasks added to your roadmap.",
+        "tasks": tasks,
+    }
+
+
+# ─── V2: Performance Trends ─────────────────────────────────────────
+
+@router.get("/performance/trends")
+async def get_trends(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Score trends per topic over time."""
+    from app.services.assessment_engine import get_performance_trends
+    return await get_performance_trends(db, current_user.id)
+

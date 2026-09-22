@@ -14,6 +14,8 @@ from app.models.assessment import AssessmentQuestionBank, AssessmentSession, Ass
 from app.models.cohort import StudentCohort, Notification
 from app.models.experiences import InterviewExperience
 from app.models.announcements import DriveAnnouncement
+from app.models.interview_session import MockInterviewSession
+from app.models.curriculum_proposal import CurriculumProposal
 
 __all__ = [
     # Identity & Auth (4)
@@ -35,6 +37,9 @@ __all__ = [
     "AssessmentQuestionBank", "AssessmentSession", "AssessmentSessionQuestion",
     "StudentCohort", "Notification",
     "InterviewExperience",
+    # Sprint 3 — AI Learning Infrastructure
+    "MockInterviewSession",
+    "CurriculumProposal",
 ]
-# Total: 36 tables
+# Total: 38 tables
 

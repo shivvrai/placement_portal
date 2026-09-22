@@ -24,6 +24,9 @@ import Copilot from '../pages/student/Copilot';
 import AssessmentsList from '../pages/student/AssessmentsList';
 import AssessmentTake from '../pages/student/AssessmentTake';
 import PublicPortfolio from '../pages/student/PublicPortfolio';
+import MockInterview from '../pages/student/MockInterview';
+import MockInterviewHistory from '../pages/student/MockInterviewHistory';
+import QuizCenter from '../pages/student/QuizCenter';
 
 // TPO portal
 import TPOLayout from '../layouts/TPOLayout';
@@ -37,6 +40,7 @@ import BIStudio from '../pages/tpo/BIStudio';
 import FacultyLayout from '../layouts/FacultyLayout';
 import FacultyDashboard from '../pages/faculty/Dashboard';
 import CurriculumMap from '../pages/faculty/CurriculumMap';
+import ProposalManager from '../pages/faculty/ProposalManager';
 
 // Shared
 import NotFound from '../pages/NotFound';
@@ -104,6 +108,9 @@ export function AppRouter() {
           <Route path="copilot" element={<Copilot />} />
           <Route path="assessments" element={<AssessmentsList />} />
           <Route path="assessments/:id/take" element={<AssessmentTake />} />
+          <Route path="mock-interview" element={<MockInterview />} />
+          <Route path="mock-interview/history" element={<MockInterviewHistory />} />
+          <Route path="quiz" element={<QuizCenter />} />
         </Route>
 
         {/* ─── TPO Portal ─── */}
@@ -136,6 +143,7 @@ export function AppRouter() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<FacultyDashboard />} />
           <Route path="curriculum" element={<CurriculumMap />} />
+          <Route path="proposals" element={<ProposalManager />} />
           <Route path="students" element={<TPOStudents />} />
         </Route>
 

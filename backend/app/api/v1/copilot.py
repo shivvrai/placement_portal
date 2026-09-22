@@ -127,3 +127,31 @@ async def respond_mock_interview(
     """
     generator = copilot_service.respond_mock_interview_stream(db, conversation_id, current_user.id, data)
     return StreamingResponse(generator, media_type="text/plain")
+
+
+# ─── V3: Context Inspector ──────────────────────────────────────────
+
+@router.get("/conversations/{conversation_id}/context")
+async def get_conversation_context(
+    conversation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Debug view: shows what context is currently injected into the copilot
+    for this student. Useful for students to understand what the AI knows.
+    """
+    return await copilot_service.get_context_summary(db, current_user.id)
+
+
+@router.get("/suggestions")
+async def get_suggestions(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns 3 proactive suggestions based on student's profile.
+    Used by the Copilot UI to show action cards.
+    """
+    return await copilot_service.generate_suggestions(db, current_user.id)
+
