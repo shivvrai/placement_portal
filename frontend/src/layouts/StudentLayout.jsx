@@ -4,6 +4,7 @@
 
 import { Outlet } from 'react-router-dom';
 import AppSidebar from '../components/AppSidebar';
+import NotificationBell from '../components/NotificationBell';
 
 const STUDENT_NAV = [
   {
@@ -36,6 +37,11 @@ export default function StudentLayout() {
     <div className="layout">
       <AppSidebar logo="CCIP" subtitle="Student Portal" navItems={STUDENT_NAV} />
       <main className="main-content">
+        <header style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '16px 24px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <NotificationBell />
+          </div>
+        </header>
         <Outlet />
       </main>
     </div>

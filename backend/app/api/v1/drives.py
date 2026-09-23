@@ -19,6 +19,9 @@ from app.schemas.drive import (
 )
 from app.schemas.common import MessageResponse, PaginatedResponse, PaginationMeta
 from app.services import drive_service
+from app.services.notification_service import NotificationService
+from app.core.config import get_settings
+import redis.asyncio as aioredis
 
 router = APIRouter(prefix="/drives", tags=["Placement Drives"])
 
@@ -98,6 +101,13 @@ async def create_drive(
         details={"company": data.company_name, "title": data.title},
         ip_address=request.client.host if request.client else None,
     )
+    
+    # Notify eligible students securely using the imported service without interfering with transaction
+    redis_client = aioredis.from_url(get_settings().REDIS_URL, decode_responses=True)
+    ns = NotificationService(db, redis_client)
+    await ns.notify_eligible_students_new_drive(drive, db)
+    await redis_client.aclose()
+    
     return _drive_to_response(drive)
 
 
@@ -209,4 +219,24 @@ async def update_application_status(
     )
     await db.commit()
     await db.refresh(app)
+    
+    # Trigger notifications based on new status
+    if old_status != new_status:
+        redis_client = aioredis.from_url(get_settings().REDIS_URL, decode_responses=True)
+        ns = NotificationService(db, redis_client)
+        
+        # We need drive details which might not be loaded if joined
+        drive = await drive_service.get_drive(db, drive_id)
+        company_name = drive.company.name if drive.company else "a company"
+        
+        if new_status == "shortlisted":
+            await ns.publish(app.student.id, "APPLICATION_STATUS", f"🎉 Shortlisted for {company_name}", f"You have been shortlisted! Check your application for details.")
+        elif new_status == "selected":
+            ctc = data.get('offer_ctc_lpa', drive.salary_ctc)
+            await ns.publish(app.student.id, "OFFER_RECEIVED", f"🏆 Offer: ₹{ctc}L from {company_name}", f"Congratulations! You've been selected.", priority="high")
+        elif new_status == "rejected":
+            await ns.publish(app.student.id, "APPLICATION_STATUS", f"Application update from {company_name}", f"Your application was not moved forward.")
+        
+        await redis_client.aclose()
+        
     return {"message": "Application updated successfully", "status": app.status}

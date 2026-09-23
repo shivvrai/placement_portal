@@ -11,12 +11,20 @@ import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 
 // Student portal
+// Admin Pages
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import UserManagement from '../pages/admin/UserManagement';
+import SystemSettings from '../pages/admin/SystemSettings';
+
+import PublicLayout from '../layouts/PublicLayout';
+import DashboardLayout from '../layouts/DashboardLayout';
 import StudentLayout from '../layouts/StudentLayout';
 import StudentDashboard from '../pages/student/Dashboard';
 import StudentProfile from '../pages/student/Profile';
 import JobMatches from '../pages/student/JobMatches';
 import SkillGap from '../pages/student/SkillGap';
-import Roadmap from '../pages/student/Roadmap';
+import CareerRoadmap from '../pages/student/CareerRoadmap';
+import Notifications from '../pages/student/Notifications';
 import PlacementDrives from '../pages/student/PlacementDrives';
 import Copilot from '../pages/student/Copilot';
 import AssessmentsList from '../pages/student/AssessmentsList';
@@ -63,6 +71,21 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="settings" element={<SystemSettings />} />
+        </Route>
+
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -91,7 +114,8 @@ export function AppRouter() {
           <Route path="profile" element={<StudentProfile />} />
           <Route path="matches" element={<JobMatches />} />
           <Route path="skill-gap" element={<SkillGap />} />
-          <Route path="roadmap" element={<Roadmap />} />
+          <Route path="career-roadmap" element={<CareerRoadmap />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="drives" element={<PlacementDrives />} />
           <Route path="copilot" element={<Copilot />} />
           <Route path="assessments" element={<AssessmentsList />} />
