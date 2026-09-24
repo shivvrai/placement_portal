@@ -43,6 +43,7 @@ from app.api.v1.notifications import router as notifications_router
 from app.api.v1.mock_interviews import router as mock_interviews_router
 from app.api.v1.admin import router as admin_router
 from app.api.v1.websocket import router as ws_router
+from app.api.v1.questions import router as questions_router
 
 # Import all models so SQLAlchemy registers them with Base.metadata
 import app.models.user  # noqa: F401
@@ -226,6 +227,7 @@ app.include_router(experiences_router, prefix=settings.API_V1_PREFIX)
 app.include_router(notifications_router, prefix=settings.API_V1_PREFIX)
 app.include_router(mock_interviews_router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_router, prefix=settings.API_V1_PREFIX)
+app.include_router(questions_router, prefix=settings.API_V1_PREFIX)
 
 # WebSocket Router (Root level)
 app.include_router(ws_router)

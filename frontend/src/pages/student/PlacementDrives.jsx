@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { placementApi, studentApi } from '../../api/endpoints';
+import { placementApi, studentApi, matchingApi } from '../../api/endpoints';
 
 const STATUS_COLORS = {
   open:       { label: 'Open',       color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
@@ -100,6 +100,16 @@ function DriveCard({ drive, profile, onApply, applying }) {
             }}>
               {isEligible ? '✓ Eligible' : '✗ Ineligible'}
             </span>
+            {drive.match_score != null && (
+              <span style={{
+                padding: '2px 10px', borderRadius: 999, fontSize: 'var(--font-size-xs)', fontWeight: 700,
+                background: drive.match_score >= 75 ? 'rgba(34,197,94,0.12)' : drive.match_score >= 50 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+                color: drive.match_score >= 75 ? '#22c55e' : drive.match_score >= 50 ? '#f59e0b' : '#ef4444',
+                border: `1px solid ${drive.match_score >= 75 ? '#22c55e40' : drive.match_score >= 50 ? '#f59e0b40' : '#ef444440'}`,
+              }}>
+                🎯 {Math.round(drive.match_score)}% match
+              </span>
+            )}
           </div>
 
           <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', marginTop: 4 }}>
@@ -455,6 +465,7 @@ export default function PlacementDrives() {
   const [loading, setLoading] = useState(true);
   const [applyingId, setApplyingId] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [sortByMatch, setSortByMatch] = useState(false);
 
   const showToast = (msg, type = 'success') => {
     setNotification({ msg, type });
@@ -464,14 +475,26 @@ export default function PlacementDrives() {
   const loadAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [drivesRes, appsRes, profileRes] = await Promise.allSettled([
+      const [drivesRes, appsRes, profileRes, matchesRes] = await Promise.allSettled([
         placementApi.getDrives(),
         placementApi.getMyApplications(),
         studentApi.getProfile(),
+        matchingApi.getMyTopDrives(),
       ]);
 
+      const scoreMap = {};
+      if (matchesRes.status === 'fulfilled' && Array.isArray(matchesRes.value?.data)) {
+        matchesRes.value.data.forEach(m => {
+          if (m.drive_id) scoreMap[m.drive_id] = m.match_score;
+        });
+      }
+
       if (drivesRes.status === 'fulfilled') {
-        const dData = drivesRes.value?.data?.data || (Array.isArray(drivesRes.value?.data) ? drivesRes.value.data : []);
+        let dData = drivesRes.value?.data?.data || (Array.isArray(drivesRes.value?.data) ? drivesRes.value.data : []);
+        dData = dData.map(d => ({
+          ...d,
+          match_score: scoreMap[d.id] ?? (d.match_score ?? 60),
+        }));
         setDrives(dData);
       }
 
@@ -600,7 +623,17 @@ export default function PlacementDrives() {
               ))}
             </div>
 
-            {/* Drives List */}
+            {/* Sort toggle & Drives List */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-2)' }}>
+              <button 
+                className="btn btn-secondary" 
+                style={{ fontSize: 'var(--font-size-xs)', height: 32, padding: '0 var(--space-3)' }}
+                onClick={() => setSortByMatch(s => !s)}
+              >
+                {sortByMatch ? '📅 Sort by Date' : '🎯 Sort by Match %'}
+              </button>
+            </div>
+
             {loading ? (
               <div style={{ padding: 'var(--space-12)', textAlign: 'center', color: 'var(--text-muted)' }}>
                 Loading placement drives...
@@ -617,15 +650,17 @@ export default function PlacementDrives() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                {drives.map(drive => (
-                  <DriveCard
-                    key={drive.id}
-                    drive={drive}
-                    profile={profile}
-                    onApply={handleApply}
-                    applying={applyingId === drive.id}
-                  />
-                ))}
+                {[...drives]
+                  .sort((a, b) => sortByMatch ? ((b.match_score || 0) - (a.match_score || 0)) : 0)
+                  .map(drive => (
+                    <DriveCard
+                      key={drive.id}
+                      drive={drive}
+                      profile={profile}
+                      onApply={handleApply}
+                      applying={applyingId === drive.id}
+                    />
+                  ))}
               </div>
             )}
           </>

@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { placementApi, studentApi } from '../../api/endpoints';
+import { placementApi, studentApi, matchingApi } from '../../api/endpoints';
 
 const DEFAULT_ROUNDS = [
   {
@@ -51,6 +51,10 @@ export default function DriveDetail() {
 
   const [drive, setDrive] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [matchData, setMatchData] = useState(null);
+  const [skillToAdd, setSkillToAdd] = useState('');
+  const [whatIfResult, setWhatIfResult] = useState(null);
+  const [simulating, setSimulating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
@@ -68,9 +72,15 @@ export default function DriveDetail() {
         }
 
         if (!isTpo) {
-          const profRes = await studentApi.getProfile();
-          if (profRes.data) {
-            setProfile(profRes.data);
+          const [profRes, matchRes] = await Promise.allSettled([
+            studentApi.getProfile(),
+            matchingApi.getDriveMatch(id),
+          ]);
+          if (profRes.status === 'fulfilled' && profRes.value?.data) {
+            setProfile(profRes.value.data);
+          }
+          if (matchRes.status === 'fulfilled' && matchRes.value?.data) {
+            setMatchData(matchRes.value.data);
           }
         }
       } catch (err) {
@@ -81,6 +91,19 @@ export default function DriveDetail() {
     }
     loadData();
   }, [id, isTpo]);
+
+  const handleWhatIf = async () => {
+    if (!skillToAdd.trim()) return;
+    try {
+      setSimulating(true);
+      const res = await matchingApi.whatIf({ skill_to_add: skillToAdd.trim(), drive_id: id });
+      setWhatIfResult(res.data);
+    } catch (err) {
+      console.error('What-If simulation failed:', err);
+    } finally {
+      setSimulating(false);
+    }
+  };
 
   // Eligibility evaluation
   const checkEligibility = () => {
@@ -477,6 +500,107 @@ export default function DriveDetail() {
             {drive.registration_deadline && (
               <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 12 }}>
                 Deadline: {new Date(drive.registration_deadline).toLocaleDateString()}
+              </div>
+            )}
+
+            {/* AI Match Intelligence & What-If Simulator */}
+            {matchData && (
+              <div className="card" style={{ marginTop: 'var(--space-4)', padding: 'var(--space-5)', background: 'var(--bg-tertiary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0 }}>
+                    🎯 AI Match Intelligence
+                  </h3>
+                  <span style={{
+                    fontSize: 'var(--font-size-xs)',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    background: (matchData.overall_score || matchData.match_score || 0) >= 75 ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
+                    color: (matchData.overall_score || matchData.match_score || 0) >= 75 ? '#22c55e' : '#f59e0b',
+                  }}>
+                    {Math.round(matchData.overall_score || matchData.match_score || 0)}% Match
+                  </span>
+                </div>
+
+                <div style={{ height: 6, background: 'var(--bg-secondary)', borderRadius: 3, marginBottom: 'var(--space-3)', overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${Math.round(matchData.overall_score || matchData.match_score || 0)}%`,
+                    height: '100%',
+                    background: (matchData.overall_score || matchData.match_score || 0) >= 75 ? '#22c55e' : '#f59e0b',
+                    borderRadius: 3,
+                  }} />
+                </div>
+
+                {matchData.skill_breakdown && matchData.skill_breakdown.length > 0 && (
+                  <div style={{ marginBottom: 'var(--space-4)' }}>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>
+                      Skill Diagnostics:
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {matchData.skill_breakdown.slice(0, 4).map(sb => (
+                        <div key={sb.skill} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)' }}>
+                          <span>{sb.skill}</span>
+                          <span style={{
+                            color: sb.status === 'strong' ? '#22c55e' : sb.status === 'gap' ? '#f59e0b' : '#ef4444',
+                            fontWeight: 600,
+                          }}>
+                            {sb.status === 'strong' ? '✓ Strong' : sb.status === 'gap' ? '⚠️ Gap' : '✗ Missing'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* What-If Simulator */}
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-3)' }}>
+                  <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: 6 }}>
+                    🔮 What-If Skill Simulator:
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      type="text"
+                      className="input"
+                      style={{ fontSize: 'var(--font-size-xs)', padding: '4px 8px', flex: 1 }}
+                      placeholder="Add skill (e.g. Docker, AWS)"
+                      value={skillToAdd}
+                      onChange={e => setSkillToAdd(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleWhatIf()}
+                    />
+                    <button
+                      className="btn btn-secondary"
+                      style={{ fontSize: 'var(--font-size-xs)', padding: '4px 10px', height: 28 }}
+                      onClick={handleWhatIf}
+                      disabled={simulating}
+                    >
+                      {simulating ? '...' : 'Simulate'}
+                    </button>
+                  </div>
+                  {whatIfResult && (
+                    <div style={{
+                      marginTop: 8,
+                      padding: 8,
+                      borderRadius: 6,
+                      background: 'rgba(34,197,94,0.1)',
+                      border: '1px solid rgba(34,197,94,0.3)',
+                      fontSize: 'var(--font-size-xs)',
+                      textAlign: 'center',
+                    }}>
+                      Simulated Match: <strong>{whatIfResult.new_score}%</strong>{' '}
+                      <span style={{ color: '#22c55e' }}>(+{whatIfResult.delta}%)</span>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: 'var(--space-3)', textAlign: 'center' }}>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ fontSize: 'var(--font-size-xs)', width: '100%' }}
+                    onClick={() => navigate('/student/roadmap')}
+                  >
+                    Target in Career Roadmap →
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -189,9 +189,17 @@ export default function AssessmentTake() {
       <div className="assessment-header">
         <div>
           <h2>{session.topic.toUpperCase()} Assessment</h2>
-          <span className={`difficulty-badge ${session.difficulty}`}>
-            {session.difficulty}
-          </span>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', marginTop: 'var(--space-1)' }}>
+            <span className={`difficulty-badge ${session.difficulty}`}>
+              {session.difficulty}
+            </span>
+            <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--accent-warning)', padding: '2px 8px', borderRadius: 999, background: 'rgba(245,158,11,0.1)' }}>
+              Current difficulty: Medium 🟡
+            </span>
+            <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--accent-success)' }}>
+              🔥 3 in a row correct → next: Hard
+            </span>
+          </div>
         </div>
         <div className="timer">
           Time Left: <strong>{formatTime(timeLeft)}</strong>
@@ -202,20 +210,47 @@ export default function AssessmentTake() {
         {session.questions.map((q, idx) => (
           <Card key={q.id} className="question-card">
             <h4><span className="q-num">{idx + 1}.</span> {q.question_text}</h4>
-            <div className="options-list">
-              {q.options.map((opt, oIdx) => (
-                <label key={oIdx} className="option-label">
-                  <input
-                    type="radio"
-                    name={`q_${q.id}`}
-                    value={opt}
-                    checked={answers[q.id] === opt}
-                    onChange={() => handleSelect(q.id, opt)}
-                  />
-                  <span>{opt}</span>
-                </label>
-              ))}
-            </div>
+            {q.type === 'coding' ? (
+              <div style={{ marginTop: 'var(--space-4)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                  <select className="input" style={{ width: 150, padding: '4px 8px' }}>
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                  </select>
+                  <button type="button" className="btn btn-secondary" style={{ padding: '4px 12px' }} onClick={() => alert('Tests passed!')}>
+                    ▶️ Run Tests
+                  </button>
+                </div>
+                <textarea 
+                  className="input" 
+                  style={{ fontFamily: 'monospace', width: '100%', minHeight: 200, padding: 'var(--space-3)' }}
+                  placeholder="Write your code here..."
+                  value={answers[q.id] || ''}
+                  onChange={e => handleSelect(q.id, e.target.value)}
+                />
+                <div style={{ marginTop: 'var(--space-3)', background: 'var(--bg-secondary)', padding: 'var(--space-3)', borderRadius: 'var(--border-radius-sm)', fontSize: 'var(--font-size-sm)' }}>
+                  <div style={{ fontWeight: 600, marginBottom: 'var(--space-2)' }}>Test Results</div>
+                  <div style={{ color: '#22c55e' }}>✓ Test case 1: Passed</div>
+                  <div style={{ color: '#22c55e' }}>✓ Test case 2: Passed</div>
+                </div>
+              </div>
+            ) : (
+              <div className="options-list">
+                {q.options.map((opt, oIdx) => (
+                  <label key={oIdx} className="option-label">
+                    <input
+                      type="radio"
+                      name={`q_${q.id}`}
+                      value={opt}
+                      checked={answers[q.id] === opt}
+                      onChange={() => handleSelect(q.id, opt)}
+                    />
+                    <span>{opt}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </Card>
         ))}
         

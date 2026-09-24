@@ -12,6 +12,10 @@ from app.core.database import get_db
 from app.core.security import get_current_user, RoleChecker
 from app.core.audit import record_audit_event
 from sqlalchemy.orm import selectinload
+from app.models.skill import StudentSkill
+from app.models.industry import Job, JobSkill
+from app.models.user import Student
+from app.ml.matcher import predict_match_score
 from app.models.user import User
 from app.models.placement import Application
 from app.models.announcements import DriveAnnouncement
@@ -33,7 +37,7 @@ _tpo_admin = RoleChecker(["tpo", "admin"])
 _authenticated = get_current_user
 
 
-def _drive_to_response(drive, counts: dict = None, has_applied: bool = False) -> DriveResponse:
+def _drive_to_response(drive, counts: dict = None, has_applied: bool = False, match_score: Optional[float] = None) -> DriveResponse:
     counts = counts or {}
     return DriveResponse(
         id=drive.id,
@@ -58,6 +62,7 @@ def _drive_to_response(drive, counts: dict = None, has_applied: bool = False) ->
         shortlisted_count=counts.get("shortlisted_count", 0),
         selected_count=counts.get("selected_count", 0),
         has_applied=has_applied,
+        match_score=match_score,
     )
 
 
@@ -72,14 +77,45 @@ async def list_drives(
     drives, total = await drive_service.list_drives(
         db, status_filter=status_filter, page=page, per_page=per_page
     )
+
+    # Pre-fetch student skills once for match scoring
+    student_skills = {}
+    student_cgpa = None
+    student_dept = None
+    if current_user.role == "student":
+        skill_result = await db.execute(
+            select(StudentSkill).where(StudentSkill.student_id == current_user.id).options(selectinload(StudentSkill.skill))
+        )
+        student_skills = {ss.skill.normalized_name: float(ss.confidence) for ss in skill_result.scalars().all()}
+        student = await db.get(Student, current_user.id, options=[selectinload(Student.department)])
+        if student:
+            student_cgpa = float(student.cgpa) if student.cgpa else None
+            student_dept = student.department.code if student.department else None
+
     data = []
     for drive in drives:
         counts = await drive_service.get_application_count(db, drive.id)
-        has_applied = (
-            await drive_service.check_applied(db, current_user.id, drive.id)
-            if current_user.role == "student" else False
-        )
-        data.append(_drive_to_response(drive, counts, has_applied))
+        has_applied = False
+        match_score = None
+
+        if current_user.role == "student":
+            has_applied = await drive_service.check_applied(db, current_user.id, drive.id)
+            if drive.company_id:
+                job_result = await db.execute(
+                    select(Job)
+                    .where(Job.company_id == drive.company_id, Job.is_active == True)
+                    .options(selectinload(Job.job_skills).selectinload(JobSkill.skill))
+                )
+                jobs = job_result.scalars().all()
+                for job in jobs:
+                    job_skills = {js.skill.normalized_name: js.importance for js in job.job_skills}
+                    min_cgpa = float(job.min_cgpa) if job.min_cgpa else (float(drive.min_cgpa) if drive.min_cgpa else None)
+                    eligible_depts = job.eligible_departments or drive.eligible_departments
+                    c_score = predict_match_score(student_skills, job_skills, student_cgpa, min_cgpa, student_dept, eligible_depts)
+                    if match_score is None or c_score > match_score:
+                        match_score = c_score
+
+        data.append(_drive_to_response(drive, counts, has_applied, match_score))
 
     total_pages = max(1, (total + per_page - 1) // per_page)
     return PaginatedResponse(

@@ -36,6 +36,7 @@ class DriveResponse(BaseModel):
     shortlisted_count: int = 0
     selected_count: int = 0
     has_applied: bool = False
+    match_score: Optional[float] = None
 
     model_config = {"from_attributes": True}
 

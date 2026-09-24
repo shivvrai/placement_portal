@@ -1,5 +1,6 @@
 import uuid
 import random
+import asyncio
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -40,7 +41,12 @@ async def create_assessment_session(
         student_id=student_id,
         topic=topic,
         difficulty=difficulty,
-        status="in_progress"
+        status="in_progress",
+        metadata_col={
+            "current_difficulty": difficulty,
+            "streak": 0,
+            "difficulty_history": [difficulty]
+        }
     )
     db.add(session)
     await db.flush() # flush to get session.id
@@ -98,6 +104,12 @@ async def submit_assessment(
     # Create map of student's answers
     student_answers = {ans.question_id: ans.selected_option for ans in data.answers}
     
+    meta = dict(session.metadata_col or {})
+    streak = meta.get("streak", 0)
+    current_difficulty = meta.get("current_difficulty", session.difficulty)
+    diff_history = meta.get("difficulty_history", [current_difficulty])
+    difficulties = ["easy", "medium", "hard", "expert"]
+    
     for sq in session.session_questions:
         q_id = sq.question_id
         selected = student_answers.get(q_id)
@@ -107,8 +119,27 @@ async def submit_assessment(
         if selected and selected == sq.question.correct_answer:
             sq.is_correct = True
             correct_count += 1
+            streak += 1
+            if streak >= 3:
+                idx = difficulties.index(current_difficulty) if current_difficulty in difficulties else 0
+                if idx < len(difficulties) - 1:
+                    current_difficulty = difficulties[idx + 1]
+                streak = 0
         else:
             sq.is_correct = False
+            streak = -1 if streak > 0 else streak - 1
+            if streak <= -2:
+                idx = difficulties.index(current_difficulty) if current_difficulty in difficulties else 0
+                if idx > 0:
+                    current_difficulty = difficulties[idx - 1]
+                streak = 0
+                
+        diff_history.append(current_difficulty)
+
+    meta["streak"] = streak
+    meta["current_difficulty"] = current_difficulty
+    meta["difficulty_history"] = diff_history
+    session.metadata_col = meta
 
     # 3. Calculate score
     score = (correct_count / total_questions) * 100 if total_questions > 0 else 0
@@ -436,3 +467,64 @@ async def get_performance_trends(
 
     return {"trends": trends}
 
+
+# ─── Sprint 3: Code Sandbox ─────────────────────────────────────────
+
+async def submit_code(db: AsyncSession, student_id: uuid.UUID, session_id: uuid.UUID, question_id: uuid.UUID, code: str, language: str) -> dict:
+    import sys
+    result = await db.execute(select(AssessmentQuestionBank).where(AssessmentQuestionBank.id == question_id))
+    question = result.scalar_one_or_none()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+        
+    test_cases = question.code_test_cases or []
+    if not test_cases:
+        return {"passed": 0, "failed": 0, "total": 0, "error": "No test cases found", "time_ms": 0, "results": []}
+
+    passed = 0
+    failed = 0
+    results = []
+    time_ms = 0
+
+    if language.lower() == "python":
+        for tc in test_cases:
+            input_data = tc.get("input", "")
+            expected = tc.get("output", "")
+            
+            start = datetime.now()
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    sys.executable, "-c", code,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(input=input_data.encode()), timeout=3.0)
+                actual = stdout.decode().strip()
+                err = stderr.decode().strip()
+                
+                if proc.returncode == 0 and actual == expected.strip():
+                    passed += 1
+                    results.append({"input": input_data, "expected": expected, "actual": actual, "passed": True})
+                else:
+                    failed += 1
+                    results.append({"input": input_data, "expected": expected, "actual": actual, "passed": False, "error": err})
+            except asyncio.TimeoutError:
+                failed += 1
+                results.append({"input": input_data, "expected": expected, "actual": "Timeout", "passed": False, "error": "Time Limit Exceeded"})
+            except Exception as e:
+                failed += 1
+                results.append({"input": input_data, "expected": expected, "actual": "Error", "passed": False, "error": str(e)})
+            
+            time_ms += int((datetime.now() - start).total_seconds() * 1000)
+    else:
+        return {"passed": 0, "failed": 0, "total": len(test_cases), "error": "Unsupported language", "time_ms": 0, "results": []}
+
+    return {
+        "passed": passed,
+        "failed": failed,
+        "total": len(test_cases),
+        "error": None,
+        "time_ms": time_ms,
+        "results": results
+    }

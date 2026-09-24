@@ -300,6 +300,35 @@ export default function SkillGap() {
           ))}
         </div>
 
+        {/* Top 3 skill gaps across all active drives */}
+        <div className="card" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+            <div>
+              <h3 style={{ margin: 0 }}>Top 3 Skill Gaps Across Active Drives</h3>
+              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', margin: 0 }}>The most common missing skills holding you back.</p>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <select className="input" style={{ width: 150, padding: '4px 8px' }}>
+                <option value="">Add a skill...</option>
+                <option value="AWS">AWS</option>
+                <option value="Docker">Docker</option>
+                <option value="React">React</option>
+              </select>
+              <button className="btn btn-secondary" style={{ padding: '4px 12px' }} onClick={() => alert('Simulated +6% match across 4 drives')}>See score change</button>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
+            {['AWS', 'System Design', 'Docker'].map((gap, i) => (
+              <div key={gap} style={{ flex: 1, padding: 'var(--space-3)', background: 'var(--bg-card)', borderRadius: 'var(--border-radius-sm)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontWeight: 600 }}>{i + 1}. {gap}</span>
+                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--accent-warning)' }}>Missing in 4 drives</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Top row: score ring + category bar chart + Market Radar */}
         <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 290px', gap: 'var(--space-5)', alignItems: 'stretch' }}>
           {/* Score card */}

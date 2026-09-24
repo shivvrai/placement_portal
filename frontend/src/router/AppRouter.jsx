@@ -34,6 +34,9 @@ import PublicPortfolio from '../pages/student/PublicPortfolio';
 import MockInterview from '../pages/student/MockInterview';
 import MockInterviewHistory from '../pages/student/MockInterviewHistory';
 import QuizCenter from '../pages/student/QuizCenter';
+import SkillTrends from '../pages/student/SkillTrends';
+import Benchmark from '../pages/student/Benchmark';
+import AssessmentAnalytics from '../pages/student/AssessmentAnalytics';
 
 // TPO portal
 import TPOLayout from '../layouts/TPOLayout';
@@ -132,6 +135,9 @@ export function AppRouter() {
           <Route path="copilot" element={<Copilot />} />
           <Route path="assessments" element={<AssessmentsList />} />
           <Route path="assessments/:id/take" element={<AssessmentTake />} />
+          <Route path="assessments/analytics" element={<AssessmentAnalytics />} />
+          <Route path="skill-trends" element={<SkillTrends />} />
+          <Route path="benchmark" element={<Benchmark />} />
           <Route path="mock-interview" element={<MockInterview />} />
           <Route path="mock-interview/history" element={<MockInterviewHistory />} />
           <Route path="quiz" element={<QuizCenter />} />

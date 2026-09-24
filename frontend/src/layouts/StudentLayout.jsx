@@ -24,6 +24,8 @@ const STUDENT_NAV = [
       { path: '/student/copilot', icon: '🤖', label: 'AI Copilot' },
       { path: '/student/assessments', icon: '📝', label: 'Assessments' },
       { path: '/student/mock-interview', icon: '🎙️', label: 'Mock Interview' },
+      { path: '/student/skill-trends', icon: '📈', label: 'Skill Trends' },
+      { path: '/student/benchmark', icon: '🏆', label: 'Peer Benchmark' },
     ],
   },
   {

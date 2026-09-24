@@ -189,6 +189,18 @@ export const intelligenceApi = {
 
 export const roadmapApi = intelligenceApi;
 
+export const matchingApi = {
+  getDriveMatch: (driveId) => api.get(`/matching/drives/${driveId}`),
+  getTopDrives: () => api.get('/matching/my-top-drives'),
+  getDriveSkillGap: (driveId) => api.get(`/matching/skill-gap/${driveId}`),
+  getJobFit: (jobId) => api.get(`/matching/job-fit/${jobId}`),
+  getRankCohort: () => api.get('/matching/rank-cohort'),
+  whatIf: (data) => api.post('/matching/what-if', data),
+  getBenchmark: (scope) => api.get('/matching/benchmark', { params: { scope } }),
+  getLeaderboard: (dept, metric) => api.get(`/matching/leaderboard/${dept}`, { params: { metric } }),
+  getReadiness: () => api.get('/matching/readiness'),
+};
+
 // ─── Placement Drives ─────────────────────────────────────────────
 export const placementApi = {
   getDrives: (params) => mockOr('drives.json', () => api.get('/drives', { params })),
@@ -229,6 +241,10 @@ export const analyticsApi = {
   getSectorDistribution: () =>
     mockOr('sector_dist.json', () => api.get('/analytics/sectors')),
   getSkillTrends: () => api.get('/analytics/skills/trends'),
+  getSkillTrendsFull: () => api.get('/analytics/skill-trends/full'),
+  getSkillTrendsEmerging: () => api.get('/analytics/skill-trends/emerging'),
+  getSkillTrendsHeatmap: () => api.get('/analytics/skill-trends/heatmap'),
+  getSkillTrendDetail: (skill) => api.get(`/analytics/skill-trends/${encodeURIComponent(skill)}`),
   // ─── Accreditation ──────────────────────────────────────────────
   getAccreditationPreview: (year = '2026-27') =>
     api.get('/analytics/accreditation/preview', { params: { academic_year: year } }),
@@ -331,6 +347,10 @@ export const assessmentsApi = {
   getRecommended: () => api.get('/assessments/quiz/recommended'),
   generateRemediation: (sessionId) => api.post(`/assessments/quiz/${sessionId}/remediate`),
   getTrends: () => api.get('/assessments/performance/trends'),
+  submitCode: (sessionId, data) => api.post(`/assessments/${sessionId}/submit-code`, data),
+  getDetailedHistory: () => api.get('/assessments/history/detailed'),
+  getMyAnalytics: () => api.get('/assessments/analytics/my'),
+  getCohortAnalytics: (skill) => api.get(`/assessments/analytics/cohort/${encodeURIComponent(skill)}`),
 };
 
 // ─── Mock Interview V2 ───────────────────────────────────────────

@@ -23,9 +23,18 @@ class AssessmentQuestionBank(Base):
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
     
     # Store options as a JSON array of strings
-    options = mapped_column(JSONB, nullable=False)
+    options = mapped_column(JSONB, nullable=True)
     
-    correct_answer: Mapped[str] = mapped_column(String(255), nullable=False)
+    question_type: Mapped[str] = mapped_column(String(50), default="mcq")
+    code_problem_statement: Mapped[str | None] = mapped_column(Text)
+    code_input_format: Mapped[str | None] = mapped_column(Text)
+    code_output_format: Mapped[str | None] = mapped_column(Text)
+    code_sample_inputs = mapped_column(JSONB, nullable=True)
+    code_sample_outputs = mapped_column(JSONB, nullable=True)
+    code_test_cases = mapped_column(JSONB, nullable=True)
+    code_language: Mapped[str | None] = mapped_column(String(50))
+
+    correct_answer: Mapped[str | None] = mapped_column(String(255), nullable=True)
     explanation: Mapped[str | None] = mapped_column(Text)
     
     skill_id: Mapped[uuid.UUID | None] = mapped_column(UUIDType, ForeignKey("skills.id"), index=True)
@@ -54,6 +63,8 @@ class AssessmentSession(Base):
     
     started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    
+    metadata_col = mapped_column("metadata", JSONB, nullable=True)
 
     student: Mapped["Student"] = relationship(backref="assessment_sessions")
     session_questions: Mapped[list["AssessmentSessionQuestion"]] = relationship(
