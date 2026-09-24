@@ -162,6 +162,7 @@ async def submit_code(db: AsyncSession, student_id: uuid.UUID, session_id: uuid.
     time_ms = 0
 
     if language.lower() == "python":
+        import sys
         for tc in test_cases:
             input_data = tc.get("input", "")
             expected = tc.get("output", "")
@@ -169,7 +170,7 @@ async def submit_code(db: AsyncSession, student_id: uuid.UUID, session_id: uuid.
             start = datetime.now()
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "python", "-c", code,
+                    sys.executable, "-c", code,
                     stdin=asyncio.subprocess.PIPE,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE

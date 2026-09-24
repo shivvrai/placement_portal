@@ -73,9 +73,9 @@ async def delete_question(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
         
-    db.delete(question)
+    await db.delete(question)
     await db.commit()
-    return {"message": "Question deleted successfully"}
+    return {"status": "success", "message": "Question deleted successfully"}
 
 @router.get("/{question_id}/usage-stats")
 async def get_question_stats(
@@ -85,6 +85,8 @@ async def get_question_stats(
 ):
     # Mocked stats for now
     return {
+        "times_asked": 42,
         "asked_count": 42,
-        "correct_rate": 0.65
+        "correct_rate": 0.65,
+        "avg_correct_rate": 0.65
     }

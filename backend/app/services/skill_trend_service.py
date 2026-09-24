@@ -44,6 +44,7 @@ class SkillTrendService:
         for row in trends:
             results_map[row.name] = {
                 "skill": row.name,
+                "skill_name": row.name,
                 "demand_count": row.demand_count or counts.get(row.name, 0),
                 "growth_rate": float(row.growth_rate) if row.growth_rate else 0.0,
                 "avg_salary_requiring_skill": 0.0,
@@ -54,6 +55,7 @@ class SkillTrendService:
             if name not in results_map:
                 results_map[name] = {
                     "skill": name,
+                    "skill_name": name,
                     "demand_count": cnt,
                     "growth_rate": 0.0,
                     "avg_salary_requiring_skill": 0.0,
@@ -62,12 +64,12 @@ class SkillTrendService:
                 
         if not results_map or sum(x['demand_count'] for x in results_map.values()) < 10:
             benchmark = [
-                {"skill": "LangChain", "demand_count": 28, "growth_rate": 1.45, "avg_salary_requiring_skill": 18.5, "departments_needing": ["CS", "IT"]},
-                {"skill": "PyTorch", "demand_count": 34, "growth_rate": 0.89, "avg_salary_requiring_skill": 16.0, "departments_needing": ["CS", "IT", "ECE"]},
-                {"skill": "React", "demand_count": 76, "growth_rate": 0.05, "avg_salary_requiring_skill": 12.0, "departments_needing": ["CS", "IT"]},
-                {"skill": "AWS", "demand_count": 54, "growth_rate": 0.35, "avg_salary_requiring_skill": 14.5, "departments_needing": ["CS", "IT"]},
-                {"skill": "jQuery", "demand_count": 8, "growth_rate": -0.34, "avg_salary_requiring_skill": 6.0, "departments_needing": ["CS", "IT"]},
-                {"skill": "PHP", "demand_count": 12, "growth_rate": -0.28, "avg_salary_requiring_skill": 5.5, "departments_needing": ["CS", "IT"]},
+                {"skill": "LangChain", "skill_name": "LangChain", "demand_count": 28, "growth_rate": 1.45, "avg_salary_requiring_skill": 18.5, "departments_needing": ["CS", "IT"]},
+                {"skill": "PyTorch", "skill_name": "PyTorch", "demand_count": 34, "growth_rate": 0.89, "avg_salary_requiring_skill": 16.0, "departments_needing": ["CS", "IT", "ECE"]},
+                {"skill": "React", "skill_name": "React", "demand_count": 76, "growth_rate": 0.05, "avg_salary_requiring_skill": 12.0, "departments_needing": ["CS", "IT"]},
+                {"skill": "AWS", "skill_name": "AWS", "demand_count": 54, "growth_rate": 0.35, "avg_salary_requiring_skill": 14.5, "departments_needing": ["CS", "IT"]},
+                {"skill": "jQuery", "skill_name": "jQuery", "demand_count": 8, "growth_rate": -0.34, "avg_salary_requiring_skill": 6.0, "departments_needing": ["CS", "IT"]},
+                {"skill": "PHP", "skill_name": "PHP", "demand_count": 12, "growth_rate": -0.28, "avg_salary_requiring_skill": 5.5, "departments_needing": ["CS", "IT"]},
             ]
             for b in benchmark:
                 results_map[b['skill']] = b
@@ -107,7 +109,10 @@ class SkillTrendService:
         trends = await self.compute_demand_trends(db)
         emerging = [t for t in trends if t['growth_rate'] > 0.2 and t['demand_count'] > 3]
         for skill in emerging:
-            skill['narrative'] = await self.generate_forecast_narrative(db, skill['skill'], skill)
+            narr = await self.generate_forecast_narrative(db, skill['skill'], skill)
+            skill['narrative'] = narr
+            skill['forecast_narrative'] = narr
+            skill['skill_name'] = skill['skill']
         return emerging
 
     async def get_declining_skills(self, db: AsyncSession) -> list[dict]:
@@ -141,13 +146,19 @@ class SkillTrendService:
         if not trend:
             trend = {
                 "skill": skill_name,
+                "skill_name": skill_name,
                 "demand_count": 0,
                 "growth_rate": 0.0,
                 "avg_salary_requiring_skill": 0.0,
                 "departments_needing": []
             }
+        else:
+            trend = dict(trend)
             
-        trend['narrative'] = await self.generate_forecast_narrative(db, skill_name, trend)
+        narr = await self.generate_forecast_narrative(db, skill_name, trend)
+        trend['narrative'] = narr
+        trend['forecast_narrative'] = narr
+        trend['skill_name'] = trend.get('skill', skill_name)
         return trend
 
 skill_trend_service = SkillTrendService()

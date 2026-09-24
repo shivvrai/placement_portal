@@ -4,7 +4,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 import numpy as np
 
-from app.models.user import Student
+from app.models.user import Student, User
 from app.models.skill import StudentSkill
 from app.models.portfolio import Project, Resume
 from app.models.placement import Application
@@ -122,7 +122,8 @@ class BenchmarkingService:
         components = []
         total_score = 0
         
-        prof_score = 10 if student.phone else 0
+        user = await db.get(User, student_id)
+        prof_score = 10 if (user and user.phone) else 5
         res_cnt = (await db.execute(select(func.count(Resume.id)).where(Resume.student_id == student_id))).scalar() or 0
         if res_cnt > 0: prof_score += 10
         components.append({"name": "Profile", "score": prof_score, "max_score": 20})
