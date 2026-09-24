@@ -3,9 +3,10 @@ Copilot API — AI career advisor conversations.
 """
 
 import uuid
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.middleware.rate_limit import limiter
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -81,7 +82,9 @@ async def get_conversation(
 
 
 @router.post("/conversations/{conversation_id}/messages")
+@limiter.limit("30/hour")
 async def send_message(
+    request: Request,
     conversation_id: uuid.UUID,
     data: NewMessageRequest,
     current_user: User = Depends(get_current_user),

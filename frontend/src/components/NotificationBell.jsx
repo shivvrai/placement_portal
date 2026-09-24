@@ -1,11 +1,12 @@
 /**
  * Global In-App Notification Center (Bell Dropdown).
- * Displays unread count badge, recent alerts, relative timestamps, and one-click navigation.
+ * Supports Real-time WebSockets, priority styling, filtering, and deep-linking.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { notificationsApi } from '../api/endpoints';
+import { api } from '../api/client';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 function formatTimeAgo(isoString) {
   if (!isoString) return '';
@@ -26,30 +27,68 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activeTab, setActiveTab] = useState('All');
+  const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const fetchNotifications = async () => {
+  const fetchUnreadCount = async () => {
     try {
-      const res = await notificationsApi.getMine({ limit: 10 });
-      if (res.data) {
-        setNotifications(res.data.items || []);
-        setUnreadCount(res.data.unread_count || 0);
+      const res = await api.get('/notifications/unread-count');
+      if (typeof res.data?.count === 'number') {
+        setUnreadCount(res.data.count);
       }
-    } catch (err) {
-      console.error('Failed to load notifications:', err);
+    } catch {
+      // Fallback
+      try {
+        const res = await api.get('/notifications/mine', { params: { limit: 1 } });
+        if (typeof res.data?.unread_count === 'number') {
+          setUnreadCount(res.data.unread_count);
+        }
+      } catch {}
+    }
+  };
+
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/notifications', { params: { page_size: 15 } });
+      if (res.data?.data) {
+        setNotifications(res.data.data);
+      } else {
+        // Fallback to /notifications/mine
+        const resMine = await api.get('/notifications/mine', { params: { limit: 15 } });
+        setNotifications(resMine.data?.items || []);
+        if (typeof resMine.data?.unread_count === 'number') {
+          setUnreadCount(resMine.data.unread_count);
+        }
+      }
+    } catch {
+      try {
+        const resMine = await api.get('/notifications/mine', { params: { limit: 15 } });
+        setNotifications(resMine.data?.items || []);
+      } catch (e) {
+        console.error('Failed to load notifications:', e);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchNotifications();
-    // Poll every 60 seconds
-    const interval = setInterval(fetchNotifications, 60000);
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Close dropdown on click outside
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications();
+    }
+  }, [isOpen]);
+
+  // Click outside to close
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -62,48 +101,69 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const handleMarkRead = async (id, link) => {
+  // WebSocket message receiver
+  const onWebSocketMessage = useCallback((payload) => {
+    setUnreadCount((prev) => prev + 1);
+    setShake(true);
+    setTimeout(() => setShake(false), 600);
+    setNotifications((prev) => [{ ...payload, is_new: true, is_read: false }, ...prev]);
+  }, []);
+
+  useWebSocket(onWebSocketMessage);
+
+  const handleMarkRead = async (notif) => {
     try {
-      await notificationsApi.markRead(id);
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      if (link) {
+      if (!notif.is_read) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+        await api.post(`/notifications/${notif.id}/read`).catch(() =>
+          api.patch(`/notifications/${notif.id}/read`)
+        );
+      }
+      if (notif.link) {
         setIsOpen(false);
-        navigate(link);
+        navigate(notif.link);
       }
     } catch (err) {
       console.error('Failed to mark read:', err);
-      if (link) {
+      if (notif.link) {
         setIsOpen(false);
-        navigate(link);
+        navigate(notif.link);
       }
     }
   };
 
   const handleMarkAllRead = async () => {
     try {
-      setLoading(true);
-      await notificationsApi.markAllRead();
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      await api.post('/notifications/read-all').catch(() =>
+        api.patch('/notifications/read-all')
+      );
     } catch (err) {
       console.error('Failed to mark all read:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
+  const displayedNotifications =
+    activeTab === 'Unread'
+      ? notifications.filter((n) => !n.is_read)
+      : notifications;
+
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
-      {/* Bell Button */}
+    <div
+      ref={dropdownRef}
+      className="notification-bell-wrapper"
+      style={{ position: 'relative', display: 'inline-block' }}
+    >
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
         style={{
-          background: isOpen ? 'var(--accent-primary-subtle)' : 'var(--bg-tertiary)',
-          border: '1px solid var(--border-color)',
+          background: isOpen ? 'var(--accent-primary-subtle, rgba(99,102,241,0.12))' : 'var(--bg-tertiary, #1f2937)',
+          border: '1px solid var(--border-color, #374151)',
           borderRadius: '50%',
           width: 40,
           height: 40,
@@ -112,7 +172,8 @@ export default function NotificationBell() {
           justifyContent: 'center',
           cursor: 'pointer',
           position: 'relative',
-          transition: 'all 0.2s',
+          transition: 'all 0.2s ease',
+          animation: shake ? 'bellShake 0.5s ease' : 'none',
         }}
       >
         <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🔔</span>
@@ -121,10 +182,10 @@ export default function NotificationBell() {
           <span
             style={{
               position: 'absolute',
-              top: -2,
-              right: -2,
+              top: -3,
+              right: -3,
               background: '#ef4444',
-              color: 'white',
+              color: '#ffffff',
               fontSize: '0.7rem',
               fontWeight: 700,
               minWidth: 18,
@@ -137,12 +198,11 @@ export default function NotificationBell() {
               boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)',
             }}
           >
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Dropdown Card */}
       {isOpen && (
         <div
           style={{
@@ -151,40 +211,71 @@ export default function NotificationBell() {
             right: 0,
             width: 360,
             maxWidth: '90vw',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--border-radius-md, 12px)',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+            background: 'var(--bg-secondary, #111827)',
+            border: '1px solid var(--border-color, #374151)',
+            borderRadius: '12px',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
             zIndex: 1000,
             overflow: 'hidden',
-            animation: 'fadeIn 0.15s ease-out',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           {/* Header */}
           <div
             style={{
               padding: '12px 16px',
-              borderBottom: '1px solid var(--border-color)',
+              borderBottom: '1px solid var(--border-color, #374151)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: 'var(--bg-primary)',
+              background: 'var(--bg-primary, #0f172a)',
             }}
           >
-            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-              Notifications {unreadCount > 0 && `(${unreadCount})`}
-            </div>
-            {unreadCount > 0 && (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <button
-                onClick={handleMarkAllRead}
-                disabled={loading}
+                type="button"
+                onClick={() => setActiveTab('All')}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--accent-primary)',
+                  cursor: 'pointer',
+                  fontWeight: activeTab === 'All' ? 700 : 500,
+                  color: activeTab === 'All' ? 'var(--accent-primary, #6366f1)' : 'var(--text-secondary, #9ca3af)',
+                  fontSize: '0.88rem',
+                  padding: 0,
+                }}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('Unread')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: activeTab === 'Unread' ? 700 : 500,
+                  color: activeTab === 'Unread' ? 'var(--accent-primary, #6366f1)' : 'var(--text-secondary, #9ca3af)',
+                  fontSize: '0.88rem',
+                  padding: 0,
+                }}
+              >
+                Unread ({unreadCount})
+              </button>
+            </div>
+
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={handleMarkAllRead}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-primary, #6366f1)',
                   fontSize: '0.8rem',
                   cursor: 'pointer',
-                  fontWeight: 500,
+                  fontWeight: 600,
                 }}
               >
                 Mark all read
@@ -192,67 +283,89 @@ export default function NotificationBell() {
             )}
           </div>
 
-          {/* List */}
-          <div style={{ maxHeight: 380, overflowY: 'auto' }}>
-            {notifications.length === 0 ? (
-              <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: 8 }}>📭</span>
-                No notifications right now
+          {/* Notifications List */}
+          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+            {displayedNotifications.length === 0 ? (
+              <div
+                style={{
+                  padding: '36px 16px',
+                  textAlign: 'center',
+                  color: 'var(--text-muted, #6b7280)',
+                }}
+              >
+                <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: 8 }}>🔕</span>
+                {activeTab === 'Unread' ? 'No unread notifications' : 'All caught up!'}
               </div>
             ) : (
-              notifications.map(n => (
-                <div
-                  key={n.id}
-                  onClick={() => handleMarkRead(n.id, n.link)}
-                  style={{
-                    padding: '12px 16px',
-                    borderBottom: '1px solid var(--border-color)',
-                    background: n.is_read ? 'transparent' : 'rgba(99, 102, 241, 0.08)',
-                    cursor: n.link ? 'pointer' : 'default',
-                    transition: 'background 0.15s',
-                    display: 'flex',
-                    gap: 12,
-                    alignItems: 'flex-start',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = n.is_read ? 'rgba(255,255,255,0.03)' : 'rgba(99, 102, 241, 0.14)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = n.is_read ? 'transparent' : 'rgba(99, 102, 241, 0.08)';
-                  }}
-                >
-                  {/* Read indicator dot */}
-                  <div style={{ paddingTop: 4 }}>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        background: n.is_read ? 'transparent' : 'var(--accent-primary)',
-                        border: n.is_read ? '1px solid var(--text-muted)' : 'none',
-                      }}
-                    />
-                  </div>
+              displayedNotifications.map((n) => {
+                const priorityColor =
+                  n.priority === 'critical'
+                    ? '#ef4444'
+                    : n.priority === 'high'
+                    ? '#f59e0b'
+                    : '#10b981';
 
-                  {/* Text content */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontWeight: n.is_read ? 500 : 600,
-                        fontSize: '0.88rem',
-                        color: 'var(--text-primary)',
-                        marginBottom: 3,
-                      }}
-                    >
-                      {n.title}
+                return (
+                  <div
+                    key={n.id}
+                    onClick={() => handleMarkRead(n)}
+                    style={{
+                      padding: '12px 16px',
+                      borderBottom: '1px solid var(--border-color, #374151)',
+                      borderLeft: `4px solid ${priorityColor}`,
+                      background: n.is_read
+                        ? 'transparent'
+                        : 'var(--accent-primary-subtle, rgba(99,102,241,0.08))',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = n.is_read
+                        ? 'rgba(255,255,255,0.03)'
+                        : 'rgba(99,102,241,0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = n.is_read
+                        ? 'transparent'
+                        : 'var(--accent-primary-subtle, rgba(99,102,241,0.08))';
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                      <div
+                        style={{
+                          fontWeight: n.is_read ? 500 : 700,
+                          fontSize: '0.88rem',
+                          color: 'var(--text-primary, #f9fafb)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        {n.type === 'APPLICATION_STATUS' ? '📄' : n.type === 'OFFER_RECEIVED' ? '🏆' : '🔔'}
+                        <span>{n.title}</span>
+                      </div>
+                      {n.is_new && (
+                        <span
+                          style={{
+                            color: '#60a5fa',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
+                          }}
+                        >
+                          ● NEW
+                        </span>
+                      )}
                     </div>
                     <div
                       style={{
                         fontSize: '0.8rem',
-                        color: 'var(--text-secondary)',
+                        color: 'var(--text-secondary, #d1d5db)',
                         lineHeight: 1.35,
-                        wordBreak: 'break-word',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
                       }}
                     >
                       {n.message}
@@ -260,19 +373,56 @@ export default function NotificationBell() {
                     <div
                       style={{
                         fontSize: '0.72rem',
-                        color: 'var(--text-muted)',
-                        marginTop: 4,
+                        color: 'var(--text-muted, #9ca3af)',
+                        marginTop: 5,
                       }}
                     >
                       {formatTimeAgo(n.created_at)}
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
+          </div>
+
+          {/* Footer View All */}
+          <div
+            onClick={() => {
+              setIsOpen(false);
+              navigate('/student/notifications');
+            }}
+            style={{
+              padding: '10px',
+              textAlign: 'center',
+              borderTop: '1px solid var(--border-color, #374151)',
+              background: 'var(--bg-primary, #0f172a)',
+              color: 'var(--accent-primary, #6366f1)',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--bg-primary, #0f172a)';
+            }}
+          >
+            View all notifications →
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes bellShake {
+          0% { transform: rotate(0deg); }
+          25% { transform: rotate(15deg); }
+          50% { transform: rotate(-15deg); }
+          75% { transform: rotate(10deg); }
+          100% { transform: rotate(0deg); }
+        }
+      `}</style>
     </div>
   );
 }
