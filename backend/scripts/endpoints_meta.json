@@ -1,0 +1,2751 @@
+[
+  {
+    "path": "/health",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "health_check",
+    "module": "app.main",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [],
+    "tags": [
+      "System"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/register",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "register",
+    "module": "app.api.v1.auth",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.auth.RegisterRequest'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Authentication"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/login",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "login",
+    "module": "app.api.v1.auth",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.auth.LoginRequest'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Authentication"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/refresh",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "refresh_token",
+    "module": "app.api.v1.auth",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.auth.RefreshRequest'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Authentication"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/me",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_me",
+    "module": "app.api.v1.auth",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user"
+    ],
+    "tags": [
+      "Authentication"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_profile",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "update_my_profile",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.student.StudentUpdateRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/consent",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "update_consent",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.student.ConsentUpdateRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/academic-records",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_academic_records",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/skills",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_skills",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/skills",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "add_my_skill",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.student.AddStudentSkillRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/skills/{skill_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "delete_my_skill",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "skill_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/projects",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_projects",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/projects",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "add_project",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.student.ProjectCreate'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/projects/{project_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "delete_project",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "project_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/certifications",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_certifications",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/certifications",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "add_certification",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.student.CertificationCreate'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/certifications/{cert_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "delete_certification",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "cert_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/experience",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_experience",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/experience",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "add_experience",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.student.WorkExperienceCreate'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/experience/{exp_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "delete_experience",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "exp_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/me/skills/bulk",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "bulk_confirm_skills",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.student.BulkSkillConfirm'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/{student_id}/public-profile",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_public_profile",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_students",
+    "module": "app.api.v1.students",
+    "path_params": [],
+    "query_params": [
+      "department_code",
+      "min_cgpa",
+      "semester",
+      "status",
+      "page",
+      "per_page"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/{student_id}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_student",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/{student_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "update_student",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.student.StudentUpdateRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/{student_id}/consent",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "update_student_consent",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.student.ConsentUpdateRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/{student_id}/skills",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_student_skills",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/students/{student_id}/academic-records",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_student_academic_records",
+    "module": "app.api.v1.students",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Students"
+    ]
+  },
+  {
+    "path": "/api/v1/drives",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_drives",
+    "module": "app.api.v1.drives",
+    "path_params": [],
+    "query_params": [
+      "status_filter",
+      "page",
+      "per_page"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "create_drive",
+    "module": "app.api.v1.drives",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.drive.DriveCreateRequest'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives/{drive_id}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_drive",
+    "module": "app.api.v1.drives",
+    "path_params": [
+      "drive_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives/{drive_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "update_drive",
+    "module": "app.api.v1.drives",
+    "path_params": [
+      "drive_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.drive.DriveUpdateRequest'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives/{drive_id}/apply",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "apply_to_drive",
+    "module": "app.api.v1.drives",
+    "path_params": [
+      "drive_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives/{drive_id}/shortlisted",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_shortlisted",
+    "module": "app.api.v1.drives",
+    "path_params": [
+      "drive_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives/{drive_id}/applicants",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_all_applicants",
+    "module": "app.api.v1.drives",
+    "path_params": [
+      "drive_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives/{drive_id}/applications/{application_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "update_application_stage",
+    "module": "app.api.v1.drives",
+    "path_params": [
+      "drive_id",
+      "application_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.drive.ApplicationStageUpdate'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives/{drive_id}/applications/{application_id}/offer",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "record_offer",
+    "module": "app.api.v1.drives",
+    "path_params": [
+      "drive_id",
+      "application_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.drive.OfferCreate'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives/{drive_id}/announcements",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "post_announcement",
+    "module": "app.api.v1.drives",
+    "path_params": [
+      "drive_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.drive.AnnouncementCreate'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/drives/{drive_id}/announcements",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_announcements",
+    "module": "app.api.v1.drives",
+    "path_params": [
+      "drive_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Placement Drives"
+    ]
+  },
+  {
+    "path": "/api/v1/applications/mine",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_applications",
+    "module": "app.api.v1.applications",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Applications"
+    ]
+  },
+  {
+    "path": "/api/v1/gaps/me",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_skill_gap",
+    "module": "app.api.v1.matching",
+    "path_params": [],
+    "query_params": [
+      "target_role"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Matching & Intelligence"
+    ]
+  },
+  {
+    "path": "/api/v1/gaps/students/{student_id}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_student_skill_gap",
+    "module": "app.api.v1.matching",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [
+      "target_role"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Matching & Intelligence"
+    ]
+  },
+  {
+    "path": "/api/v1/students/{student_id}/gap",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_skill_gap_for_student",
+    "module": "app.api.v1.matching",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [
+      "target_role"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Matching & Intelligence"
+    ]
+  },
+  {
+    "path": "/api/v1/matching/students/{student_id}/gap",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_skill_gap_for_student",
+    "module": "app.api.v1.matching",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [
+      "target_role"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Matching & Intelligence"
+    ]
+  },
+  {
+    "path": "/api/v1/matching/me",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_job_matches",
+    "module": "app.api.v1.matching",
+    "path_params": [],
+    "query_params": [
+      "limit"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Matching & Intelligence"
+    ]
+  },
+  {
+    "path": "/api/v1/matching/students/{student_id}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_student_job_matches",
+    "module": "app.api.v1.matching",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [
+      "limit"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Matching & Intelligence"
+    ]
+  },
+  {
+    "path": "/api/v1/students/{student_id}/jobs",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_student_job_matches_jobs",
+    "module": "app.api.v1.matching",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [
+      "limit",
+      "role",
+      "location",
+      "minMatch"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Matching & Intelligence"
+    ]
+  },
+  {
+    "path": "/api/v1/matching/students/{student_id}/jobs",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_student_job_matches_jobs",
+    "module": "app.api.v1.matching",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [
+      "limit",
+      "role",
+      "location",
+      "minMatch"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Matching & Intelligence"
+    ]
+  },
+  {
+    "path": "/api/v1/roadmap/students/{student_id}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_roadmap",
+    "module": "app.api.v1.roadmap",
+    "path_params": [
+      "student_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Roadmap"
+    ]
+  },
+  {
+    "path": "/api/v1/roadmap/me",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_roadmap",
+    "module": "app.api.v1.roadmap",
+    "path_params": [],
+    "query_params": [
+      "student_id"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Roadmap"
+    ]
+  },
+  {
+    "path": "/api/v1/roadmap/me/generate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "generate_my_roadmap",
+    "module": "app.api.v1.roadmap",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.roadmap.RoadmapGenerateRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Roadmap"
+    ]
+  },
+  {
+    "path": "/api/v1/roadmap/tasks/{task_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "update_task_status",
+    "module": "app.api.v1.roadmap",
+    "path_params": [
+      "task_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.roadmap.TaskStatusUpdateRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Roadmap"
+    ]
+  },
+  {
+    "path": "/api/v1/roadmap/me/tasks",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "inject_remedial_task",
+    "module": "app.api.v1.roadmap",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.roadmap.RemedialTaskCreate'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Roadmap"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/placement",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_placement_stats",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [
+      "academic_year"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/placement/departments",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_dept_stats",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/departments",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_dept_stats",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/top-recruiters",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_top_recruiters",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [
+      "limit"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/trends",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_placement_trends",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [
+      "academic_year"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/package-distribution",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_package_distribution",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/yoy",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_yoy_stats",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/sectors",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_sector_distribution",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/skill-demand",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_skill_demand",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/curriculum-gaps/{department_code}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_curriculum_gaps",
+    "module": "app.api.v1.analytics",
+    "path_params": [
+      "department_code"
+    ],
+    "query_params": [
+      "semester_number"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/departments/{department_code}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_department_overview",
+    "module": "app.api.v1.analytics",
+    "path_params": [
+      "department_code"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/skills/trends",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_skill_trends",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/accreditation/preview",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "preview_accreditation_metrics",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [
+      "academic_year"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/analytics/accreditation/report",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_accreditation_report",
+    "module": "app.api.v1.analytics",
+    "path_params": [],
+    "query_params": [
+      "academic_year",
+      "format"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Analytics"
+    ]
+  },
+  {
+    "path": "/api/v1/copilot/conversations",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_conversations",
+    "module": "app.api.v1.copilot",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "AI Copilot"
+    ]
+  },
+  {
+    "path": "/api/v1/copilot/conversations",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "create_conversation",
+    "module": "app.api.v1.copilot",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.copilot.NewConversationRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "AI Copilot"
+    ]
+  },
+  {
+    "path": "/api/v1/copilot/conversations/{conversation_id}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_conversation",
+    "module": "app.api.v1.copilot",
+    "path_params": [
+      "conversation_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "AI Copilot"
+    ]
+  },
+  {
+    "path": "/api/v1/copilot/conversations/{conversation_id}/messages",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "send_message",
+    "module": "app.api.v1.copilot",
+    "path_params": [
+      "conversation_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.copilot.NewMessageRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "AI Copilot"
+    ]
+  },
+  {
+    "path": "/api/v1/copilot/mock-interview/start",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "start_mock_interview",
+    "module": "app.api.v1.copilot",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.api.v1.copilot.MockInterviewStartRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "AI Copilot"
+    ]
+  },
+  {
+    "path": "/api/v1/copilot/mock-interview/{conversation_id}/respond",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "respond_mock_interview",
+    "module": "app.api.v1.copilot",
+    "path_params": [
+      "conversation_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.copilot.NewMessageRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "AI Copilot"
+    ]
+  },
+  {
+    "path": "/api/v1/copilot/conversations/{conversation_id}/context",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_conversation_context",
+    "module": "app.api.v1.copilot",
+    "path_params": [
+      "conversation_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "AI Copilot"
+    ]
+  },
+  {
+    "path": "/api/v1/copilot/suggestions",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_suggestions",
+    "module": "app.api.v1.copilot",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "AI Copilot"
+    ]
+  },
+  {
+    "path": "/api/v1/skills",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_skills",
+    "module": "app.api.v1.skills",
+    "path_params": [],
+    "query_params": [
+      "category",
+      "domain",
+      "limit"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Skills"
+    ]
+  },
+  {
+    "path": "/api/v1/skills/search",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "search_skills",
+    "module": "app.api.v1.skills",
+    "path_params": [],
+    "query_params": [
+      "q",
+      "limit"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Skills"
+    ]
+  },
+  {
+    "path": "/api/v1/resume/upload",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "upload_resume",
+    "module": "app.api.v1.resume",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'fastapi._compat.Body_upload_resume_api_v1_resume_upload_post'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Resume"
+    ]
+  },
+  {
+    "path": "/api/v1/resume/status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_resume_status",
+    "module": "app.api.v1.resume",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Resume"
+    ]
+  },
+  {
+    "path": "/api/v1/resume/reparse",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "reparse_resume",
+    "module": "app.api.v1.resume",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Resume"
+    ]
+  },
+  {
+    "path": "/api/v1/assessments/start",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "start_assessment",
+    "module": "app.api.v1.assessments",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.assessment.AssessmentStartRequest'>",
+    "dependencies": [
+      "get_db",
+      "get_current_user"
+    ],
+    "tags": [
+      "Assessments"
+    ]
+  },
+  {
+    "path": "/api/v1/assessments/{session_id}/submit",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "submit_assessment_endpoint",
+    "module": "app.api.v1.assessments",
+    "path_params": [
+      "session_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.assessment.AssessmentSubmitRequest'>",
+    "dependencies": [
+      "get_db",
+      "get_current_user"
+    ],
+    "tags": [
+      "Assessments"
+    ]
+  },
+  {
+    "path": "/api/v1/assessments/history",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_assessment_history",
+    "module": "app.api.v1.assessments",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db",
+      "get_current_user"
+    ],
+    "tags": [
+      "Assessments"
+    ]
+  },
+  {
+    "path": "/api/v1/assessments/quiz/quick",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "start_quick_quiz",
+    "module": "app.api.v1.assessments",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.assessment.AssessmentStartRequest'>",
+    "dependencies": [
+      "get_db",
+      "get_current_user"
+    ],
+    "tags": [
+      "Assessments"
+    ]
+  },
+  {
+    "path": "/api/v1/assessments/quiz/recommended",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_recommended_quizzes",
+    "module": "app.api.v1.assessments",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db",
+      "get_current_user"
+    ],
+    "tags": [
+      "Assessments"
+    ]
+  },
+  {
+    "path": "/api/v1/assessments/quiz/{session_id}/remediate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "generate_remediation",
+    "module": "app.api.v1.assessments",
+    "path_params": [
+      "session_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db",
+      "get_current_user"
+    ],
+    "tags": [
+      "Assessments"
+    ]
+  },
+  {
+    "path": "/api/v1/assessments/performance/trends",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_trends",
+    "module": "app.api.v1.assessments",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db",
+      "get_current_user"
+    ],
+    "tags": [
+      "Assessments"
+    ]
+  },
+  {
+    "path": "/api/v1/ums/students/{roll_number}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "preview_ums_student",
+    "module": "app.api.v1.ums",
+    "path_params": [
+      "roll_number"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "UMS Integration"
+    ]
+  },
+  {
+    "path": "/api/v1/ums/subjects",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_ums_subjects",
+    "module": "app.api.v1.ums",
+    "path_params": [],
+    "query_params": [
+      "department_code"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "UMS Integration"
+    ]
+  },
+  {
+    "path": "/api/v1/ums/sync/student/{roll_number}",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "sync_student",
+    "module": "app.api.v1.ums",
+    "path_params": [
+      "roll_number"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "UMS Integration"
+    ]
+  },
+  {
+    "path": "/api/v1/ums/sync",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "sync_student_by_body",
+    "module": "app.api.v1.ums",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.schemas.ums.UMSSyncRequest'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "UMS Integration"
+    ]
+  },
+  {
+    "path": "/api/v1/ums/sync/department/{department_code}",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "sync_dept",
+    "module": "app.api.v1.ums",
+    "path_params": [
+      "department_code"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "UMS Integration"
+    ]
+  },
+  {
+    "path": "/api/v1/ums/sync/all",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "sync_all",
+    "module": "app.api.v1.ums",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [],
+    "tags": [
+      "UMS Integration"
+    ]
+  },
+  {
+    "path": "/api/v1/ums/sync/task/{task_id}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_task_status",
+    "module": "app.api.v1.ums",
+    "path_params": [
+      "task_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [],
+    "tags": [
+      "UMS Integration"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/subjects",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_subjects_with_skills",
+    "module": "app.api.v1.curriculum",
+    "path_params": [],
+    "query_params": [
+      "dept",
+      "semester"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/subjects/{subject_id}/skills",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_subject_skills",
+    "module": "app.api.v1.curriculum",
+    "path_params": [
+      "subject_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/subjects/{subject_id}/suggest-mappings",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "apply_suggested_mappings",
+    "module": "app.api.v1.curriculum",
+    "path_params": [
+      "subject_id"
+    ],
+    "query_params": [
+      "skill_name"
+    ],
+    "has_body": true,
+    "body_type": "typing.Optional[app.schemas.skill.ApplySuggestionRequest]",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/subjects/{subject_id}/generate-proposal",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "generate_bos_proposal",
+    "module": "app.api.v1.curriculum",
+    "path_params": [
+      "subject_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/gap-analysis/{dept}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_gap_analysis",
+    "module": "app.api.v1.curriculum",
+    "path_params": [
+      "dept"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/proposals",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "create_proposal",
+    "module": "app.api.v1.curriculum",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.api.v1.curriculum.CreateProposalRequest'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/proposals",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_proposals",
+    "module": "app.api.v1.curriculum",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/proposals/{proposal_id}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_proposal",
+    "module": "app.api.v1.curriculum",
+    "path_params": [
+      "proposal_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/proposals/{proposal_id}/status",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "update_proposal_status",
+    "module": "app.api.v1.curriculum",
+    "path_params": [
+      "proposal_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.api.v1.curriculum.UpdateProposalStatusRequest'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/proposals/{proposal_id}/download",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "download_proposal",
+    "module": "app.api.v1.curriculum",
+    "path_params": [
+      "proposal_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/proposals/{proposal_id}/submit",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "submit_proposal",
+    "module": "app.api.v1.curriculum",
+    "path_params": [
+      "proposal_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/curriculum/coverage-heatmap/{dept}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_coverage_heatmap",
+    "module": "app.api.v1.curriculum",
+    "path_params": [
+      "dept"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Curriculum"
+    ]
+  },
+  {
+    "path": "/api/v1/tpo/cohorts/query",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "query_students",
+    "module": "app.api.v1.tpo",
+    "path_params": [],
+    "query_params": [
+      "page",
+      "page_size"
+    ],
+    "has_body": true,
+    "body_type": "<class 'app.api.v1.tpo.CohortQuery'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "TPO Operations"
+    ]
+  },
+  {
+    "path": "/api/v1/tpo/cohorts",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "save_cohort",
+    "module": "app.api.v1.tpo",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.api.v1.tpo.SaveCohortRequest'>",
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "TPO Operations"
+    ]
+  },
+  {
+    "path": "/api/v1/tpo/cohorts",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_cohorts",
+    "module": "app.api.v1.tpo",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "TPO Operations"
+    ]
+  },
+  {
+    "path": "/api/v1/tpo/cohorts/{cohort_id}/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "export_cohort_csv",
+    "module": "app.api.v1.tpo",
+    "path_params": [
+      "cohort_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "TPO Operations"
+    ]
+  },
+  {
+    "path": "/api/v1/tpo/cohorts/{cohort_id}/invite-to-drive",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "batch_invite_to_drive",
+    "module": "app.api.v1.tpo",
+    "path_params": [
+      "cohort_id"
+    ],
+    "query_params": [
+      "drive_id"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "TPO Operations"
+    ]
+  },
+  {
+    "path": "/api/v1/tpo/cohorts/{cohort_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "archive_cohort",
+    "module": "app.api.v1.tpo",
+    "path_params": [
+      "cohort_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "TPO Operations"
+    ]
+  },
+  {
+    "path": "/api/v1/system/audit-logs",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_audit_logs",
+    "module": "app.api.v1.system",
+    "path_params": [],
+    "query_params": [
+      "event_type",
+      "actor_id",
+      "date_from",
+      "date_to",
+      "page",
+      "page_size"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "System & Audit"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/embed-token",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_embed_token",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [
+      "dashboard_id"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/dashboards",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_dashboards",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/config",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_bi_config",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/odata/$metadata",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "odata_metadata",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/odata/Students",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "odata_students",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [
+      "top",
+      "skip",
+      "orderby"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/odata/Placements",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "odata_placements",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [
+      "top",
+      "skip"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/odata/Drives",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "odata_drives",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [
+      "top",
+      "skip"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/odata/Departments",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "odata_departments",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/odata/Skills",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "odata_skills",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [
+      "top",
+      "skip"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/odata/StudentSkills",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "odata_student_skills",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [
+      "top",
+      "skip"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/export/{entity}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "export_entity",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [
+      "entity"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/bi/counts",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_entity_counts",
+    "module": "app.api.v1.superset_bi",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "BI Studio"
+    ]
+  },
+  {
+    "path": "/api/v1/experiences",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_experiences",
+    "module": "app.api.v1.experiences",
+    "path_params": [],
+    "query_params": [
+      "company",
+      "role",
+      "difficulty",
+      "verdict",
+      "page",
+      "per_page"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Interview Experiences"
+    ]
+  },
+  {
+    "path": "/api/v1/experiences",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "submit_experience",
+    "module": "app.api.v1.experiences",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.api.v1.experiences.ExperienceCreate'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Interview Experiences"
+    ]
+  },
+  {
+    "path": "/api/v1/experiences/{experience_id}/upvote",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "upvote_experience",
+    "module": "app.api.v1.experiences",
+    "path_params": [
+      "experience_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_db"
+    ],
+    "tags": [
+      "Interview Experiences"
+    ]
+  },
+  {
+    "path": "/api/v1/notifications/mine",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_notifications",
+    "module": "app.api.v1.notifications",
+    "path_params": [],
+    "query_params": [
+      "unread_only",
+      "limit"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Notifications"
+    ]
+  },
+  {
+    "path": "/api/v1/notifications/{notification_id}/read",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "mark_notification_read",
+    "module": "app.api.v1.notifications",
+    "path_params": [
+      "notification_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Notifications"
+    ]
+  },
+  {
+    "path": "/api/v1/notifications/read-all",
+    "methods": [
+      "PATCH"
+    ],
+    "endpoint": "mark_all_notifications_read",
+    "module": "app.api.v1.notifications",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Notifications"
+    ]
+  },
+  {
+    "path": "/api/v1/mock-interviews/start",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "start_interview",
+    "module": "app.api.v1.mock_interviews",
+    "path_params": [],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.api.v1.mock_interviews.StartInterviewRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Mock Interviews"
+    ]
+  },
+  {
+    "path": "/api/v1/mock-interviews/my",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_my_sessions",
+    "module": "app.api.v1.mock_interviews",
+    "path_params": [],
+    "query_params": [
+      "limit"
+    ],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Mock Interviews"
+    ]
+  },
+  {
+    "path": "/api/v1/mock-interviews/my/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_my_stats",
+    "module": "app.api.v1.mock_interviews",
+    "path_params": [],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Mock Interviews"
+    ]
+  },
+  {
+    "path": "/api/v1/mock-interviews/{session_id}/message",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "send_message",
+    "module": "app.api.v1.mock_interviews",
+    "path_params": [
+      "session_id"
+    ],
+    "query_params": [],
+    "has_body": true,
+    "body_type": "<class 'app.api.v1.mock_interviews.SendMessageRequest'>",
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Mock Interviews"
+    ]
+  },
+  {
+    "path": "/api/v1/mock-interviews/{session_id}",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_session",
+    "module": "app.api.v1.mock_interviews",
+    "path_params": [
+      "session_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Mock Interviews"
+    ]
+  },
+  {
+    "path": "/api/v1/mock-interviews/{session_id}/report",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "get_report",
+    "module": "app.api.v1.mock_interviews",
+    "path_params": [
+      "session_id"
+    ],
+    "query_params": [],
+    "has_body": false,
+    "body_type": null,
+    "dependencies": [
+      "get_current_user",
+      "get_db"
+    ],
+    "tags": [
+      "Mock Interviews"
+    ]
+  }
+]
