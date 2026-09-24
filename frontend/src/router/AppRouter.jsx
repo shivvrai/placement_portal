@@ -10,6 +10,12 @@ import { useAuth } from '../context/AuthContext';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 
+// Admin Portal
+import AdminLayout from '../layouts/AdminLayout';
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import UserManagement from '../pages/admin/UserManagement';
+import SystemSettings from '../pages/admin/SystemSettings';
+
 // Student portal
 import StudentLayout from '../layouts/StudentLayout';
 import StudentDashboard from '../pages/student/Dashboard';
@@ -17,6 +23,7 @@ import StudentProfile from '../pages/student/Profile';
 import JobMatches from '../pages/student/JobMatches';
 import SkillGap from '../pages/student/SkillGap';
 import Roadmap from '../pages/student/Roadmap';
+import Notifications from '../pages/student/Notifications';
 import PlacementDrives from '../pages/student/PlacementDrives';
 import DriveDetail from '../pages/student/DriveDetail';
 import InterviewExperiences from '../pages/student/InterviewExperiences';
@@ -71,6 +78,21 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="settings" element={<SystemSettings />} />
+        </Route>
+
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -82,7 +104,7 @@ export function AppRouter() {
           path="/"
           element={
             user
-              ? <Navigate to={`/${user.role === 'student' ? 'student' : user.role === 'tpo' ? 'tpo' : 'faculty'}/dashboard`} replace />
+              ? <Navigate to={`/${user.role === 'admin' ? 'admin' : user.role === 'student' ? 'student' : user.role === 'tpo' ? 'tpo' : 'faculty'}/dashboard`} replace />
               : <Navigate to="/login" replace />
           }
         />
@@ -102,6 +124,8 @@ export function AppRouter() {
           <Route path="matches" element={<JobMatches />} />
           <Route path="skill-gap" element={<SkillGap />} />
           <Route path="roadmap" element={<Roadmap />} />
+          <Route path="career-roadmap" element={<Roadmap />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="drives" element={<PlacementDrives />} />
           <Route path="drives/:id" element={<DriveDetail />} />
           <Route path="experiences" element={<InterviewExperiences />} />

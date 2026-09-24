@@ -23,6 +23,9 @@ from app.schemas.drive import (
 )
 from app.schemas.common import MessageResponse, PaginatedResponse, PaginationMeta
 from app.services import drive_service
+from app.services.notification_service import NotificationService
+from app.core.config import get_settings
+import redis.asyncio as aioredis
 
 router = APIRouter(prefix="/drives", tags=["Placement Drives"])
 
@@ -102,6 +105,16 @@ async def create_drive(
         details={"company": data.company_name, "title": data.title},
         ip_address=request.client.host if request.client else None,
     )
+    
+    # Notify eligible students securely using the imported service without interfering with transaction
+    try:
+        redis_client = aioredis.from_url(get_settings().REDIS_URL, decode_responses=True)
+        ns = NotificationService(db, redis_client)
+        await ns.notify_eligible_students_new_drive(drive, db)
+        await redis_client.aclose()
+    except Exception:
+        pass
+    
     return _drive_to_response(drive)
 
 
@@ -442,3 +455,4 @@ async def get_announcements(
         )
         for a in items
     ]
+

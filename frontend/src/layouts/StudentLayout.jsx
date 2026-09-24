@@ -12,6 +12,7 @@ const STUDENT_NAV = [
     items: [
       { path: '/student/dashboard', icon: '🏠', label: 'Dashboard' },
       { path: '/student/profile', icon: '👤', label: 'My Profile' },
+      { path: '/student/notifications', icon: '🔔', label: 'Notifications' },
     ],
   },
   {
@@ -19,9 +20,10 @@ const STUDENT_NAV = [
     items: [
       { path: '/student/matches', icon: '🎯', label: 'Job Matches' },
       { path: '/student/skill-gap', icon: '📊', label: 'Skill Gap' },
-      { path: '/student/roadmap', icon: '🗺️', label: 'Career Roadmap' },
+      { path: '/student/career-roadmap', icon: '🗺️', label: 'Career Roadmap' },
       { path: '/student/copilot', icon: '🤖', label: 'AI Copilot' },
       { path: '/student/assessments', icon: '📝', label: 'Assessments' },
+      { path: '/student/mock-interview', icon: '🎙️', label: 'Mock Interview' },
     ],
   },
   {
@@ -38,16 +40,18 @@ export default function StudentLayout() {
     <div className="layout">
       <AppSidebar logo="CCIP" subtitle="Student Portal" navItems={STUDENT_NAV} />
       <main className="main-content">
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          padding: '12px 32px',
-          borderBottom: '1px solid var(--border-color)',
-          background: 'var(--bg-secondary)',
-        }}>
+        <header
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            padding: '12px 32px',
+            borderBottom: '1px solid var(--border-color, #374151)',
+            background: 'var(--bg-secondary, #111827)',
+          }}
+        >
           <NotificationBell />
-        </div>
+        </header>
         <Outlet />
       </main>
     </div>

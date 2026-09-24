@@ -1,8 +1,9 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from app.middleware.rate_limit import limiter
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -17,14 +18,19 @@ from app.schemas.assessment import (
     AssessmentHistoryItemResponse
 )
 from app.services.assessment_engine import create_assessment_session, submit_assessment
+from app.services.notification_service import NotificationService
+from app.core.config import get_settings
+import redis.asyncio as aioredis
 
 
 router = APIRouter(prefix="/assessments", tags=["Assessments"])
 
 
 @router.post("/start", response_model=AssessmentSessionResponse)
+@limiter.limit("20/hour")
 async def start_assessment(
-    request: AssessmentStartRequest,
+    request: Request,
+    data: AssessmentStartRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -32,8 +38,8 @@ async def start_assessment(
     session = await create_assessment_session(
         db=db,
         student_id=current_user.id,
-        topic=request.topic,
-        difficulty=request.difficulty
+        topic=data.topic,
+        difficulty=data.difficulty
     )
     
     # Map to schema (correct_answer will NOT be included due to schema definition)
@@ -87,6 +93,19 @@ async def submit_assessment_endpoint(
         for sq in session.session_questions
     ]
     
+    
+    if session.score and session.score >= 85:
+        redis_client = aioredis.from_url(get_settings().REDIS_URL, decode_responses=True)
+        ns = NotificationService(db, redis_client)
+        await ns.publish(
+            user_id=current_user.id,
+            type="ASSESSMENT_RESULT",
+            title="🎯 Top scorer! Roadmap updated",
+            message=f"You scored {session.score}% on {session.topic}. Amazing job!",
+            priority="normal"
+        )
+        await redis_client.aclose()
+
     return {
         "id": session.id,
         "topic": session.topic,
