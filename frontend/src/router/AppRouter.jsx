@@ -18,9 +18,13 @@ import JobMatches from '../pages/student/JobMatches';
 import SkillGap from '../pages/student/SkillGap';
 import Roadmap from '../pages/student/Roadmap';
 import PlacementDrives from '../pages/student/PlacementDrives';
+import DriveDetail from '../pages/student/DriveDetail';
 import Copilot from '../pages/student/Copilot';
 import AssessmentsList from '../pages/student/AssessmentsList';
 import AssessmentTake from '../pages/student/AssessmentTake';
+import SkillTrends from '../pages/student/SkillTrends';
+import Benchmark from '../pages/student/Benchmark';
+import AssessmentAnalytics from '../pages/student/AssessmentAnalytics';
 
 // TPO portal
 import TPOLayout from '../layouts/TPOLayout';
@@ -91,11 +95,15 @@ export function AppRouter() {
           <Route path="profile" element={<StudentProfile />} />
           <Route path="matches" element={<JobMatches />} />
           <Route path="skill-gap" element={<SkillGap />} />
+          <Route path="skill-trends" element={<SkillTrends />} />
           <Route path="roadmap" element={<Roadmap />} />
+          <Route path="benchmark" element={<Benchmark />} />
           <Route path="drives" element={<PlacementDrives />} />
+          <Route path="drives/:id" element={<DriveDetail />} />
           <Route path="copilot" element={<Copilot />} />
           <Route path="assessments" element={<AssessmentsList />} />
           <Route path="assessments/:id/take" element={<AssessmentTake />} />
+          <Route path="assessments/analytics" element={<AssessmentAnalytics />} />
         </Route>
 
         {/* ─── TPO Portal ─── */}

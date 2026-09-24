@@ -113,3 +113,34 @@ async def get_skill_trends(
     Cached for 6 hours.
     """
     return await analytics_service.compute_skill_trends(db)
+
+from app.services.skill_trend_service import skill_trend_service
+
+@router.get("/skill-trends/full")
+async def get_skill_trends_full(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await skill_trend_service.compute_demand_trends(db)
+
+@router.get("/skill-trends/emerging")
+async def get_emerging_skills(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await skill_trend_service.get_emerging_skills(db)
+
+@router.get("/skill-trends/heatmap")
+async def get_heatmap_data(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await skill_trend_service.get_heatmap_data(db)
+
+@router.get("/skill-trends/{skill_name}")
+async def get_single_skill_trend(
+    skill_name: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await skill_trend_service.get_single_skill_trend(db, skill_name)

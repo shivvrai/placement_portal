@@ -87,6 +87,8 @@ async def health_check():
 
 # ─── API v1 Routers ─────────────────────────────────────────────
 
+from app.api.v1.questions import router as questions_router
+
 app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 app.include_router(students_router, prefix=settings.API_V1_PREFIX)
 app.include_router(drives_router, prefix=settings.API_V1_PREFIX)
@@ -100,4 +102,5 @@ app.include_router(resume_router, prefix=settings.API_V1_PREFIX)
 app.include_router(assessments_router, prefix=settings.API_V1_PREFIX)
 app.include_router(ums_router, prefix=settings.API_V1_PREFIX)
 app.include_router(tpo_router, prefix=settings.API_V1_PREFIX)
+app.include_router(questions_router, prefix=settings.API_V1_PREFIX)
 

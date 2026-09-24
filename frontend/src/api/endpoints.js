@@ -69,6 +69,18 @@ export const intelligenceApi = {
     api.patch(`/roadmap/tasks/${taskId}`, { status }),
 };
 
+export const matchingApi = {
+  getDriveMatch: (driveId) => api.get(`/matching/drives/${driveId}`),
+  getTopDrives: () => api.get('/matching/my-top-drives'),
+  getDriveSkillGap: (driveId) => api.get(`/matching/skill-gap/${driveId}`),
+  getJobFit: (jobId) => api.get(`/matching/job-fit/${jobId}`),
+  getRankCohort: () => api.get('/matching/rank-cohort'),
+  whatIf: (data) => api.post('/matching/what-if', data),
+  getBenchmark: (scope) => api.get('/matching/benchmark', { params: { scope } }),
+  getLeaderboard: (dept, metric) => api.get(`/matching/leaderboard/${dept}`, { params: { metric } }),
+  getReadiness: () => api.get('/matching/readiness'),
+};
+
 // ─── Placement Drives ─────────────────────────────────────────────
 export const placementApi = {
   getDrives: (params) => mockOr('drives.json', () => api.get('/drives', { params })),
@@ -104,6 +116,10 @@ export const analyticsApi = {
   getSectorDistribution: () =>
     mockOr('sector_dist.json', () => api.get('/analytics/sectors')),
   getSkillTrends: () => api.get('/analytics/skills/trends'),
+  getSkillTrendsFull: () => api.get('/analytics/skill-trends/full'),
+  getSkillTrendsEmerging: () => api.get('/analytics/skill-trends/emerging'),
+  getSkillTrendsHeatmap: () => api.get('/analytics/skill-trends/heatmap'),
+  getSkillTrendDetail: (skill) => api.get(`/analytics/skill-trends/${encodeURIComponent(skill)}`),
 };
 
 
@@ -155,5 +171,9 @@ export const assessmentsApi = {
   start: (topic, difficulty) => api.post('/assessments/start', { topic, difficulty }),
   submit: (sessionId, answers) => api.post(`/assessments/${sessionId}/submit`, { answers }),
   getHistory: () => api.get('/assessments/history'),
+  submitCode: (sessionId, data) => api.post(`/assessments/${sessionId}/submit-code`, data),
+  getDetailedHistory: () => api.get('/assessments/history/detailed'),
+  getMyAnalytics: () => api.get('/assessments/analytics/my'),
+  getCohortAnalytics: (skill) => api.get(`/assessments/analytics/cohort/${encodeURIComponent(skill)}`),
 };
 

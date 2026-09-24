@@ -18,9 +18,12 @@ const STUDENT_NAV = [
     items: [
       { path: '/student/matches', icon: '🎯', label: 'Job Matches' },
       { path: '/student/skill-gap', icon: '📊', label: 'Skill Gap' },
+      { path: '/student/skill-trends', icon: '📊', label: 'Skill Trends' },
       { path: '/student/roadmap', icon: '🗺️', label: 'Career Roadmap' },
+      { path: '/student/benchmark', icon: '🏆', label: 'Benchmark' },
       { path: '/student/copilot', icon: '🤖', label: 'AI Copilot' },
       { path: '/student/assessments', icon: '📝', label: 'Assessments' },
+      { path: '/student/assessments/analytics', icon: '📈', label: 'Assessment Analytics' },
     ],
   },
   {
