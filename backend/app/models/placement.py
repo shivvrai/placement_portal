@@ -11,7 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
-from app.core.db_types import UUIDType, ARRAY
+from app.core.db_types import UUIDType, ARRAY, JSONB
 
 
 def utcnow():
@@ -69,6 +69,18 @@ class Application(Base):
     offer_reference_number: Mapped[str | None] = mapped_column(String(100))
     offer_recorded_at: Mapped[datetime | None] = mapped_column(DateTime)
 
+    # Offer Letter Pipeline — added in Sprint 3
+    offer_letter_url: Mapped[str | None] = mapped_column(String(500))
+    offer_letter_uploaded_at: Mapped[datetime | None] = mapped_column(DateTime)
+    offer_letter_status: Mapped[str] = mapped_column(String(20), default="pending")
+    offer_accepted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    offer_declined_reason: Mapped[str | None] = mapped_column(Text)
+    offer_joining_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
+    offer_joining_date_confirmed: Mapped[date | None] = mapped_column(Date)
+
+    # Shortlisting metadata — reasons for pass/fail per applicant
+    extra_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True, name="metadata")
+
     student: Mapped["Student"] = relationship(back_populates="applications")
     drive: Mapped["PlacementDrive"] = relationship(back_populates="applications")
     stages: Mapped[list["InterviewStage"]] = relationship(back_populates="application")
@@ -78,6 +90,10 @@ class Application(Base):
         CheckConstraint(
             "status IN ('applied','shortlisted','in_progress','selected','rejected','withdrawn')",
             name="ck_application_status",
+        ),
+        CheckConstraint(
+            "offer_letter_status IN ('pending','uploaded','accepted','declined')",
+            name="ck_offer_letter_status",
         ),
     )
 

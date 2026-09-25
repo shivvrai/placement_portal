@@ -28,6 +28,10 @@ from app.api.v1.system import router as system_router
 from app.api.v1.superset_bi import router as bi_router
 from app.api.v1.experiences import router as experiences_router
 from app.api.v1.notifications import router as notifications_router
+from app.api.v1.mock_interviews import router as mock_interviews_router
+from app.api.v1.calendar import router as calendar_router
+from app.api.v1.offer_letters import router as offer_letters_router
+from app.api.v1.recruiter import router as recruiter_router
 
 # Import all models so SQLAlchemy registers them with Base.metadata
 import app.models.user  # noqa: F401
@@ -93,6 +97,28 @@ def _migrate_sqlite_columns(sync_conn):
             sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_reference_number VARCHAR(100)"))
         if "offer_recorded_at" not in cols:
             sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_recorded_at DATETIME"))
+        if "metadata" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN metadata JSON"))
+        if "offer_letter_url" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_letter_url VARCHAR(500)"))
+        if "offer_letter_uploaded_at" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_letter_uploaded_at DATETIME"))
+        if "offer_letter_status" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_letter_status VARCHAR(20) DEFAULT 'pending'"))
+        if "offer_accepted_at" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_accepted_at DATETIME"))
+        if "offer_declined_reason" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_declined_reason TEXT"))
+        if "offer_joining_confirmed" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_joining_confirmed BOOLEAN DEFAULT 0"))
+        if "offer_joining_date_confirmed" not in cols:
+            sync_conn.execute(text("ALTER TABLE applications ADD COLUMN offer_joining_date_confirmed DATE"))
+
+    # users: company_id for recruiters
+    res = sync_conn.execute(text("PRAGMA table_info(users)")).fetchall()
+    cols = [r[1] for r in res]
+    if "company_id" not in cols and cols:
+        sync_conn.execute(text("ALTER TABLE users ADD COLUMN company_id VARCHAR(36)"))
 
 
 @asynccontextmanager
@@ -163,4 +189,8 @@ app.include_router(system_router, prefix=settings.API_V1_PREFIX)
 app.include_router(bi_router, prefix=settings.API_V1_PREFIX)
 app.include_router(experiences_router, prefix=settings.API_V1_PREFIX)
 app.include_router(notifications_router, prefix=settings.API_V1_PREFIX)
+app.include_router(mock_interviews_router, prefix=settings.API_V1_PREFIX)
+app.include_router(calendar_router, prefix=settings.API_V1_PREFIX)
+app.include_router(offer_letters_router, prefix=settings.API_V1_PREFIX)
+app.include_router(recruiter_router, prefix=settings.API_V1_PREFIX)
 

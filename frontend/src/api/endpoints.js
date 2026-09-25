@@ -204,6 +204,12 @@ export const placementApi = {
   recordOffer: (driveId, appId, data) => api.post(`/drives/${driveId}/applications/${appId}/offer`, data),
   postAnnouncement: (driveId, data) => api.post(`/drives/${driveId}/announcements`, data),
   getAnnouncements: (driveId) => api.get(`/drives/${driveId}/announcements`),
+  // Shortlisting Engine
+  shortlistDryRun: (driveId, criteria) => api.post(`/drives/${driveId}/shortlist/dry-run`, criteria),
+  shortlistExecute: (driveId, criteria) => api.post(`/drives/${driveId}/shortlist/execute`, criteria),
+  overrideApplication: (driveId, appId, newStatus, reason) => api.post(`/drives/${driveId}/applicants/${appId}/override`, { new_status: newStatus, reason }),
+  shortlistSummary: (driveId) => api.get(`/drives/${driveId}/shortlist/summary`),
+  bulkUpdateStatus: (driveId, applicationIds, newStatus) => Promise.all(applicationIds.map(appId => api.post(`/drives/${driveId}/applicants/${appId}/override`, { new_status: newStatus, reason: 'Bulk action' }))),
 };
 
 // ─── Analytics ────────────────────────────────────────────────────
@@ -332,4 +338,39 @@ export const notificationsApi = {
   markRead: (id) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.patch('/notifications/read-all'),
 };
+
+// ─── Drive Calendar ───────────────────────────────────────────────
+export const calendarApi = {
+  getDrives: () => api.get('/calendar/drives'),
+  getDrivesForMonth: (year, month) => api.get('/calendar/drives/month', { params: { year, month } }),
+  rescheduleDrive: (id, data) => api.post(`/calendar/drives/${id}/reschedule`, data),
+  getConflicts: () => api.get('/calendar/conflicts'),
+};
+
+// ─── Offer Letters ────────────────────────────────────────────────
+export const offerLetterApi = {
+  upload: (applicationId, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post(`/offer-letters/${applicationId}/upload`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  download: (applicationId) => api.get(`/offer-letters/${applicationId}/download`, { responseType: 'blob' }),
+  accept: (applicationId) => api.post(`/offer-letters/${applicationId}/accept`),
+  decline: (applicationId, reason) => api.post(`/offer-letters/${applicationId}/decline`, { reason }),
+  confirmJoining: (applicationId, joiningDate) => api.patch(`/offer-letters/${applicationId}/joining`, { joining_date: joiningDate }),
+  listPending: () => api.get('/offer-letters/tpo/pending'),
+  listAccepted: () => api.get('/offer-letters/tpo/accepted'),
+};
+
+// ─── Recruiter CRM ────────────────────────────────────────────────
+export const recruiterApi = {
+  getDrives: () => api.get('/recruiter/drives'),
+  getDriveApplicants: (driveId) => api.get(`/recruiter/drives/${driveId}/applicants`),
+  getApplicant: (appId) => api.get(`/recruiter/applicants/${appId}`),
+  submitFeedback: (appId, data) => api.post(`/recruiter/applicants/${appId}/feedback`, data),
+  getDashboard: () => api.get('/recruiter/dashboard'),
+};
+
 

@@ -40,6 +40,9 @@ AUDIT_EVENTS = [
     "STUDENT_PROFILE_UPDATE",
     "SHORTLIST_GENERATED",
     "ACCREDITATION_REPORT_EXPORTED",
+    "OFFER_LETTER_UPLOADED",
+    "OFFER_ACCEPTED",
+    "OFFER_DECLINED",
 ]
 
 # ─── Event → color mapping (used by frontend drawer) ─────────────────────────
@@ -54,6 +57,9 @@ EVENT_COLORS = {
     "STUDENT_PROFILE_UPDATE": "yellow",
     "SHORTLIST_GENERATED": "blue",
     "ACCREDITATION_REPORT_EXPORTED": "blue",
+    "OFFER_LETTER_UPLOADED": "blue",
+    "OFFER_ACCEPTED": "green",
+    "OFFER_DECLINED": "red",
 }
 
 

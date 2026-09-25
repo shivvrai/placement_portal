@@ -32,6 +32,13 @@ import TPOStudents from '../pages/tpo/Students';
 import TPODrives from '../pages/tpo/Drives';
 import TPOAnalytics from '../pages/tpo/Analytics';
 import BIStudio from '../pages/tpo/BIStudio';
+import DriveCalendar from '../pages/tpo/DriveCalendar';
+import OfferPipeline from '../pages/tpo/OfferPipeline';
+
+// Recruiter portal
+import RecruiterLayout from '../layouts/RecruiterLayout';
+import RecruiterDashboard from '../pages/recruiter/RecruiterDashboard';
+import RecruiterApplicants from '../pages/recruiter/RecruiterApplicants';
 
 // Faculty/HOD portal
 import FacultyLayout from '../layouts/FacultyLayout';
@@ -78,7 +85,7 @@ export function AppRouter() {
           path="/"
           element={
             user
-              ? <Navigate to={`/${user.role === 'student' ? 'student' : user.role === 'tpo' ? 'tpo' : 'faculty'}/dashboard`} replace />
+              ? <Navigate to={`/${user.role === 'student' ? 'student' : user.role === 'tpo' ? 'tpo' : user.role === 'recruiter' ? 'recruiter' : 'faculty'}/dashboard`} replace />
               : <Navigate to="/login" replace />
           }
         />
@@ -120,6 +127,8 @@ export function AppRouter() {
           <Route path="students" element={<TPOStudents />} />
           <Route path="drives" element={<TPODrives />} />
           <Route path="drives/:id" element={<DriveDetail />} />
+          <Route path="calendar" element={<DriveCalendar />} />
+          <Route path="offers" element={<OfferPipeline />} />
           <Route path="analytics" element={<TPOAnalytics />} />
           <Route path="bi-studio" element={<BIStudio />} />
         </Route>
@@ -137,6 +146,21 @@ export function AppRouter() {
           <Route path="dashboard" element={<FacultyDashboard />} />
           <Route path="curriculum" element={<CurriculumMap />} />
           <Route path="students" element={<TPOStudents />} />
+        </Route>
+
+        {/* ─── Recruiter Portal ─── */}
+        <Route
+          path="/recruiter"
+          element={
+            <ProtectedRoute roles={['recruiter', 'tpo', 'admin']}>
+              <RecruiterLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<RecruiterDashboard />} />
+          <Route path="drives" element={<RecruiterDashboard />} />
+          <Route path="drives/:driveId/applicants" element={<RecruiterApplicants />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />
