@@ -15,13 +15,16 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
-    role: str = Field(pattern="^(student|tpo|faculty|hod|admin)$")
+    role: str = Field(pattern="^(student|tpo|faculty|hod|admin|recruiter)$")
     phone: str | None = None
     # Student-specific (required when role = "student")
     roll_number: str | None = None
     department_code: str | None = None
     current_semester: int | None = Field(default=None, ge=1, le=8)
     admission_year: int | None = None
+    # Recruiter-specific
+    invite_code: str | None = None
+    company_id: str | None = None
 
 
 class LoginRequest(BaseModel):

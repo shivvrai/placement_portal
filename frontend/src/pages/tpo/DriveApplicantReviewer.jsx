@@ -65,6 +65,108 @@ export default function DriveApplicantReviewer({ drive, onClose, onDriveUpdated 
   const [rejectReason, setRejectReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Bulk selection and Kanban state
+  const [selectedApps, setSelectedApps] = useState(new Set());
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'kanban'
+  const [dragOverCol, setDragOverCol] = useState(null);
+  const [draggedAppId, setDraggedAppId] = useState(null);
+
+  // Auto-shortlist wizard state
+  const [shortlistWizardOpen, setShortlistWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardCriteria, setWizardCriteria] = useState({
+    min_cgpa: drive?.min_cgpa || 7.0,
+    max_backlogs: drive?.max_backlogs ?? 0,
+    required_skills: [],
+    eligible_departments: drive?.eligible_departments || [],
+    min_projects: null,
+    has_resume: true,
+    min_match_score: 60,
+  });
+  const [newSkillInput, setNewSkillInput] = useState('');
+  const [dryRunResult, setDryRunResult] = useState(null);
+  const [executeResult, setExecuteResult] = useState(null);
+  const [wizardLoading, setWizardLoading] = useState(false);
+
+  // Bulk action state
+  const [bulkConfirmAction, setBulkConfirmAction] = useState(null);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  const toggleSelectAll = () => {
+    if (selectedApps.size === filtered.length) {
+      setSelectedApps(new Set());
+    } else {
+      setSelectedApps(new Set(filtered.map(a => a.application_id)));
+    }
+  };
+
+  const toggleSelectApp = (appId) => {
+    const s = new Set(selectedApps);
+    if (s.has(appId)) s.delete(appId);
+    else s.add(appId);
+    setSelectedApps(s);
+  };
+
+  const executeBulkAction = async (action) => {
+    setBulkActionLoading(true);
+    const ids = Array.from(selectedApps);
+    const statusMap = {
+      shortlist: 'shortlisted',
+      next_round: 'in_progress',
+      reject: 'rejected',
+    };
+    try {
+      await placementApi.bulkUpdateStatus(drive.id, ids, statusMap[action]);
+      await loadApplicants();
+      setSelectedApps(new Set());
+      setBulkConfirmAction(null);
+    } catch (err) {
+      console.error('Bulk action error:', err);
+      alert('Failed to execute bulk action: ' + (err.response?.data?.detail || 'Error'));
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleKanbanDrop = async (appId, targetStatus) => {
+    try {
+      await placementApi.overrideApplication(drive.id, appId, targetStatus, 'Moved via Kanban drag-and-drop');
+      updateLocalApplicant(appId, { status: targetStatus });
+      if (onDriveUpdated) onDriveUpdated();
+    } catch (err) {
+      console.error('Kanban status update failed:', err);
+      await loadApplicants();
+    }
+  };
+
+  const runDryRun = async () => {
+    setWizardLoading(true);
+    try {
+      const res = await placementApi.shortlistDryRun(drive.id, wizardCriteria);
+      setDryRunResult(res.data);
+      setWizardStep(2);
+    } catch (err) {
+      alert('Dry-run failed: ' + (err.response?.data?.detail || 'Error'));
+    } finally {
+      setWizardLoading(false);
+    }
+  };
+
+  const runExecuteShortlist = async () => {
+    setWizardLoading(true);
+    try {
+      const res = await placementApi.shortlistExecute(drive.id, wizardCriteria);
+      setExecuteResult(res.data);
+      setWizardStep(3);
+      await loadApplicants();
+      if (onDriveUpdated) onDriveUpdated();
+    } catch (err) {
+      alert('Execution failed: ' + (err.response?.data?.detail || 'Error'));
+    } finally {
+      setWizardLoading(false);
+    }
+  };
+
   // Load applicants
   const loadApplicants = async () => {
     if (!drive?.id) return;
@@ -324,17 +426,57 @@ export default function DriveApplicantReviewer({ drive, onClose, onDriveUpdated 
               Role: {drive.title} {drive.salary_ctc ? `· ₹${drive.salary_ctc} LPA` : ''}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
-              borderRadius: '50%', width: 36, height: 36, display: 'flex',
-              alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-              color: 'var(--text-secondary)', fontSize: '1.2rem',
-            }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              className="btn btn-primary"
+              style={{ fontSize: '0.85rem', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 6 }}
+              onClick={() => {
+                setShortlistWizardOpen(true);
+                setWizardStep(1);
+                setDryRunResult(null);
+                setExecuteResult(null);
+              }}
+            >
+              <span>⚡</span> Auto-Shortlist Engine
+            </button>
+
+            <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: 8, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                style={{
+                  padding: '6px 12px', border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600,
+                  background: viewMode === 'table' ? 'var(--primary)' : 'var(--bg-tertiary)',
+                  color: viewMode === 'table' ? '#fff' : 'var(--text-secondary)',
+                }}
+              >
+                📋 Table
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('kanban')}
+                style={{
+                  padding: '6px 12px', border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600,
+                  background: viewMode === 'kanban' ? 'var(--primary)' : 'var(--bg-tertiary)',
+                  color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)',
+                }}
+              >
+                📊 Kanban Board
+              </button>
+            </div>
+
+            <button
+              onClick={onClose}
+              style={{
+                background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                borderRadius: '50%', width: 36, height: 36, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                color: 'var(--text-secondary)', fontSize: '1.2rem',
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Live Stats Summary Bar */}
@@ -374,6 +516,54 @@ export default function DriveApplicantReviewer({ drive, onClose, onDriveUpdated 
             <strong style={{ color: '#ef4444' }}>{stats.rejected}</strong>
           </div>
         </div>
+
+        {/* Bulk Action Toolbar */}
+        {selectedApps.size > 0 && (
+          <div style={{
+            padding: '10px var(--space-8)',
+            background: 'rgba(99, 102, 241, 0.12)',
+            borderBottom: '1px solid rgba(99, 102, 241, 0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>✓ {selectedApps.size} candidate(s) selected</span>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: '0.75rem', height: 24, padding: '0 8px' }}
+                onClick={() => setSelectedApps(new Set())}
+              >
+                Deselect
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.8rem', padding: '4px 12px', borderColor: '#f59e0b', color: '#f59e0b' }}
+                onClick={() => setBulkConfirmAction('shortlist')}
+              >
+                ✓ Shortlist Selected
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.8rem', padding: '4px 12px', borderColor: '#06b6d4', color: '#06b6d4' }}
+                onClick={() => setBulkConfirmAction('next_round')}
+              >
+                ➡️ Advance to Tech Round
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: '0.8rem', padding: '4px 12px', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+                onClick={() => setBulkConfirmAction('reject')}
+              >
+                ❌ Reject Selected
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Filters Toolbar */}
         <div style={{
@@ -470,11 +660,110 @@ export default function DriveApplicantReviewer({ drive, onClose, onDriveUpdated 
               <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>No matching applicants found</div>
               <p style={{ fontSize: 'var(--font-size-sm)' }}>Try adjusting your filters or search criteria.</p>
             </div>
+          ) : viewMode === 'kanban' ? (
+            /* Kanban Board View */
+            <div style={{ display: 'flex', gap: 16, overflowX: 'auto', padding: '16px 0', minHeight: 520, alignItems: 'flex-start' }}>
+              {[
+                { key: 'applied', label: 'Applied', color: '#6366f1', icon: '📥' },
+                { key: 'shortlisted', label: 'Shortlisted', color: '#f59e0b', icon: '⚡' },
+                { key: 'in_progress', label: 'Tech Round', color: '#06b6d4', icon: '💻' },
+                { key: 'selected', label: 'Selected / Offer', color: '#22c55e', icon: '🎉' },
+                { key: 'rejected', label: 'Rejected', color: '#ef4444', icon: '❌' },
+              ].map(col => {
+                const colApps = filtered.filter(a => a.status === col.key);
+                const isDragTarget = dragOverCol === col.key;
+                return (
+                  <div
+                    key={col.key}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.key); }}
+                    onDragLeave={() => setDragOverCol(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverCol(null);
+                      if (draggedAppId) {
+                        handleKanbanDrop(draggedAppId, col.key);
+                        setDraggedAppId(null);
+                      }
+                    }}
+                    style={{
+                      minWidth: 220, maxWidth: 240, flex: '1 0 220px',
+                      background: isDragTarget ? 'rgba(99,102,241,0.1)' : 'var(--bg-card)',
+                      border: isDragTarget ? `2px dashed ${col.color}` : '1px solid var(--border-color)',
+                      borderRadius: 12, padding: 12,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      display: 'flex', flexDirection: 'column', gap: 8,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: col.color, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>{col.icon}</span> {col.label}
+                      </div>
+                      <span style={{
+                        background: `${col.color}25`, color: col.color,
+                        borderRadius: 99, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700,
+                      }}>
+                        {colApps.length}
+                      </span>
+                    </div>
+
+                    <div style={{ minHeight: 400, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {colApps.map(app => {
+                        const fullName = `${app.first_name || ''} ${app.last_name || ''}`.trim() || 'Candidate';
+                        return (
+                          <div
+                            key={app.application_id}
+                            draggable
+                            onDragStart={() => setDraggedAppId(app.application_id)}
+                            style={{
+                              background: 'var(--bg-secondary)',
+                              borderRadius: 8, padding: '10px 12px',
+                              border: '1px solid var(--border-color)',
+                              cursor: 'grab', fontSize: '0.82rem',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                            }}
+                          >
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
+                              {fullName}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                              {app.roll_number} · {app.department}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: app.cgpa >= 8 ? '#22c55e' : 'var(--text-muted)' }}>
+                                CGPA: {app.cgpa ? app.cgpa.toFixed(2) : 'N/A'}
+                              </span>
+                              {app.offer_ctc_lpa && (
+                                <span style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 700 }}>
+                                  ₹{app.offer_ctc_lpa}L
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {colApps.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)', fontSize: '0.75rem', border: '1px dashed var(--border-color)', borderRadius: 8 }}>
+                          Drag candidates here
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="table-container" style={{ marginTop: 'var(--space-4)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '12px 8px', width: 36, textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={filtered.length > 0 && selectedApps.size === filtered.length}
+                        onChange={toggleSelectAll}
+                        title="Select All"
+                      />
+                    </th>
                     <th style={{ padding: '12px 8px' }}>Roll No</th>
                     <th style={{ padding: '12px 8px' }}>Candidate Name</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center' }}>Branch</th>
@@ -500,6 +789,15 @@ export default function DriveApplicantReviewer({ drive, onClose, onDriveUpdated 
                           transition: 'background 0.15s',
                         }}
                       >
+                        {/* Selection Checkbox */}
+                        <td style={{ padding: '12px 8px', width: 36, textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedApps.has(app.application_id)}
+                            onChange={() => toggleSelectApp(app.application_id)}
+                          />
+                        </td>
+
                         {/* Roll Number */}
                         <td style={{ padding: '12px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
                           {app.roll_number}
@@ -918,6 +1216,224 @@ export default function DriveApplicantReviewer({ drive, onClose, onDriveUpdated 
             onClose={() => setOfferModalApp(null)}
             onSuccess={handleOfferRecorded}
           />
+        )}
+
+        {/* ─── MODAL 6: Auto-Shortlist Wizard Modal ─── */}
+        {shortlistWizardOpen && (
+          <div style={overlayStyle} onClick={() => setShortlistWizardOpen(false)}>
+            <div style={{ ...modalCardStyle, maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: '1.4rem' }}>⚡</span>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Auto-Shortlist Wizard</h3>
+                </div>
+                <button onClick={() => setShortlistWizardOpen(false)} style={closeBtnStyle}>×</button>
+              </div>
+
+              {/* Steps bar */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+                {['1. Criteria Config', '2. Dry-Run Preview', '3. Execution'].map((st, idx) => (
+                  <div
+                    key={st}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: 8, textAlign: 'center',
+                      fontSize: '0.78rem', fontWeight: 700,
+                      background: wizardStep === idx + 1 ? 'var(--primary)' : 'var(--bg-tertiary)',
+                      color: wizardStep === idx + 1 ? '#fff' : 'var(--text-muted)',
+                    }}
+                  >
+                    {st}
+                  </div>
+                ))}
+              </div>
+
+              {/* STEP 1: Criteria Config */}
+              {wizardStep === 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6 }}>
+                      Minimum CGPA Threshold ({wizardCriteria.min_cgpa ?? 'None'})
+                    </label>
+                    <input
+                      type="range" min="5.0" max="10.0" step="0.1"
+                      value={wizardCriteria.min_cgpa || 7.0}
+                      onChange={e => setWizardCriteria(c => ({ ...c, min_cgpa: parseFloat(e.target.value) }))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6 }}>Max Active Backlogs</label>
+                      <select
+                        className="input"
+                        value={wizardCriteria.max_backlogs ?? ''}
+                        onChange={e => setWizardCriteria(c => ({ ...c, max_backlogs: e.target.value === '' ? null : parseInt(e.target.value) }))}
+                      >
+                        <option value="">No limit</option>
+                        <option value="0">0 (Strictly No Backlogs)</option>
+                        <option value="1">Max 1 Backlog</option>
+                        <option value="2">Max 2 Backlogs</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6 }}>Min Projects Count</label>
+                      <select
+                        className="input"
+                        value={wizardCriteria.min_projects ?? ''}
+                        onChange={e => setWizardCriteria(c => ({ ...c, min_projects: e.target.value === '' ? null : parseInt(e.target.value) }))}
+                      >
+                        <option value="">Any</option>
+                        <option value="1">At least 1 Project</option>
+                        <option value="2">At least 2 Projects</option>
+                        <option value="3">At least 3 Projects</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6 }}>
+                      ML Match Score Threshold ({wizardCriteria.min_match_score || 0}%)
+                    </label>
+                    <input
+                      type="range" min="0" max="95" step="5"
+                      value={wizardCriteria.min_match_score || 0}
+                      onChange={e => setWizardCriteria(c => ({ ...c, min_match_score: parseInt(e.target.value) || null }))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6 }}>Required Skills (Must Have All)</label>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <input
+                        className="input"
+                        placeholder="e.g. Python, React, SQL..."
+                        value={newSkillInput}
+                        onChange={e => setNewSkillInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && newSkillInput.trim()) {
+                            e.preventDefault();
+                            setWizardCriteria(c => ({ ...c, required_skills: [...c.required_skills, newSkillInput.trim()] }));
+                            setNewSkillInput('');
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          if (newSkillInput.trim()) {
+                            setWizardCriteria(c => ({ ...c, required_skills: [...c.required_skills, newSkillInput.trim()] }));
+                            setNewSkillInput('');
+                          }
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {wizardCriteria.required_skills.map((sk, idx) => (
+                        <span key={idx} style={{ padding: '4px 10px', borderRadius: 99, background: 'var(--primary)', color: '#fff', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {sk}
+                          <span style={{ cursor: 'pointer' }} onClick={() => setWizardCriteria(c => ({ ...c, required_skills: c.required_skills.filter((_, i) => i !== idx) }))}>✕</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      id="req-resume"
+                      checked={wizardCriteria.has_resume || false}
+                      onChange={e => setWizardCriteria(c => ({ ...c, has_resume: e.target.checked || null }))}
+                    />
+                    <label htmlFor="req-resume" style={{ fontSize: '0.85rem' }}>Require Uploaded Resume PDF</label>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setShortlistWizardOpen(false)} style={{ flex: 1 }}>Cancel</button>
+                    <button type="button" className="btn btn-primary" onClick={runDryRun} disabled={wizardLoading} style={{ flex: 1.5 }}>
+                      {wizardLoading ? 'Running Dry-Run...' : '👁 Run Dry-Run Preview →'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: Dry Run Preview */}
+              {wizardStep === 2 && dryRunResult && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                    <div style={{ padding: 16, borderRadius: 10, background: 'rgba(34, 197, 94, 0.12)', border: '1px solid rgba(34, 197, 94, 0.3)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 800, color: '#22c55e' }}>{dryRunResult.would_shortlist}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Candidates Would Shortlist</div>
+                    </div>
+                    <div style={{ padding: 16, borderRadius: 10, background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ef4444' }}>{dryRunResult.would_skip}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Candidates Unqualified</div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: 8 }}>Preview Passing Candidates ({dryRunResult.preview_pass?.length}):</div>
+                    <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 8, padding: 8 }}>
+                      {(dryRunResult.preview_pass || []).map((s, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', padding: '4px 8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <span>{s.first_name} {s.last_name} ({s.department})</span>
+                          <span style={{ color: '#22c55e', fontWeight: 600 }}>CGPA: {s.cgpa?.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setWizardStep(1)} style={{ flex: 1 }}>← Edit Criteria</button>
+                    <button type="button" className="btn btn-primary" onClick={runExecuteShortlist} disabled={wizardLoading || dryRunResult.would_shortlist === 0} style={{ flex: 1.5 }}>
+                      {wizardLoading ? 'Executing Shortlist...' : `✅ Confirm & Shortlist ${dryRunResult.would_shortlist} Students`}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: Execution Result */}
+              {wizardStep === 3 && executeResult && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: 16 }}>🎉</div>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', color: '#22c55e' }}>Shortlisting Successfully Executed!</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 20 }}>
+                    Successfully updated <strong style={{ color: '#22c55e' }}>{executeResult.shortlisted}</strong> candidate status to <strong>Shortlisted</strong>.<br />
+                    In-app notifications have been dispatched to all qualified students.
+                  </p>
+                  <button type="button" className="btn btn-primary" onClick={() => setShortlistWizardOpen(false)}>Done</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── MODAL 7: Bulk Action Confirmation Modal ─── */}
+        {bulkConfirmAction && (
+          <div style={overlayStyle} onClick={() => setBulkConfirmAction(null)}>
+            <div style={modalCardStyle} onClick={e => e.stopPropagation()}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '1.1rem' }}>Confirm Bulk Action</h3>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: 20 }}>
+                Are you sure you want to <strong>{bulkConfirmAction === 'shortlist' ? 'Shortlist' : bulkConfirmAction === 'next_round' ? 'Advance to Tech Round' : 'Reject'}</strong> all {selectedApps.size} selected candidate(s)?
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-secondary" onClick={() => setBulkConfirmAction(null)} style={{ flex: 1 }}>Cancel</button>
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1, background: bulkConfirmAction === 'reject' ? '#ef4444' : 'var(--primary)' }}
+                  onClick={() => executeBulkAction(bulkConfirmAction)}
+                  disabled={bulkActionLoading}
+                >
+                  {bulkActionLoading ? 'Processing...' : 'Confirm Action'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

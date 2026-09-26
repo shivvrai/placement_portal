@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { placementApi } from '../../api/endpoints';
+import { placementApi, offerLetterApi } from '../../api/endpoints';
 
 export default function OfferModal({ driveId, application, onClose, onSuccess }) {
   const studentName = application
@@ -22,6 +22,25 @@ export default function OfferModal({ driveId, application, onClose, onSuccess })
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [offerFile, setOfferFile] = useState(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+
+  const handleUploadLetter = async () => {
+    if (!offerFile || !application?.application_id) return;
+    setUploadLoading(true);
+    setError(null);
+    try {
+      await offerLetterApi.upload(application.application_id, offerFile);
+      setUploadSuccess(true);
+      setOfferFile(null);
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setError(err.response?.data?.detail || 'Failed to upload offer letter.');
+    } finally {
+      setUploadLoading(false);
+    }
+  };
 
   // Auto-fill defaults if empty
   useEffect(() => {
@@ -284,6 +303,68 @@ export default function OfferModal({ driveId, application, onClose, onSuccess })
                 onChange={handleChange('referenceNumber')}
               />
             </div>
+          </div>
+
+          {/* PDF Offer Letter Upload */}
+          <div style={{ marginTop: 24, padding: 16, borderRadius: 10, border: '1px dashed var(--border-color)', background: 'var(--bg-tertiary)' }}>
+            <div style={{ fontWeight: 600, marginBottom: 10, fontSize: '0.9rem' }}>📄 Upload Official Offer Letter PDF</div>
+            {uploadSuccess ? (
+              <div style={{ color: '#22c55e', fontWeight: 600, textAlign: 'center', padding: 12 }}>
+                ✅ Offer letter uploaded successfully! Student has been notified.
+              </div>
+            ) : (
+              <>
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const f = e.dataTransfer.files[0];
+                    if (f && (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) {
+                      setOfferFile(f);
+                    }
+                  }}
+                  style={{
+                    border: '2px dashed var(--border-color)',
+                    borderRadius: 8,
+                    padding: '16px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    marginBottom: 10,
+                  }}
+                  onClick={() => document.getElementById('offer-pdf-input').click()}
+                >
+                  <input
+                    id="offer-pdf-input"
+                    type="file"
+                    accept=".pdf"
+                    style={{ display: 'none' }}
+                    onChange={e => {
+                      if (e.target.files?.[0]) setOfferFile(e.target.files[0]);
+                    }}
+                  />
+                  {offerFile ? (
+                    <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                      📄 {offerFile.name} ({(offerFile.size / 1024).toFixed(1)} KB)
+                    </div>
+                  ) : (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      Drag &amp; drop PDF offer letter here or click to browse
+                    </div>
+                  )}
+                </div>
+                {offerFile && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ width: '100%', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                    onClick={handleUploadLetter}
+                    disabled={uploadLoading}
+                  >
+                    {uploadLoading ? 'Uploading PDF...' : '⬆ Upload Offer Letter PDF'}
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           {/* Actions */}

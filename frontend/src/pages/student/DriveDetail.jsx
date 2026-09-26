@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { placementApi, studentApi, matchingApi } from '../../api/endpoints';
+import { placementApi, studentApi, matchingApi, offerLetterApi } from '../../api/endpoints';
 
 const DEFAULT_ROUNDS = [
   {
@@ -60,6 +60,12 @@ export default function DriveDetail() {
   const [hasApplied, setHasApplied] = useState(false);
   const [applySuccess, setApplySuccess] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [myApplication, setMyApplication] = useState(null);
+  const [declineModal, setDeclineModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [joiningDate, setJoiningDate] = useState('');
+  const [offerActionResult, setOfferActionResult] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -72,15 +78,24 @@ export default function DriveDetail() {
         }
 
         if (!isTpo) {
-          const [profRes, matchRes] = await Promise.allSettled([
+          const [profRes, matchRes, appsRes] = await Promise.allSettled([
             studentApi.getProfile(),
             matchingApi.getDriveMatch(id),
+            placementApi.getMyApplications(),
           ]);
           if (profRes.status === 'fulfilled' && profRes.value?.data) {
             setProfile(profRes.value.data);
           }
           if (matchRes.status === 'fulfilled' && matchRes.value?.data) {
             setMatchData(matchRes.value.data);
+          }
+          if (appsRes.status === 'fulfilled') {
+            const apps = Array.isArray(appsRes.value?.data) ? appsRes.value.data : [];
+            const myApp = apps.find(a => a.drive_id === id);
+            if (myApp) {
+              setHasApplied(true);
+              setMyApplication(myApp);
+            }
           }
         }
       } catch (err) {
@@ -480,11 +495,176 @@ export default function DriveDetail() {
 
             {/* Action CTA */}
             {hasApplied ? (
-              <div style={{ textAlign: 'center', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 8 }}>
-                <span style={{ color: '#22c55e', fontWeight: 600 }}>✓ Application Registered</span>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                  Status: Under Review by Placement Committee
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ textAlign: 'center', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 8 }}>
+                  <span style={{ color: '#22c55e', fontWeight: 600 }}>✓ Application Registered</span>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                    Status: {myApplication?.status ? myApplication.status.toUpperCase() : 'Under Review by Placement Committee'}
+                  </div>
                 </div>
+
+                {/* Offer Letter Panel */}
+                {(myApplication?.offer_letter_url || drive?.offer_letter_url) && (
+                  <div style={{ padding: 14, borderRadius: 10, background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>📄</span> Official Offer Letter
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ width: '100%', marginBottom: 10, fontSize: '0.85rem' }}
+                      onClick={async () => {
+                        const appId = myApplication?.id || drive?.application_id;
+                        if (!appId) return;
+                        try {
+                          const res = await offerLetterApi.download(appId);
+                          const blob = new Blob([res.data], { type: 'application/pdf' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `offer_letter_${drive?.title || 'placement'}.pdf`;
+                          a.click();
+                        } catch (err) {
+                          window.open(myApplication?.offer_letter_url || drive?.offer_letter_url, '_blank');
+                        }
+                      }}
+                    >
+                      📥 Download Offer Letter (PDF)
+                    </button>
+
+                    {/* Pending response state */}
+                    {(myApplication?.offer_letter_status === 'uploaded' || (!myApplication?.offer_letter_status && !offerActionResult)) && (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ flex: 1, fontSize: '0.82rem' }}
+                          disabled={actionLoading}
+                          onClick={async () => {
+                            const appId = myApplication?.id || drive?.application_id;
+                            if (!appId) return;
+                            setActionLoading(true);
+                            try {
+                              await offerLetterApi.accept(appId);
+                              setOfferActionResult('accepted');
+                              setMyApplication(prev => prev ? ({ ...prev, offer_letter_status: 'accepted' }) : prev);
+                            } catch (e) {
+                              alert('Failed to accept offer: ' + (e.response?.data?.detail || 'Error'));
+                            } finally {
+                              setActionLoading(false);
+                            }
+                          }}
+                        >
+                          {actionLoading ? 'Processing...' : '✅ Accept Offer'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          style={{ flex: 1, fontSize: '0.82rem', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+                          onClick={() => setDeclineModal(true)}
+                        >
+                          ❌ Decline
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Accepted state */}
+                    {(myApplication?.offer_letter_status === 'accepted' || offerActionResult === 'accepted') && (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ color: '#22c55e', fontWeight: 700, fontSize: '0.85rem', textAlign: 'center', marginBottom: 8 }}>
+                          🎉 Offer Accepted!
+                        </div>
+                        {(!myApplication?.offer_joining_confirmed) ? (
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                              Confirm Your Joining Date:
+                            </label>
+                            <input
+                              type="date"
+                              value={joiningDate}
+                              onChange={e => setJoiningDate(e.target.value)}
+                              style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', marginBottom: 8, fontSize: '0.82rem' }}
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ width: '100%', fontSize: '0.8rem' }}
+                              disabled={!joiningDate || actionLoading}
+                              onClick={async () => {
+                                const appId = myApplication?.id || drive?.application_id;
+                                if (!appId || !joiningDate) return;
+                                setActionLoading(true);
+                                try {
+                                  await offerLetterApi.confirmJoining(appId, joiningDate);
+                                  setMyApplication(prev => prev ? ({ ...prev, offer_joining_confirmed: true, offer_joining_date_confirmed: joiningDate }) : prev);
+                                  alert('Joining date confirmed!');
+                                } catch (e) {
+                                  alert('Failed: ' + (e.response?.data?.detail || 'Error'));
+                                } finally {
+                                  setActionLoading(false);
+                                }
+                              }}
+                            >
+                              📅 Confirm Joining Date
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.78rem', color: '#22c55e', textAlign: 'center' }}>
+                            ✓ Joining confirmed: {myApplication?.offer_joining_date_confirmed}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Declined state */}
+                    {(myApplication?.offer_letter_status === 'declined' || offerActionResult === 'declined') && (
+                      <div style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.82rem', textAlign: 'center', marginTop: 6 }}>
+                        Offer Declined
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Decline Modal */}
+                {declineModal && (
+                  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: 24, width: 380, border: '1px solid var(--border-color)' }}>
+                      <h3 style={{ margin: '0 0 10px 0', fontSize: '1.1rem' }}>Decline Placement Offer</h3>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+                        Are you sure you want to decline this offer? This decision is final.
+                      </p>
+                      <textarea
+                        placeholder="Reason for declining (optional, e.g. accepted another offer, higher studies)..."
+                        value={declineReason}
+                        onChange={e => setDeclineReason(e.target.value)}
+                        rows={3}
+                        style={{ width: '100%', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '8px 10px', resize: 'vertical', marginBottom: 14, fontSize: '0.82rem' }}
+                      />
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button className="btn btn-secondary" onClick={() => setDeclineModal(false)}>Cancel</button>
+                        <button
+                          className="btn btn-ghost"
+                          style={{ flex: 1, color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+                          onClick={async () => {
+                            const appId = myApplication?.id || drive?.application_id;
+                            if (!appId) return;
+                            try {
+                              await offerLetterApi.decline(appId, declineReason);
+                              setDeclineModal(false);
+                              setOfferActionResult('declined');
+                              setMyApplication(prev => prev ? ({ ...prev, offer_letter_status: 'declined' }) : prev);
+                            } catch (e) {
+                              alert('Failed to decline: ' + (e.response?.data?.detail || 'Error'));
+                            }
+                          }}
+                        >
+                          Confirm Decline
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <button

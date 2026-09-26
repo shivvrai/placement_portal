@@ -18,6 +18,8 @@ const TPO_NAV = [
     items: [
       { path: '/tpo/students', icon: '👥', label: 'Students' },
       { path: '/tpo/drives', icon: '🏢', label: 'Placement Drives' },
+      { path: '/tpo/calendar', icon: '📅', label: 'Drive Calendar' },
+      { path: '/tpo/offers', icon: '📄', label: 'Offer Pipeline' },
     ],
   },
   {

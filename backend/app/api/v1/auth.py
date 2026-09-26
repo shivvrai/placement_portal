@@ -110,6 +110,22 @@ async def register(request: Request, data: RegisterRequest, db: AsyncSession = D
         )
         db.add(faculty)
 
+    elif request.role == "recruiter":
+        import os as _os
+        invite_code = request.invite_code or ""
+        expected_code = _os.environ.get("RECRUITER_INVITE_CODE", "RECRUIT2024")
+        if invite_code != expected_code:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid invite code for recruiter registration",
+            )
+        if request.company_id:
+            import uuid as _uuid
+            try:
+                user.company_id = _uuid.UUID(str(request.company_id))
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid company_id format")
+
     return user
 
 

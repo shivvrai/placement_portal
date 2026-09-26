@@ -30,6 +30,7 @@ from app.services import drive_service
 from app.services.notification_service import NotificationService
 from app.core.config import get_settings
 import redis.asyncio as aioredis
+from app.services.shortlisting_service import shortlisting_service, ShortlistingCriteria
 
 router = APIRouter(prefix="/drives", tags=["Placement Drives"])
 
@@ -492,3 +493,97 @@ async def get_announcements(
         for a in items
     ]
 
+
+
+# ─── Bulk Shortlisting ────────────────────────────────────────────────────────
+
+@router.post("/{drive_id}/shortlist/dry-run", summary="Preview shortlisting (no DB write)")
+async def shortlist_dry_run(
+    drive_id: uuid.UUID,
+    criteria: ShortlistingCriteria,
+    current_user: User = Depends(_tpo_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Preview which applicants would be shortlisted given the criteria, without writing to DB."""
+    try:
+        return await shortlisting_service.dry_run(drive_id, criteria, db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/{drive_id}/shortlist/execute", summary="Run and persist auto-shortlisting")
+async def shortlist_execute(
+    drive_id: uuid.UUID,
+    criteria: ShortlistingCriteria,
+    current_user: User = Depends(_tpo_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Execute shortlisting: evaluates all applied applicants, updates status, sends notifications."""
+    try:
+        return await shortlisting_service.run_auto_shortlist(drive_id, criteria, current_user.id, db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/{drive_id}/applicants/{app_id}/override", summary="Manual override applicant status (TPO)")
+async def override_application(
+    drive_id: uuid.UUID,
+    app_id: uuid.UUID,
+    body: dict,
+    current_user: User = Depends(_tpo_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """TPO manually overrides an applicant's status with an optional reason."""
+    new_status = body.get("new_status", "")
+    reason = body.get("reason", "")
+    valid_statuses = ["applied", "shortlisted", "in_progress", "selected", "rejected", "withdrawn"]
+    if new_status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+    try:
+        app = await shortlisting_service.manual_override(app_id, new_status, reason, current_user.id, db)
+        return {"message": "Status updated", "application_id": str(app.id), "new_status": app.status}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{drive_id}/shortlist/summary", summary="Shortlisting summary for a drive")
+async def shortlist_summary(
+    drive_id: uuid.UUID,
+    current_user: User = Depends(_tpo_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns counts of applicants in each status + last criteria used."""
+    from sqlalchemy import func
+    stmt = (
+        select(Application.status, func.count(Application.id).label("count"))
+        .where(Application.drive_id == drive_id)
+        .group_by(Application.status)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+    counts = {row.status: row.count for row in rows}
+
+    last_criteria = None
+    stmt2 = (
+        select(Application)
+        .where(Application.drive_id == drive_id)
+        .where(Application.status == "shortlisted")
+        .order_by(Application.updated_at.desc())
+        .limit(1)
+    )
+    r2 = await db.execute(stmt2)
+    latest_app = r2.scalar_one_or_none()
+    if latest_app and latest_app.extra_metadata:
+        shortlisting_meta = latest_app.extra_metadata.get("shortlisting", {})
+        last_criteria = shortlisting_meta.get("criteria_used")
+
+    return {
+        "applied": counts.get("applied", 0),
+        "shortlisted": counts.get("shortlisted", 0),
+        "in_progress": counts.get("in_progress", 0),
+        "selected": counts.get("selected", 0),
+        "rejected": counts.get("rejected", 0),
+        "withdrawn": counts.get("withdrawn", 0),
+        "total": sum(counts.values()),
+        "last_criteria_used": last_criteria,
+    }
