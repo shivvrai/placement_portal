@@ -37,6 +37,11 @@ import QuizCenter from '../pages/student/QuizCenter';
 import SkillTrends from '../pages/student/SkillTrends';
 import Benchmark from '../pages/student/Benchmark';
 import AssessmentAnalytics from '../pages/student/AssessmentAnalytics';
+import AlumniMentorship from '../pages/student/AlumniMentorship';
+import PrepHub from '../pages/student/PrepHub';
+import CompanyInsights from '../pages/student/CompanyInsights';
+import ApplicationTracker from '../pages/student/ApplicationTracker';
+import DocumentVault from '../pages/student/DocumentVault';
 
 // TPO portal
 import TPOLayout from '../layouts/TPOLayout';
@@ -148,6 +153,11 @@ export function AppRouter() {
           <Route path="mock-interview" element={<MockInterview />} />
           <Route path="mock-interview/history" element={<MockInterviewHistory />} />
           <Route path="quiz" element={<QuizCenter />} />
+          <Route path="mentorship" element={<AlumniMentorship />} />
+          <Route path="prep" element={<PrepHub />} />
+          <Route path="company-insights" element={<CompanyInsights />} />
+          <Route path="applications" element={<ApplicationTracker />} />
+          <Route path="vault" element={<DocumentVault />} />
         </Route>
 
         {/* ─── TPO Portal ─── */}

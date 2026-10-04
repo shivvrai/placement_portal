@@ -32,7 +32,17 @@ const STUDENT_NAV = [
     label: 'Placement & Careers',
     items: [
       { path: '/student/drives', icon: '🏢', label: 'Placement Drives' },
+      { path: '/student/applications', icon: '📋', label: 'Application Tracker' },
+      { path: '/student/vault', icon: '📁', label: 'Document Vault' },
+      { path: '/student/company-insights', icon: '🏢', label: 'Company Insights' },
       { path: '/student/experiences', icon: '💡', label: 'Interview Experiences' },
+    ],
+  },
+  {
+    label: 'Community & Prep',
+    items: [
+      { path: '/student/mentorship', icon: '🤝', label: 'Alumni Mentorship' },
+      { path: '/student/prep', icon: '📚', label: 'Prep Hub' },
     ],
   },
 ];

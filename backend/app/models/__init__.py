@@ -16,6 +16,12 @@ from app.models.experiences import InterviewExperience
 from app.models.announcements import DriveAnnouncement
 from app.models.interview_session import MockInterviewSession
 from app.models.curriculum_proposal import CurriculumProposal
+from app.models.alumni import AlumniProfile, MentorshipConnection, MentorshipSession
+from app.models.prep_resources import PrepResource, PrepCollection, PrepProgress
+from app.models.feedback import FeedbackSurvey, SurveyQuestion, SurveyResponse
+from app.models.company_reviews import CompanyReview, CompanyInsight
+from app.models.document_vault import StudentDocument
+from app.models.application_timeline import ApplicationTimelineEvent
 
 __all__ = [
     # Identity & Auth (4)
@@ -40,6 +46,14 @@ __all__ = [
     # Sprint 3 — AI Learning Infrastructure
     "MockInterviewSession",
     "CurriculumProposal",
+    # Sprint 3 — Sakshi: Alumni & Mentorship, Prep Resources, Feedback
+    "AlumniProfile", "MentorshipConnection", "MentorshipSession",
+    "PrepResource", "PrepCollection", "PrepProgress",
+    "FeedbackSurvey", "SurveyQuestion", "SurveyResponse",
+    # Sprint 3 — Anjula: Company Reviews, Document Vault, Application Timeline
+    "CompanyReview", "CompanyInsight",
+    "StudentDocument",
+    "ApplicationTimelineEvent",
 ]
-# Total: 38 tables
+# Total: 53 tables
 
