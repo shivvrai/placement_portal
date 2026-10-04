@@ -47,6 +47,11 @@ from app.api.v1.questions import router as questions_router
 from app.api.v1.calendar import router as calendar_router
 from app.api.v1.offer_letters import router as offer_letters_router
 from app.api.v1.recruiter import router as recruiter_router
+from app.api.v1.alumni import router as alumni_router
+from app.api.v1.prep_resources import router as prep_router
+from app.api.v1.feedback import router as feedback_router
+from app.api.v1.company_reviews import router as company_reviews_router
+from app.api.v1.tracker_vault import router as tracker_vault_router
 
 # Import all models so SQLAlchemy registers them with Base.metadata
 import app.models.user  # noqa: F401
@@ -63,6 +68,12 @@ import app.models.experiences  # noqa: F401
 import app.models.announcements  # noqa: F401
 import app.models.interview_session  # noqa: F401
 import app.models.curriculum_proposal  # noqa: F401
+import app.models.alumni  # noqa: F401
+import app.models.prep_resources  # noqa: F401
+import app.models.feedback  # noqa: F401
+import app.models.company_reviews  # noqa: F401
+import app.models.document_vault  # noqa: F401
+import app.models.application_timeline  # noqa: F401
 
 settings = get_settings()
 
@@ -256,6 +267,11 @@ app.include_router(questions_router, prefix=settings.API_V1_PREFIX)
 app.include_router(calendar_router, prefix=settings.API_V1_PREFIX)
 app.include_router(offer_letters_router, prefix=settings.API_V1_PREFIX)
 app.include_router(recruiter_router, prefix=settings.API_V1_PREFIX)
+app.include_router(alumni_router, prefix=settings.API_V1_PREFIX)
+app.include_router(prep_router, prefix=settings.API_V1_PREFIX)
+app.include_router(feedback_router, prefix=settings.API_V1_PREFIX)
+app.include_router(company_reviews_router, prefix=settings.API_V1_PREFIX)
+app.include_router(tracker_vault_router, prefix=settings.API_V1_PREFIX)
 
 # WebSocket Router (Root level)
 app.include_router(ws_router)
