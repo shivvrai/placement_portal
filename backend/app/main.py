@@ -275,3 +275,9 @@ app.include_router(tracker_vault_router, prefix=settings.API_V1_PREFIX)
 
 # WebSocket Router (Root level)
 app.include_router(ws_router)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+

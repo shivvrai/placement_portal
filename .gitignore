@@ -38,3 +38,21 @@ htmlcov/
 *.sqlite
 *.sqlite3
 
+# MLflow
+mlruns/
+mlartifacts/
+
+# Presentation, tasks, and internal documentation (keep local only)
+docs/presentation/
+docs/presentation_prompts/
+docs/tasks/
+docs/hp_*.md
+frontend/public/architecture_and_flow_visualizer.html
+frontend/public/showcase.html
+
+# Internal prompt and test artifact dumps
+PROMPT.md
+api_test_results.json
+API_AUDIT_REPORT.md
+
+

@@ -89,14 +89,19 @@ async def ws_endpoint(user_id: str, websocket: WebSocket, token: str = Query(Non
             # We don't expect incoming messages from client for this sprint
             await websocket.receive_text()
     except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
         manager.unregister(user_id, websocket)
         r_task.cancel()
         k_task.cancel()
-        await pubsub.unsubscribe(channel)
-        await redis_client.aclose()
-    except Exception as e:
-        manager.unregister(user_id, websocket)
-        r_task.cancel()
-        k_task.cancel()
-        await pubsub.unsubscribe(channel)
-        await redis_client.aclose()
+        try:
+            await pubsub.unsubscribe(channel)
+        except Exception:
+            pass
+        try:
+            await redis_client.aclose()
+        except Exception:
+            pass
+
