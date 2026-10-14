@@ -20,12 +20,13 @@ export function AuthProvider({ children }) {
     }
 
     if (import.meta.env.VITE_USE_MOCKS === 'true' && token === 'mock_token') {
+      const savedRole = localStorage.getItem('mock_role') || 'student';
       setUser({
         id: "mock_id",
-        email: "student@demo.ccip",
+        email: `${savedRole}@demo.ccip`,
         first_name: "Demo",
-        last_name: "Student",
-        role: "student",
+        last_name: savedRole.toUpperCase(),
+        role: savedRole,
         is_active: true
       });
       setLoading(false);
@@ -37,13 +38,18 @@ export function AuthProvider({ children }) {
       .catch(() => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('mock_role');
       })
       .finally(() => setLoading(false));
   }, []);
 
   const login = useCallback(async (email, password) => {
     if (import.meta.env.VITE_USE_MOCKS === 'true') {
-      const role = email.includes("tpo") ? "tpo" : (email.includes("faculty") ? "faculty" : "student");
+      const role = email.includes("admin") ? "admin"
+        : email.includes("recruiter") ? "recruiter"
+        : email.includes("tpo") ? "tpo"
+        : email.includes("faculty") ? "faculty"
+        : "student";
       const mockUser = {
         id: "mock_id",
         email: email,
@@ -54,6 +60,7 @@ export function AuthProvider({ children }) {
       };
       localStorage.setItem('access_token', 'mock_token');
       localStorage.setItem('refresh_token', 'mock_refresh');
+      localStorage.setItem('mock_role', role);
       setUser(mockUser);
       return mockUser;
     }
@@ -70,6 +77,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('mock_role');
     setUser(null);
   }, []);
 

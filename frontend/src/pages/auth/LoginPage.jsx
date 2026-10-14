@@ -21,7 +21,9 @@ export default function LoginPage() {
     try {
       const user = await login(email, password);
       const portal = user.role === 'student' ? '/student/dashboard'
-        : user.role === 'tpo' || user.role === 'admin' ? '/tpo/dashboard'
+        : user.role === 'admin' ? '/admin/dashboard'
+        : user.role === 'tpo' ? '/tpo/dashboard'
+        : user.role === 'recruiter' ? '/recruiter/dashboard'
         : '/faculty/dashboard';
       navigate(portal, { replace: true });
     } catch (err) {
@@ -165,10 +167,11 @@ export default function LoginPage() {
             onChange={(e) => {
               const role = e.target.value;
               const creds = {
-                student:  { email: 'priya.agarwal0@ccip.edu', password: 'student123' },
-                tpo:      { email: 'tpo@ccip.edu',            password: 'tpo123' },
-                faculty:  { email: 'faculty@ccip.edu',         password: 'faculty123' },
-                admin:    { email: 'tpo@ccip.edu',             password: 'tpo123' },
+                student:   { email: 'priya.agarwal0@ccip.edu', password: 'student123' },
+                tpo:       { email: 'tpo@ccip.edu',            password: 'tpo123' },
+                faculty:   { email: 'faculty@ccip.edu',        password: 'faculty123' },
+                admin:     { email: 'admin@ccip.edu',          password: 'admin123' },
+                recruiter: { email: 'recruiter@ccip.edu',      password: 'recruiter123' },
               };
               if (role && creds[role]) {
                 setEmail(creds[role].email);
@@ -190,7 +193,9 @@ export default function LoginPage() {
             <option value="" disabled>Select a role...</option>
             <option value="student">Student (Priya Agarwal)</option>
             <option value="faculty">Faculty (Dr. Sharma)</option>
-            <option value="tpo">TPO (Admin)</option>
+            <option value="tpo">TPO Officer (Placement Cell)</option>
+            <option value="admin">System Admin (Super User)</option>
+            <option value="recruiter">Recruiter (Corporate HR)</option>
           </select>
         </div>
       </div>

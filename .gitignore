@@ -42,10 +42,9 @@ htmlcov/
 mlruns/
 mlartifacts/
 
-# Presentation, tasks, and internal documentation (keep local only)
+# Presentation and internal documentation (keep local only)
 docs/presentation/
 docs/presentation_prompts/
-docs/tasks/
 docs/hp_*.md
 frontend/public/architecture_and_flow_visualizer.html
 frontend/public/showcase.html
