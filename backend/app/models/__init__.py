@@ -12,6 +12,10 @@ from app.models.roadmap import Resource, ResourceSkill, Roadmap, RoadmapTask
 from app.models.system import CopilotConversation, AuditLog
 from app.models.assessment import AssessmentQuestionBank, AssessmentSession, AssessmentSessionQuestion
 from app.models.cohort import StudentCohort, Notification
+from app.models.experiences import InterviewExperience
+from app.models.announcements import DriveAnnouncement
+from app.models.interview_session import MockInterviewSession
+from app.models.curriculum_proposal import CurriculumProposal
 
 __all__ = [
     # Identity & Auth (4)
@@ -24,14 +28,18 @@ __all__ = [
     "Company", "Job", "JobSkill", "IndustrySkillTrend",
     # Student Portfolio (5)
     "Project", "Certification", "Internship", "CareerGoal", "Resume",
-    # Placement (4)
-    "PlacementDrive", "Application", "InterviewStage", "PlacementOutcome",
+    # Placement (5)
+    "PlacementDrive", "Application", "InterviewStage", "PlacementOutcome", "DriveAnnouncement",
     # Learning & Roadmap (4)
     "Resource", "ResourceSkill", "Roadmap", "RoadmapTask",
     # Intelligence & System (2)
     "CopilotConversation", "AuditLog",
     "AssessmentQuestionBank", "AssessmentSession", "AssessmentSessionQuestion",
     "StudentCohort", "Notification",
+    "InterviewExperience",
+    # Sprint 3 — AI Learning Infrastructure
+    "MockInterviewSession",
+    "CurriculumProposal",
 ]
-# Total: 36 tables
+# Total: 38 tables
 

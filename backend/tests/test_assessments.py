@@ -5,9 +5,11 @@ from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.models.user import User
 
+
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
+
 
 def get_mock_student():
     user = User(
@@ -19,6 +21,7 @@ def get_mock_student():
         is_active=True,
     )
     return user
+
 
 def get_mock_faculty():
     user = User(
@@ -69,7 +72,15 @@ async def test_question_selection_insufficient():
 
 @pytest.mark.anyio
 async def test_answer_leakage_prevention():
-    """Verify correct answer is not leaked in the start response."""
+    """
+    SECURITY TEST: Verify that the /start response NEVER leaks:
+    - correct_answer
+    - correct_option
+    - is_correct
+    - explanation
+    
+    These fields must only appear in the post-submission /submit response.
+    """
     transport = ASGITransport(app=app)
     student = get_mock_student()
     
@@ -84,6 +95,7 @@ async def test_answer_leakage_prevention():
         mock_q.question_text = f"What is 2+{i}?"
         mock_q.options = ["1", "2", "3", "4"]
         mock_q.correct_answer = str(2+i)
+        mock_q.explanation = f"Because {2+i} is the sum"
         mock_qs.append(mock_q)
         
     mock_result_1 = MagicMock()
@@ -122,15 +134,96 @@ async def test_answer_leakage_prevention():
         assert response.status_code == 200
         data = response.json()
         assert len(data["questions"]) == 5
-        q = data["questions"][0]
-        assert "correct_answer" not in q
-        assert "correct_option" not in q
+        
+        # Verify NO answer leakage in ANY question
+        for q in data["questions"]:
+            assert "correct_answer" not in q, f"SECURITY: correct_answer leaked in question {q['id']}"
+            assert "correct_option" not in q, f"SECURITY: correct_option leaked in question {q['id']}"
+            assert "is_correct" not in q, f"SECURITY: is_correct leaked in question {q['id']}"
+            assert "explanation" not in q, f"SECURITY: explanation leaked in question {q['id']}"
+        
+        # Also verify correct_answer does not appear anywhere in the raw response body
+        raw_body = response.text
+        for q in mock_qs:
+            # The correct answer values should not appear as field values
+            # (they may appear as option values which is fine)
+            assert f'"correct_answer"' not in raw_body, "SECURITY: correct_answer key found in response"
             
     # Only clear our own overrides — preserve get_db test override
     from app.core.security import get_current_user as gcu
     app.dependency_overrides.pop(gcu, None)
     from app.core.database import get_db as _gdb
     # Restore to test override if it was replaced
+    from tests.conftest import _override_get_db
+    app.dependency_overrides[_gdb] = _override_get_db
+
+
+@pytest.mark.anyio
+async def test_answer_leakage_full_response_check():
+    """
+    SECURITY TEST: Deeper check that verifies no internal correctness 
+    data is exposed in the question response schema.
+    """
+    transport = ASGITransport(app=app)
+    student = get_mock_student()
+    
+    from app.core.security import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: student
+    
+    mock_qs = []
+    for i in range(6):
+        mock_q = MagicMock()
+        mock_q.id = uuid.uuid4()
+        mock_q.question_text = f"Security question {i}"
+        mock_q.options = ["A", "B", "C", "D"]
+        mock_q.correct_answer = "B"  # Secret - must not leak
+        mock_q.explanation = "Secret explanation"
+        mock_qs.append(mock_q)
+
+    mock_result_1 = MagicMock()
+    mock_result_1.scalars.return_value.all.return_value = mock_qs
+
+    mock_session = MagicMock()
+    mock_session.id = uuid.uuid4()
+    mock_session.topic = "Security"
+    mock_session.difficulty = "intermediate"
+    mock_session.status = "in_progress"
+    
+    session_qs = []
+    for q in mock_qs:
+        sq = MagicMock()
+        sq.question = q
+        session_qs.append(sq)
+    mock_session.session_questions = session_qs
+
+    mock_result_2 = MagicMock()
+    mock_result_2.scalar_one.return_value = mock_session
+
+    mock_db = AsyncMock()
+    mock_db.execute.side_effect = [mock_result_1, mock_result_2]
+
+    from app.core.database import get_db
+    app.dependency_overrides[get_db] = lambda: mock_db
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/assessments/start",
+            json={"topic": "Security", "difficulty": "intermediate"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Each question should have EXACTLY these keys
+        allowed_keys = {"id", "question_text", "options"}
+        for q in data["questions"]:
+            actual_keys = set(q.keys())
+            assert actual_keys == allowed_keys, (
+                f"SECURITY: Question has unexpected keys: {actual_keys - allowed_keys}"
+            )
+
+    from app.core.security import get_current_user as gcu
+    app.dependency_overrides.pop(gcu, None)
+    from app.core.database import get_db as _gdb
     from tests.conftest import _override_get_db
     app.dependency_overrides[_gdb] = _override_get_db
 
@@ -184,3 +277,31 @@ async def test_scoring_and_skill_updates():
         
         # Verify update was called
         mock_update.assert_called_once_with(mock_db, student_id, mock_session)
+
+
+@pytest.mark.anyio
+async def test_completed_assessment_resubmission_rejected():
+    """Test that already-completed assessments cannot be resubmitted."""
+    from app.services.assessment_engine import submit_assessment
+    from app.schemas.assessment import AssessmentSubmitRequest, AssessmentAnswerItem
+    
+    mock_db = AsyncMock()
+    session_id = uuid.uuid4()
+    student_id = uuid.uuid4()
+    
+    mock_session = MagicMock()
+    mock_session.id = session_id
+    mock_session.student_id = student_id
+    mock_session.status = "completed"  # Already completed
+    
+    mock_res = MagicMock()
+    mock_res.scalar_one_or_none.return_value = mock_session
+    mock_db.execute.return_value = mock_res
+    
+    from fastapi import HTTPException
+    with pytest.raises(HTTPException) as exc_info:
+        request_data = AssessmentSubmitRequest(answers=[AssessmentAnswerItem(question_id=uuid.uuid4(), selected_option="opt1")])
+        await submit_assessment(mock_db, student_id, session_id, data=request_data)
+    
+    assert exc_info.value.status_code == 400
+    assert "already submitted" in str(exc_info.value.detail).lower()

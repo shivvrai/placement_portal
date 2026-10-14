@@ -236,3 +236,175 @@ async def generate_bos_proposal(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate proposal: {e}")
+
+
+# ─── V2: Department Gap Analysis ─────────────────────────────────────
+
+@router.get("/gap-analysis/{dept}", summary="Run department-wide gap analysis")
+async def get_gap_analysis(
+    dept: str,
+    current_user: User = Depends(_faculty_or_tpo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Analyze the gap between curriculum skills and industry demands for a department."""
+    try:
+        result = await curriculum_proposal_service.run_full_gap_analysis(dept, db)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# ─── V2: Proposal CRUD ──────────────────────────────────────────────
+
+from pydantic import BaseModel as PydanticBase, Field as PydanticField
+
+
+class CreateProposalRequest(PydanticBase):
+    department_code: str = PydanticField(default="CS")
+    academic_year: str = PydanticField(default="2026-27")
+
+
+class UpdateProposalStatusRequest(PydanticBase):
+    status: str  # approved | rejected
+    comments: Optional[str] = None
+
+
+@router.post("/proposals", summary="Generate a full BoS curriculum proposal")
+async def create_proposal(
+    data: CreateProposalRequest,
+    current_user: User = Depends(_faculty_or_tpo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate an AI-powered full curriculum proposal for the department."""
+    try:
+        result = await curriculum_proposal_service.generate_full_proposal(
+            department_code=data.department_code,
+            academic_year=data.academic_year,
+            faculty_id=current_user.id,
+            db=db,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get("/proposals", summary="List all proposals for faculty's department")
+async def list_proposals(
+    current_user: User = Depends(_faculty_or_tpo),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all curriculum proposals."""
+    from app.models.curriculum_proposal import CurriculumProposal
+    result = await db.execute(
+        select(CurriculumProposal).order_by(CurriculumProposal.created_at.desc())
+    )
+    proposals = result.scalars().all()
+    return [
+        {
+            "id": str(p.id),
+            "department_code": p.department_code,
+            "academic_year": p.academic_year,
+            "status": p.status,
+            "impact_projection": p.impact_projection,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+        }
+        for p in proposals
+    ]
+
+
+@router.get("/proposals/{proposal_id}", summary="Get proposal detail")
+async def get_proposal(
+    proposal_id: uuid.UUID,
+    current_user: User = Depends(_faculty_or_tpo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get full detail of a curriculum proposal."""
+    from app.models.curriculum_proposal import CurriculumProposal
+    result = await db.execute(
+        select(CurriculumProposal).where(CurriculumProposal.id == proposal_id)
+    )
+    p = result.scalar_one_or_none()
+    if not p:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
+    return {
+        "id": str(p.id),
+        "department_code": p.department_code,
+        "academic_year": p.academic_year,
+        "status": p.status,
+        "gap_analysis": p.gap_analysis,
+        "proposed_subjects": p.proposed_subjects,
+        "impact_projection": p.impact_projection,
+        "hod_comments": p.hod_comments,
+        "created_at": p.created_at.isoformat() if p.created_at else None,
+        "reviewed_at": p.reviewed_at.isoformat() if p.reviewed_at else None,
+    }
+
+
+@router.patch("/proposals/{proposal_id}/status", summary="HOD approves or rejects a proposal")
+async def update_proposal_status(
+    proposal_id: uuid.UUID,
+    data: UpdateProposalStatusRequest,
+    current_user: User = Depends(RoleChecker(["hod", "admin"])),
+    db: AsyncSession = Depends(get_db),
+):
+    """HOD approves or rejects a curriculum proposal."""
+    from app.models.curriculum_proposal import CurriculumProposal
+    from datetime import datetime, timezone
+    result = await db.execute(
+        select(CurriculumProposal).where(CurriculumProposal.id == proposal_id)
+    )
+    proposal = result.scalar_one_or_none()
+    if not proposal:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
+    if data.status not in ("approved", "rejected"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Status must be 'approved' or 'rejected'")
+    proposal.status = data.status
+    proposal.hod_comments = data.comments
+    proposal.reviewed_by = current_user.id
+    proposal.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    await db.commit()
+    return {"message": f"Proposal {data.status}", "id": str(proposal.id)}
+
+
+@router.get("/proposals/{proposal_id}/download", summary="Download proposal as .docx")
+async def download_proposal(
+    proposal_id: uuid.UUID,
+    current_user: User = Depends(_faculty_or_tpo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download the curriculum proposal as a formatted .docx file."""
+    from fastapi.responses import Response
+    try:
+        docx_bytes = await curriculum_proposal_service.export_proposal_to_word(proposal_id, db)
+        return Response(
+            content=docx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename=BoS_Proposal_{proposal_id}.docx"},
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post("/proposals/{proposal_id}/submit", summary="Submit proposal to HOD for review")
+async def submit_proposal(
+    proposal_id: uuid.UUID,
+    current_user: User = Depends(_faculty_or_tpo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Faculty submits their proposal for HOD review."""
+    try:
+        await curriculum_proposal_service.submit_proposal_for_review(proposal_id, current_user.id, db)
+        return {"message": "Proposal submitted for HOD review", "id": str(proposal_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/coverage-heatmap/{dept}", summary="Subject × skill demand heatmap data")
+async def get_coverage_heatmap(
+    dept: str,
+    current_user: User = Depends(_faculty_or_tpo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get heatmap data: rows=subjects, cols=top industry skills, cells=0/1 coverage."""
+    return await curriculum_proposal_service.get_coverage_heatmap(dept, db)
+

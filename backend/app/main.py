@@ -6,7 +6,7 @@ Main FastAPI application entry point.
 
 from contextlib import asynccontextmanager
 import time
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -33,42 +33,10 @@ from app.api.v1.tpo import router as tpo_router
 from app.api.v1.system import router as system_router
 from app.api.v1.admin import router as admin_router
 from app.api.v1.notifications import router as notifications_router
-"""
-CCIP — Campus Career & Curriculum Intelligence Platform
-
-Main FastAPI application entry point.
-"""
-
-from contextlib import asynccontextmanager
-import time
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from slowapi.middleware import SlowAPIMiddleware
-from slowapi.errors import RateLimitExceeded
-from slowapi import _rate_limit_exceeded_handler
-import redis.asyncio as aioredis
-from sqlalchemy import text
-
-from app.core.config import get_settings
-from app.core.database import engine, IS_SQLITE, Base
-from app.api.v1.auth import router as auth_router
-from app.api.v1.students import router as students_router
-from app.api.v1.drives import router as drives_router
-from app.api.v1.applications import router as applications_router
-from app.api.v1.matching import router as matching_router
-from app.api.v1.roadmap import router as roadmap_router
-from app.api.v1.analytics import router as analytics_router
-from app.api.v1.copilot import router as copilot_router
-from app.api.v1.skills import router as skills_router
-from app.api.v1.resume import router as resume_router
-from app.api.v1.assessments import router as assessments_router
-from app.api.v1.ums import router as ums_router
-from app.api.v1.curriculum import router as curriculum_router
-from app.api.v1.tpo import router as tpo_router
-from app.api.v1.system import router as system_router
-from app.api.v1.admin import router as admin_router
-from app.api.v1.notifications import router as notifications_router
+from app.api.v1.mock_interviews import router as mock_interviews_router
+from app.api.v1.experiences import router as experiences_router
 from app.api.v1.websocket import router as ws_router
+
 
 from app.middleware.rls import RowLevelSecurityMiddleware
 from app.middleware.timing import TimingMiddleware
@@ -84,19 +52,51 @@ import app.models.placement  # noqa: F401
 import app.models.roadmap  # noqa: F401
 import app.models.system  # noqa: F401
 import app.models.cohort  # noqa: F401
-import app.models.notification # noqa: F401
+import app.models.notification  # noqa: F401
 
 settings = get_settings()
 
 APP_START_TIME = time.time()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan — create tables for SQLite, ensure vector ext for PostgreSQL."""
-from fastapi import Response
+    if IS_SQLITE:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    lifespan=lifespan,
+)
+
+# ─── Middleware ─────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.add_middleware(TimingMiddleware)
+app.add_middleware(RowLevelSecurityMiddleware)
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+# ─── Health ─────────────────────────────────────────────────────────
+@app.get("/health", tags=["System"])
+async def health():
+    return {"status": "ok", "uptime_seconds": round(time.time() - APP_START_TIME, 1)}
+
+
 @app.get("/health/ready", tags=["System"])
 async def health_ready(response: Response):
-    # For a service to be ready both db and redis must answer fast
     db_ok = False
     redis_ok = False
     try:
@@ -107,7 +107,7 @@ async def health_ready(response: Response):
             db_ok = True
     except Exception:
         pass
-        
+
     try:
         t0 = time.perf_counter()
         r = aioredis.from_url(settings.REDIS_URL, socket_timeout=1)
@@ -144,4 +144,7 @@ app.include_router(tpo_router, prefix=settings.API_V1_PREFIX)
 app.include_router(system_router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_router, prefix=settings.API_V1_PREFIX)
 app.include_router(notifications_router, prefix=settings.API_V1_PREFIX)
-app.include_router(ws_router) # ROOT LEVEL route for /ws/{user_id}
+app.include_router(mock_interviews_router, prefix=settings.API_V1_PREFIX)
+app.include_router(experiences_router, prefix=settings.API_V1_PREFIX)
+app.include_router(ws_router)  # ROOT LEVEL route for /ws/{user_id}
+

@@ -48,6 +48,40 @@ export const studentApi = {
   getMyAcademicRecords: () => mockOr('academic_records.json', () => api.get('/students/me/academic-records')),
   updateMyConsent: (consent) => api.patch('/students/me/consent', consent),
 
+  // Portfolio: Projects
+  getMyProjects: () => mockOr('student_projects.json', () => api.get('/students/me/projects')),
+  addProject: (data) => api.post('/students/me/projects', data),
+  deleteProject: (id) => api.delete(`/students/me/projects/${id}`),
+
+  // Portfolio: Certifications
+  getMyCertifications: () => mockOr('student_certifications.json', () => api.get('/students/me/certifications')),
+  addCertification: (data) => api.post('/students/me/certifications', data),
+  deleteCertification: (id) => api.delete(`/students/me/certifications/${id}`),
+
+  // Portfolio: Work Experience
+  getMyExperience: () => mockOr('student_experience.json', () => api.get('/students/me/experience')),
+  addExperience: (data) => api.post('/students/me/experience', data),
+  deleteExperience: (id) => api.delete(`/students/me/experience/${id}`),
+
+  // Bulk Skills Confirmation
+  bulkConfirmSkills: (data) => {
+    if (USE_MOCKS) {
+      return Promise.resolve({
+        data: (data.skills || []).map((name, i) => ({
+          id: `mock-skill-${i}-${Date.now()}`,
+          skill: { name, category: 'tool' },
+          confidence: 0.9,
+          source: data.source || 'resume_verified',
+          is_verified: true,
+        }))
+      });
+    }
+    return api.post('/students/me/skills/bulk', data);
+  },
+
+  // Public Recruiter Portfolio (No Auth Required)
+  getPublicProfile: (id) => mockOr('public_profile.json', () => api.get(`/students/${id}/public-profile`)),
+
   // Legacy endpoints for backward compatibility (still work but require student ID)
   // Deprecated: prefer using the /me endpoints above
   getProfile: (id) => mockOr('student_profile.json', () => (id ? api.get(`/students/${id}`) : api.get('/students/me'))),
@@ -64,6 +98,27 @@ export const studentApi = {
   getAttendance: (id) => mockOr('attendance.json', () => (id ? api.get(`/students/${id}/attendance`) : api.get('/students/me/attendance'))),
   uploadResume: (idOrFile, file) => {
     const fileObj = (idOrFile instanceof File || idOrFile instanceof Blob) ? idOrFile : file;
+    if (USE_MOCKS) {
+      return Promise.resolve({
+        data: {
+          message: 'Resume uploaded. Review and confirm extracted skills.',
+          status: 'processing',
+          extracted_skills: [
+            { name: 'Python', confidence: 0.95, raw: 'Python' },
+            { name: 'React', confidence: 0.92, raw: 'React' },
+            { name: 'FastAPI', confidence: 0.90, raw: 'FastAPI' },
+            { name: 'PostgreSQL', confidence: 0.88, raw: 'PostgreSQL' },
+            { name: 'Docker', confidence: 0.86, raw: 'Docker' },
+            { name: 'REST APIs', confidence: 0.85, raw: 'REST APIs' },
+            { name: 'Git', confidence: 0.92, raw: 'Git' },
+            { name: 'SQL', confidence: 0.89, raw: 'SQL' },
+            { name: 'Machine Learning', confidence: 0.78, raw: 'ML project' },
+            { name: 'Java', confidence: 0.65, raw: 'JavaScript' },
+            { name: 'Kubernetes', confidence: 0.72, raw: 'k8s' },
+          ],
+        },
+      });
+    }
     const form = new FormData();
     form.append('file', fileObj);
     return api.post('/resume/upload', form, {
@@ -79,6 +134,27 @@ export const studentApi = {
 // ─── Resume & NLP ────────────────────────────────────────────────
 export const resumeApi = {
   upload: (file) => {
+    if (USE_MOCKS) {
+      return Promise.resolve({
+        data: {
+          message: 'Resume uploaded. Review and confirm extracted skills.',
+          status: 'processing',
+          extracted_skills: [
+            { name: 'Python', confidence: 0.95, raw: 'Python' },
+            { name: 'React', confidence: 0.92, raw: 'React' },
+            { name: 'FastAPI', confidence: 0.90, raw: 'FastAPI' },
+            { name: 'PostgreSQL', confidence: 0.88, raw: 'PostgreSQL' },
+            { name: 'Docker', confidence: 0.86, raw: 'Docker' },
+            { name: 'REST APIs', confidence: 0.85, raw: 'REST APIs' },
+            { name: 'Git', confidence: 0.92, raw: 'Git' },
+            { name: 'SQL', confidence: 0.89, raw: 'SQL' },
+            { name: 'Machine Learning', confidence: 0.78, raw: 'ML project' },
+            { name: 'Java', confidence: 0.65, raw: 'JavaScript' },
+            { name: 'Kubernetes', confidence: 0.72, raw: 'k8s' },
+          ],
+        },
+      });
+    }
     const form = new FormData();
     form.append('file', file);
     return api.post('/resume/upload', form, {
@@ -111,6 +187,8 @@ export const intelligenceApi = {
     api.post('/roadmap/me/tasks', payload),
 };
 
+export const roadmapApi = intelligenceApi;
+
 // ─── Placement Drives ─────────────────────────────────────────────
 export const placementApi = {
   getDrives: (params) => mockOr('drives.json', () => api.get('/drives', { params })),
@@ -121,6 +199,11 @@ export const placementApi = {
   createDrive: (data) => api.post('/drives', data),
   updateDrive: (id, data) => api.patch(`/drives/${id}`, data),
   shortlistStudents: (driveId) => api.get(`/drives/${driveId}/shortlisted`),
+  getAllApplicants: (driveId) => api.get(`/drives/${driveId}/applicants`),
+  updateApplicationStage: (driveId, appId, data) => api.patch(`/drives/${driveId}/applications/${appId}`, data),
+  recordOffer: (driveId, appId, data) => api.post(`/drives/${driveId}/applications/${appId}/offer`, data),
+  postAnnouncement: (driveId, data) => api.post(`/drives/${driveId}/announcements`, data),
+  getAnnouncements: (driveId) => api.get(`/drives/${driveId}/announcements`),
 };
 
 // ─── Analytics ────────────────────────────────────────────────────
@@ -158,6 +241,22 @@ export const analyticsApi = {
     }),
 };
 
+// ─── BI Studio (Superset + Power BI) ──────────────────────────────────────
+export const biApi = {
+  // Superset integration
+  getEmbedToken: (dashboardId) =>
+    api.get('/bi/embed-token', { params: { dashboard_id: dashboardId } }),
+  getDashboards: () => api.get('/bi/dashboards'),
+  getConfig: () => api.get('/bi/config'),
+
+  // Data export
+  exportData: (entity, format = 'csv') =>
+    api.get(`/bi/export/${entity}`, { params: { format }, responseType: 'blob' }),
+
+  // Entity counts
+  getCounts: () => api.get('/bi/counts'),
+};
+
 
 
 // ─── Curriculum ───────────────────────────────────────────────────
@@ -172,6 +271,17 @@ export const curriculumApi = {
   },
   generateBoSProposal: (subjectId) => 
     api.post(`/curriculum/subjects/${subjectId}/generate-proposal`),
+  // V2: Department gap analysis & proposals
+  getGapAnalysis: (dept) => api.get(`/curriculum/gap-analysis/${dept}`),
+  createProposal: (data) => api.post('/curriculum/proposals', data),
+  listProposals: () => api.get('/curriculum/proposals'),
+  getProposal: (id) => api.get(`/curriculum/proposals/${id}`),
+  updateProposalStatus: (id, status, comments) =>
+    api.patch(`/curriculum/proposals/${id}/status`, { status, comments }),
+  downloadProposal: (id) =>
+    api.get(`/curriculum/proposals/${id}/download`, { responseType: 'blob' }),
+  submitProposal: (id) => api.post(`/curriculum/proposals/${id}/submit`),
+  getCoverageHeatmap: (dept) => api.get(`/curriculum/coverage-heatmap/${dept}`),
 };
 
 // ─── AI Career Copilot ────────────────────────────────────────────
@@ -183,6 +293,9 @@ export const copilotApi = {
     api.post(`/copilot/conversations/${convId}/messages`, { content: message }),
   getHistory: (convId) => api.get(`/copilot/conversations/${convId}`),
   startMockInterview: (payload) => api.post('/copilot/mock-interview/start', payload),
+  // V3: Context-aware features
+  getContext: (convId) => api.get(`/copilot/conversations/${convId}/context`),
+  getSuggestions: () => api.get('/copilot/suggestions'),
 };
 
 // ─── Skills Taxonomy ──────────────────────────────────────────────
@@ -213,10 +326,46 @@ export const assessmentsApi = {
   start: (topic, difficulty) => api.post('/assessments/start', { topic, difficulty }),
   submit: (sessionId, answers) => api.post(`/assessments/${sessionId}/submit`, { answers }),
   getHistory: () => api.get('/assessments/history'),
+  // V2: Quiz center features
+  startQuickQuiz: (topic, difficulty) => api.post('/assessments/quiz/quick', { topic, difficulty }),
+  getRecommended: () => api.get('/assessments/quiz/recommended'),
+  generateRemediation: (sessionId) => api.post(`/assessments/quiz/${sessionId}/remediate`),
+  getTrends: () => api.get('/assessments/performance/trends'),
+  reportTabSwitch: (sessionId, count) => api.post(`/assessments/${sessionId}/tab-switch`, { tab_switches: count }),
+};
+
+// ─── Mock Interview V2 ───────────────────────────────────────────
+export const mockInterviewApi = {
+  start: (roleTarget, companyStyle = 'Product', difficulty = 'campus') =>
+    api.post('/mock-interviews/start', {
+      role_target: roleTarget,
+      company_style: companyStyle,
+      difficulty: difficulty,
+    }),
+  sendMessage: (sessionId, content) =>
+    api.post(`/mock-interviews/${sessionId}/message`, { content }),
+  getSession: (sessionId) => api.get(`/mock-interviews/${sessionId}`),
+  getReport: (sessionId) => api.get(`/mock-interviews/${sessionId}/report`),
+  getMyHistory: (limit = 20) => api.get('/mock-interviews/my', { params: { limit } }),
+  getMyStats: () => api.get('/mock-interviews/my/stats'),
 };
 
 // ─── System & Audit ───────────────────────────────────────────────
 export const systemApi = {
   getAuditLogs: (params) => api.get('/system/audit-logs', { params }),
+};
+
+// ─── Interview Experiences & Questions ─────────────────────────────
+export const experiencesApi = {
+  getExperiences: (params) => mockOr('experiences.json', () => api.get('/experiences', { params })),
+  submitExperience: (data) => api.post('/experiences', data),
+  upvoteExperience: (id) => api.post(`/experiences/${id}/upvote`),
+};
+
+// ─── In-App Notifications ─────────────────────────────────────────
+export const notificationsApi = {
+  getMine: (params) => mockOr('notifications.json', () => api.get('/notifications/mine', { params })),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllRead: () => api.patch('/notifications/read-all'),
 };
 

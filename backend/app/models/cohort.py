@@ -1,4 +1,4 @@
-﻿"""
+"""
 SQLAlchemy ORM models — TPO Talent Cohorts & Notifications.
 Tables: student_cohorts, notifications
 """
@@ -29,14 +29,5 @@ class StudentCohort(Base):
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
-class Notification(Base):
-    __tablename__ = "notifications"
+from app.models.notification import Notification
 
-    id: Mapped[uuid.UUID] = mapped_column(UUIDType, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUIDType, ForeignKey("users.id"), nullable=False, index=True)
-    title: Mapped[str] = mapped_column(String(200), nullable=False)
-    message: Mapped[str] = mapped_column(Text, nullable=False)
-    type: Mapped[str] = mapped_column(String(50), default="info")
-    link: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

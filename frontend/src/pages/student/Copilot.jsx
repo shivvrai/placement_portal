@@ -8,11 +8,11 @@ import { copilotApi } from '../../api/endpoints';
 
 // ─── Suggested Prompts ──────────────────────────────────────────────
 const SUGGESTED_PROMPTS = [
+  'Analyze my resume for Google SDE',
+  'Generate 6-week roadmap for DevOps',
+  'What questions will TCS ask?',
   'What are my strongest skills based on my profile?',
   'Which companies should I target based on my skill score?',
-  'Help me write a cover letter for a Data Analyst role',
-  'What Python projects can I add to my resume?',
-  'How do I prepare for a Google SWE interview?',
   'Explain my top skill gap and how to fix it',
 ];
 
@@ -257,10 +257,20 @@ export default function Copilot() {
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const abortControllerRef = useRef(null);
+
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setTyping(false);
+  };
 
   const activeConv = conversations.find(
     c => c.id === activeId
   );
+
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
@@ -412,13 +422,20 @@ export default function Copilot() {
             body: { content: userText } // Fast API schema looks for content too
           };
 
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       const response = await fetch(endpointDetails.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(endpointDetails.body)
+          body: JSON.stringify(endpointDetails.body),
+          signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -461,17 +478,33 @@ export default function Copilot() {
 
       const decoder = new TextDecoder();
       let fullText = '';
+      let sseBuffer = '';
 
       while (true) {
         const { value, done } = await reader.read();
 
         if (done) break;
 
-        const chunk = decoder.decode(value, {
-          stream: true
-        });
+        sseBuffer += decoder.decode(value, { stream: true });
+        const lines = sseBuffer.split('\n');
+        sseBuffer = lines.pop() || '';
 
-        fullText += chunk;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            const dataContent = trimmed.slice(6);
+            if (dataContent.startsWith('{') && dataContent.endsWith('}')) {
+              try {
+                const parsed = JSON.parse(dataContent);
+                if (parsed.conversation_id) continue;
+              } catch {}
+            }
+            fullText += dataContent;
+          } else {
+            fullText += line;
+          }
+        }
 
         setConversations(prev =>
           prev.map(c => {
@@ -492,6 +525,10 @@ export default function Copilot() {
         );
       }
     } catch (error) {
+      if (error.name === 'AbortError') {
+        setTyping(false);
+        return;
+      }
       console.error(error);
       setTyping(false);
 
@@ -916,20 +953,38 @@ export default function Copilot() {
                 }
               />
 
-              <button
-                className="btn btn-primary"
-                disabled={!input.trim() || typing}
-                onClick={() => sendMessage(input)}
-                style={{
-                  height: 44,
-                  width: 44,
-                  padding: 0,
-                  flexShrink: 0,
-                  fontSize: '1.2rem'
-                }}
-              >
-                ↑
-              </button>
+              {typing ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCancel}
+                  title="Stop generating"
+                  style={{
+                    height: 44,
+                    padding: '0 12px',
+                    flexShrink: 0,
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  ⏹ Stop
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  disabled={!input.trim()}
+                  onClick={() => sendMessage(input)}
+                  style={{
+                    height: 44,
+                    width: 44,
+                    padding: 0,
+                    flexShrink: 0,
+                    fontSize: '1.2rem'
+                  }}
+                >
+                  ↑
+                </button>
+              )}
             </div>
 
             <div style={{

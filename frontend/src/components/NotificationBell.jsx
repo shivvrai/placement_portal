@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWebSocket } from '../../hooks/useWebSocket';
-import { api } from '../../api/client';
+import { useWebSocket } from '../hooks/useWebSocket';
+import { api } from '../api/client';
 
 const fetchUnreadCount = async () => {
   try {
@@ -28,8 +28,13 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('All');
   const [shake, setShake] = useState(false);
+  const [toasts, setToasts] = useState([]);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(t => t.toastId !== id));
+  };
 
   useEffect(() => {
     fetchUnreadCount().then(setCount);
@@ -58,6 +63,12 @@ export default function NotificationBell() {
     if (open) {
       setNotifications(prev => [{ ...payload, is_new: true }, ...prev]);
     }
+    const toastId = Date.now() + Math.random();
+    const newToast = { ...payload, toastId };
+    setToasts(prev => [newToast, ...prev].slice(0, 3));
+    setTimeout(() => {
+      removeToast(toastId);
+    }, 5000);
   };
 
   useWebSocket(onMessage);
@@ -142,6 +153,49 @@ export default function NotificationBell() {
           </div>
         </div>
       )}
+
+      {/* Toast Popups */}
+      {toasts.length > 0 && (
+        <div style={{
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
+          display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '360px'
+        }}>
+          {toasts.map(toast => (
+            <div
+              key={toast.toastId}
+              onClick={() => { handleItemClick(toast); removeToast(toast.toastId); }}
+              style={{
+                background: '#1e293b',
+                color: '#f1f5f9',
+                border: '1px solid #334155',
+                borderLeft: `5px solid ${toast.priority === 'critical' ? '#ef4444' : toast.priority === 'high' ? '#f59e0b' : '#10b981'}`,
+                borderRadius: '8px', padding: '12px 16px', boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                animation: 'slideIn 0.3s ease-out'
+              }}
+            >
+              <div style={{ flex: 1, paddingRight: '8px' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '4px' }}>
+                  {toast.type === 'APPLICATION_STATUS' ? '📄' : '🔔'} {toast.title}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.4 }}>
+                  {toast.message}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); removeToast(toast.toastId); }}
+                style={{
+                  background: 'none', border: 'none', color: '#94a3b8',
+                  cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <style>{`
         @keyframes shake {
           0% { transform: rotate(0deg); }
@@ -149,6 +203,10 @@ export default function NotificationBell() {
           50% { transform: rotate(-15deg); }
           75% { transform: rotate(10deg); }
           100% { transform: rotate(0deg); }
+        }
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
       `}</style>
     </div>

@@ -10,25 +10,30 @@ import { useAuth } from '../context/AuthContext';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 
-// Student portal
-// Admin Pages
+// Admin Portal
+import AdminLayout from '../layouts/AdminLayout';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import UserManagement from '../pages/admin/UserManagement';
 import SystemSettings from '../pages/admin/SystemSettings';
 
-import PublicLayout from '../layouts/PublicLayout';
-import DashboardLayout from '../layouts/DashboardLayout';
+// Student portal
 import StudentLayout from '../layouts/StudentLayout';
 import StudentDashboard from '../pages/student/Dashboard';
 import StudentProfile from '../pages/student/Profile';
 import JobMatches from '../pages/student/JobMatches';
 import SkillGap from '../pages/student/SkillGap';
-import CareerRoadmap from '../pages/student/CareerRoadmap';
+import Roadmap from '../pages/student/Roadmap';
 import Notifications from '../pages/student/Notifications';
 import PlacementDrives from '../pages/student/PlacementDrives';
+import DriveDetail from '../pages/student/DriveDetail';
+import InterviewExperiences from '../pages/student/InterviewExperiences';
 import Copilot from '../pages/student/Copilot';
 import AssessmentsList from '../pages/student/AssessmentsList';
 import AssessmentTake from '../pages/student/AssessmentTake';
+import PublicPortfolio from '../pages/student/PublicPortfolio';
+import MockInterview from '../pages/student/MockInterview';
+import MockInterviewHistory from '../pages/student/MockInterviewHistory';
+import QuizCenter from '../pages/student/QuizCenter';
 
 // TPO portal
 import TPOLayout from '../layouts/TPOLayout';
@@ -36,11 +41,13 @@ import TPODashboard from '../pages/tpo/Dashboard';
 import TPOStudents from '../pages/tpo/Students';
 import TPODrives from '../pages/tpo/Drives';
 import TPOAnalytics from '../pages/tpo/Analytics';
+import BIStudio from '../pages/tpo/BIStudio';
 
 // Faculty/HOD portal
 import FacultyLayout from '../layouts/FacultyLayout';
 import FacultyDashboard from '../pages/faculty/Dashboard';
 import CurriculumMap from '../pages/faculty/CurriculumMap';
+import ProposalManager from '../pages/faculty/ProposalManager';
 
 // Shared
 import NotFound from '../pages/NotFound';
@@ -76,11 +83,11 @@ export function AppRouter() {
           path="/admin"
           element={
             <ProtectedRoute roles={['admin']}>
-              <DashboardLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="settings" element={<SystemSettings />} />
@@ -89,13 +96,15 @@ export function AppRouter() {
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/portfolio/:studentId" element={<PublicPortfolio />} />
+        <Route path="/student/portfolio/:studentId" element={<PublicPortfolio />} />
 
         {/* Root redirect based on role */}
         <Route
           path="/"
           element={
             user
-              ? <Navigate to={`/${user.role === 'student' ? 'student' : user.role === 'tpo' ? 'tpo' : 'faculty'}/dashboard`} replace />
+              ? <Navigate to={`/${user.role === 'admin' ? 'admin' : user.role === 'student' ? 'student' : user.role === 'tpo' ? 'tpo' : 'faculty'}/dashboard`} replace />
               : <Navigate to="/login" replace />
           }
         />
@@ -114,12 +123,18 @@ export function AppRouter() {
           <Route path="profile" element={<StudentProfile />} />
           <Route path="matches" element={<JobMatches />} />
           <Route path="skill-gap" element={<SkillGap />} />
-          <Route path="career-roadmap" element={<CareerRoadmap />} />
+          <Route path="roadmap" element={<Roadmap />} />
+          <Route path="career-roadmap" element={<Roadmap />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="drives" element={<PlacementDrives />} />
+          <Route path="drives/:id" element={<DriveDetail />} />
+          <Route path="experiences" element={<InterviewExperiences />} />
           <Route path="copilot" element={<Copilot />} />
           <Route path="assessments" element={<AssessmentsList />} />
           <Route path="assessments/:id/take" element={<AssessmentTake />} />
+          <Route path="mock-interview" element={<MockInterview />} />
+          <Route path="mock-interview/history" element={<MockInterviewHistory />} />
+          <Route path="quiz" element={<QuizCenter />} />
         </Route>
 
         {/* ─── TPO Portal ─── */}
@@ -135,7 +150,9 @@ export function AppRouter() {
           <Route path="dashboard" element={<TPODashboard />} />
           <Route path="students" element={<TPOStudents />} />
           <Route path="drives" element={<TPODrives />} />
+          <Route path="drives/:id" element={<DriveDetail />} />
           <Route path="analytics" element={<TPOAnalytics />} />
+          <Route path="bi-studio" element={<BIStudio />} />
         </Route>
 
         {/* ─── Faculty/HOD Portal ─── */}
@@ -150,6 +167,7 @@ export function AppRouter() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<FacultyDashboard />} />
           <Route path="curriculum" element={<CurriculumMap />} />
+          <Route path="proposals" element={<ProposalManager />} />
           <Route path="students" element={<TPOStudents />} />
         </Route>
 
