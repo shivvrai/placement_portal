@@ -33,16 +33,22 @@ class MatchBreakdown(BaseModel):
 
 class JobMatchResponse(BaseModel):
     job_id: uuid.UUID
+    drive_id: Optional[uuid.UUID] = None
     title: str
+    role: Optional[str] = None
     company_name: str
     location: Optional[str] = None
     salary_ctc_min: Optional[float] = None
     salary_ctc_max: Optional[float] = None
     role_category: Optional[str] = None
     match_score: float = Field(..., ge=0, le=100)
-    skill_match_pct: float
+    skill_match_pct: float = 0.0
     matched_skills: list[str] = []
+    matching_skills: list[str] = []
     missing_skills: list[str] = []
-    eligible: bool
+    eligible: bool = True
+    eligibility_passed: bool = True
+    diagnostic_summary: Optional[str] = None
+    match_breakdown: Optional[dict] = None
     breakdown: Optional[MatchBreakdown] = None
 

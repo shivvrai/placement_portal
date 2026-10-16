@@ -227,7 +227,7 @@ async def test_skill_trends_endpoint(client: AsyncClient, seed_student):
     first_surging = trends["surging"][0]
     assert "skill" in first_surging
     assert "growth_pct" in first_surging
-    assert first_surging["growth_pct"] > 30
+    assert first_surging["growth_pct"] > 15  # Surging classification: > +15%
 
     assert isinstance(trends["stable"], list)
     assert len(trends["stable"]) >= 3

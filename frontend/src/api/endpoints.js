@@ -251,6 +251,7 @@ export const analyticsApi = {
   getSkillTrendsEmerging: () => api.get('/analytics/skill-trends/emerging'),
   getSkillTrendsHeatmap: () => api.get('/analytics/skill-trends/heatmap'),
   getSkillTrendDetail: (skill) => api.get(`/analytics/skill-trends/${encodeURIComponent(skill)}`),
+  getBenchmark: () => api.get('/analytics/benchmark'),
   // ─── Accreditation ──────────────────────────────────────────────
   getAccreditationPreview: (year = '2026-27') =>
     api.get('/analytics/accreditation/preview', { params: { academic_year: year } }),

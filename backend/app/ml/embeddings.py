@@ -165,7 +165,67 @@ class SkillEmbedder:
             if sim >= threshold:
                 scores.append((skill, round(sim, 4)))
 
-        return sorted(scores, key=lambda x: x[1], reverse=True)[:top_k]
+    def compute_similarity_matrix(
+        self,
+        candidate_skills: list[str],
+        job_skills: list[str],
+    ) -> np.ndarray:
+        """
+        Compute pairwise cosine similarity matrix between candidate skills and job skills.
+        Returns a 2D numpy array of shape (len(candidate_skills), len(job_skills)).
+        """
+        if not candidate_skills or not job_skills:
+            return np.zeros((len(candidate_skills), len(job_skills)), dtype=np.float32)
+
+        cand_vecs = self.encode_batch(candidate_skills)
+        job_vecs = self.encode_batch(job_skills)
+
+        matrix = np.zeros((len(candidate_skills), len(job_skills)), dtype=np.float32)
+        for i, c_skill in enumerate(candidate_skills):
+            c_vec = cand_vecs.get(c_skill.lower().strip())
+            for j, j_skill in enumerate(job_skills):
+                j_vec = job_vecs.get(j_skill.lower().strip())
+                if c_vec is not None and j_vec is not None:
+                    matrix[i, j] = max(0.0, min(1.0, float(np.dot(c_vec, j_vec))))
+                else:
+                    matrix[i, j] = self.cosine_similarity(c_skill, j_skill)
+        return matrix
+
+    def encode_dense(
+        self,
+        skill_names: list[str] | str,
+        target_dim: int = 128,
+    ) -> np.ndarray:
+        """
+        Encode skill name(s) into a fixed target_dim dense vector.
+        Averages normalized embeddings and truncates or pads to target_dim.
+        """
+        if isinstance(skill_names, str):
+            skill_names = [skill_names] if skill_names.strip() else []
+        if not skill_names:
+            return np.zeros(target_dim, dtype=np.float32)
+
+        vecs = []
+        encoded = self.encode_batch(skill_names)
+        for s in skill_names:
+            v = encoded.get(s.lower().strip())
+            if v is not None:
+                vecs.append(v)
+
+        if not vecs:
+            return np.zeros(target_dim, dtype=np.float32)
+
+        mean_vec = np.mean(vecs, axis=0)
+        norm = np.linalg.norm(mean_vec)
+        if norm > 0:
+            mean_vec = mean_vec / norm
+
+        if len(mean_vec) >= target_dim:
+            return mean_vec[:target_dim].astype(np.float32)
+        else:
+            padded = np.zeros(target_dim, dtype=np.float32)
+            padded[:len(mean_vec)] = mean_vec
+            return padded
 
     def save_cache(self, path: Path = CACHE_PATH):
         """Persist embedding cache to disk as .npz."""

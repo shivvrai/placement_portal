@@ -218,3 +218,22 @@ async def get_single_skill_trend(
     db: AsyncSession = Depends(get_db),
 ):
     return await skill_trend_service.get_single_skill_trend(db, skill_name)
+
+
+from app.services.benchmarking_service import benchmarking_service
+
+@router.get("/benchmark", summary="Institutional 4-dimension cohort benchmarking")
+async def get_analytics_benchmark(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Institutional cohort benchmarking comparing candidate across:
+      1. CGPA Percentile
+      2. Verified Skills Count Percentile
+      3. Assessment Pass Rate
+      4. Mock Interview Confidence Score
+    Returns department rank R, cohort distribution statistics, radar chart overlay, and normal curve.
+    """
+    return await benchmarking_service.get_institutional_benchmark(db, current_user.id)
+

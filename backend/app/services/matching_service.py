@@ -32,12 +32,27 @@ from app.schemas.matching import JobMatchResponse
 async def compute_skill_gap(
     db: AsyncSession,
     student_id: uuid.UUID,
-    target_role: str,
+    target_role: Optional[str] = None,
 ) -> SkillGapResponse:
     """
     Compute ML-enhanced skill gap between student's skills and a target role.
     Uses semantic embeddings to detect partial coverage from related skills.
+    Falls back to student's department archetype if target_role is null or empty.
     """
+    # Fallback to department archetype if target_role is not specified
+    if not target_role or not target_role.strip():
+        student = await db.get(Student, student_id, options=[selectinload(Student.department)])
+        dept_code = student.department.code.upper() if student and student.department else "CS"
+        dept_archetypes = {
+            "CS": "Software Engineer",
+            "IT": "Software Engineer",
+            "ECE": "DevOps Engineer",
+            "ME": "Data Analyst",
+            "CE": "Data Analyst",
+            "MBA": "Data Analyst",
+        }
+        target_role = dept_archetypes.get(dept_code, "Software Engineer")
+
     # Fetch student skills from DB
     result = await db.execute(
         select(StudentSkill)
@@ -65,6 +80,9 @@ async def compute_skill_gap(
             required_score=g["required_score"],
             gap=g["gap"],
             severity=g["severity"],
+            gap_type=g.get("gap_type", "minor"),
+            estimated_hours=g.get("estimated_hours", 0),
+            resources=g.get("resources", []),
         )
         for g in gap_result["gaps"]
     ]
@@ -73,6 +91,12 @@ async def compute_skill_gap(
         student_id=student_id,
         target_role=gap_result["target_role"],
         overall_score=gap_result["overall_score"],
+        readiness_score=gap_result.get("readiness_score", gap_result["overall_score"]),
+        estimated_hours_to_bridge=gap_result.get("estimated_hours_to_bridge", 0),
+        critical_gaps=gap_result.get("critical_gaps", []),
+        moderate_gaps=gap_result.get("moderate_gaps", []),
+        minor_gaps=gap_result.get("minor_gaps", []),
+        strengths=gap_result.get("strengths", []),
         gaps=gaps,
     )
 
@@ -191,9 +215,17 @@ async def compute_job_matches(
         total = len(job_skills_dict)
         skill_match_pct = round(len(matched_skills) / max(total, 1) * 100, 1)
 
+        # Diagnostic summary
+        if breakdown.top_missing_skills:
+            diagnostic_summary = f"Strong alignment in {', '.join(matched_skills[:2]) if matched_skills else 'academic criteria'}. Gaps identified in {', '.join(breakdown.top_missing_skills[:2])}."
+        else:
+            diagnostic_summary = breakdown.recommendation or "Strong core programming and technical alignment. Candidate meets requirements."
+
         matches.append(JobMatchResponse(
             job_id=job.id,
+            drive_id=job.id,
             title=job.title,
+            role=job.title,
             company_name=job.company.name if job.company else "Unknown",
             location=job.location,
             salary_ctc_min=float(job.salary_min) if job.salary_min else None,
@@ -202,8 +234,16 @@ async def compute_job_matches(
             match_score=match_score,
             skill_match_pct=skill_match_pct,
             matched_skills=matched_skills,
+            matching_skills=matched_skills,
             missing_skills=missing_skills,
             eligible=eligible,
+            eligibility_passed=eligible,
+            diagnostic_summary=diagnostic_summary,
+            match_breakdown={
+                "skill_alignment": breakdown.skills_score,
+                "academic_score": breakdown.academic_score,
+                "experience_bonus": breakdown.experience_bonus,
+            },
             breakdown=breakdown,
         ))
 
