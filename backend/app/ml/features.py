@@ -157,10 +157,11 @@ def build_job_features(
 def build_pair_features(
     student_skills: dict[str, float],
     job_skills: dict[str, str],
-    student_cgpa: Optional[float],
-    job_min_cgpa: Optional[float],
-    student_dept: Optional[str],
-    eligible_depts: Optional[list[str]],
+    student_cgpa: Optional[float] = None,
+    job_min_cgpa: Optional[float] = None,
+    student_dept: Optional[str] = None,
+    eligible_depts: Optional[list[str]] = None,
+    **kwargs,
 ) -> np.ndarray:
     """
     Build pairwise interaction features for one student-job pair.
@@ -168,6 +169,8 @@ def build_pair_features(
 
     Shape: (N_SKILLS * 2 + 8,)
     """
+    if eligible_depts is None and "job_depts" in kwargs:
+        eligible_depts = kwargs["job_depts"]
     weight_map = {"required": 1.5, "preferred": 1.0, "nice_to_have": 0.5}
 
     stu_vec = student_skill_vector(student_skills)
@@ -203,7 +206,10 @@ def build_pair_features(
     return np.concatenate([match_vec, gap_vec, scalars])
 
 
-PAIR_FEATURE_DIM = N_SKILLS * 2 + 8
+PAIR_FEATURE_DIM = N_SKILLS * 2 + 8  # 72 * 2 + 8 = 152
 STUDENT_FEATURE_DIM = N_SKILLS + N_DEPTS + 6
 JOB_FEATURE_DIM = N_SKILLS + N_DEPTS + 2
+
+# Alias explicitly matching Task 1 specification
+build_152_feature_vector = build_pair_features
 

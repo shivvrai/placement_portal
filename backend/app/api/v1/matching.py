@@ -43,7 +43,7 @@ async def get_student_skill_gap(
 @router.get("/students/{student_id}/gap", response_model=SkillGapResponse, include_in_schema=False)
 async def get_skill_gap_for_student(
     student_id: uuid.UUID,
-    target_role: str = Query("Software Engineer", description="Target role for gap analysis"),
+    target_role: Optional[str] = Query(None, description="Target role for gap analysis"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -103,9 +103,15 @@ async def get_student_job_matches_jobs(
         student_id=student_id,
         student_cgpa=float(student.cgpa) if student.cgpa else None,
         student_dept_code=student.department.code if student.department else None,
-        limit=limit,
+        limit=200,
     )
-    return matches
+    if role:
+        matches = [m for m in matches if role.lower() in (m.title or "").lower() or role.lower() in (m.role_category or "").lower()]
+    if location:
+        matches = [m for m in matches if location.lower() in (m.location or "").lower()]
+    if minMatch is not None:
+        matches = [m for m in matches if m.match_score >= minMatch]
+    return matches[:limit]
 
 
 from pydantic import BaseModel

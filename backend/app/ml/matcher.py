@@ -45,31 +45,46 @@ def load_model():
         return
     _model_loaded = True
 
-    if MODEL_PATH.exists():
+    candidate_paths = [
+        MODEL_PATH,
+        Path("app/ml/matcher_model.pkl"),
+        Path("backend/app/ml/matcher_model.pkl"),
+        Path("ml/matcher_model.pkl"),
+    ]
+    target_path = None
+    for p in candidate_paths:
+        if p.exists():
+            target_path = p
+            break
+
+    if target_path:
         try:
-            with open(MODEL_PATH, "rb") as f:
+            with open(target_path, "rb") as f:
                 _model = pickle.load(f)
-            logger.info("Loaded trained matcher model from %s", MODEL_PATH)
+            logger.info("Loaded trained matcher model from %s", target_path)
         except Exception as e:
             logger.warning("Could not load matcher model: %s. Using heuristic.", e)
             _model = None
     else:
-        logger.info("No trained model found at %s. Using heuristic scorer.", MODEL_PATH)
+        logger.info("No trained model found. Using heuristic scorer.")
         _model = None
 
 
 def _heuristic_score(
     student_skills: dict[str, float],
     job_skills: dict[str, str],
-    student_cgpa: Optional[float],
-    job_min_cgpa: Optional[float],
-    student_dept: Optional[str],
-    eligible_depts: Optional[list[str]],
+    student_cgpa: Optional[float] = None,
+    job_min_cgpa: Optional[float] = None,
+    student_dept: Optional[str] = None,
+    eligible_depts: Optional[list[str]] = None,
+    **kwargs,
 ) -> float:
     """
     Rule-based fallback scoring (used when no trained model exists).
     Weighted: skill match 70% + CGPA 20% + dept eligibility 10%
     """
+    if eligible_depts is None and "job_depts" in kwargs:
+        eligible_depts = kwargs["job_depts"]
     weight_map = {"required": 1.5, "preferred": 1.0, "nice_to_have": 0.5}
     total_weight = sum(weight_map.get(imp, 1.0) for imp in job_skills.values())
 
@@ -94,6 +109,10 @@ def _heuristic_score(
 
     final = skill_score * 0.70 + cgpa_score * 0.20 + dept_score * 0.10
     return round(min(final, 100.0), 1)
+
+
+# Public alias for heuristic scoring fallback
+heuristic_match_score = _heuristic_score
 
 
 def compute_breakdown(
@@ -258,6 +277,7 @@ def predict_match_score(
     job_min_cgpa: Optional[float] = None,
     student_dept: Optional[str] = None,
     eligible_depts: Optional[list[str]] = None,
+    **kwargs,
 ) -> float:
     """
     Predict match score for a student-job pair.
@@ -265,6 +285,8 @@ def predict_match_score(
     Returns a score in [0, 100].
     Uses trained ML model if available, heuristic otherwise.
     """
+    if eligible_depts is None and "job_depts" in kwargs:
+        eligible_depts = kwargs["job_depts"]
     load_model()
 
     if _model is not None:
@@ -287,6 +309,31 @@ def predict_match_score(
         student_cgpa, job_min_cgpa,
         student_dept, eligible_depts,
     )
+
+
+def predict_match_probability(
+    student_skills: dict[str, float],
+    job_skills: dict[str, str],
+    student_cgpa: Optional[float] = None,
+    job_min_cgpa: Optional[float] = None,
+    student_dept: Optional[str] = None,
+    eligible_depts: Optional[list[str]] = None,
+    **kwargs,
+) -> float:
+    """
+    Predict multidimensional match probability P in [0.0, 1.0].
+    """
+    if eligible_depts is None and "job_depts" in kwargs:
+        eligible_depts = kwargs["job_depts"]
+    score = predict_match_score(
+        student_skills=student_skills,
+        job_skills=job_skills,
+        student_cgpa=student_cgpa,
+        job_min_cgpa=job_min_cgpa,
+        student_dept=student_dept,
+        eligible_depts=eligible_depts,
+    )
+    return round(max(0.0, min(1.0, score / 100.0)), 4)
 
 
 def rank_jobs(

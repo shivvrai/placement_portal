@@ -130,6 +130,37 @@ def _get_semantic_boost(
     return min(best_sim * 0.3, 0.3)
 
 
+def classify_gap_severity(importance_weight: float, current_conf: float, raw_gap: float) -> tuple[str, str, int]:
+    """
+    Multi-severity classification according to industrial spec:
+      - Critical Gap: Required skill missing where importance weight >= 0.70 (e.g. Data Structures).
+      - Moderate Gap: Skill present but verified confidence < 60% (e.g. System Design).
+      - Minor Gap: Bonus/optional skill missing or partial gap with confidence >= 60%.
+      - None: Skill meets or exceeds requirement.
+    Returns: (severity, gap_type, estimated_hours)
+    """
+    if raw_gap <= 0.02:
+        return "none", "none", 0
+
+    if current_conf <= 0.05:  # Missing skill
+        if importance_weight >= 0.70:
+            # Critical: required core skill missing
+            hours = max(20, round(importance_weight * 30))
+            return "critical", "critical", hours
+        else:
+            # Minor: optional/bonus skill missing
+            hours = max(10, round(importance_weight * 20))
+            return "low", "minor", hours
+    elif current_conf < 0.60:
+        # Moderate: skill present but unverified / low confidence (< 60%)
+        hours = max(10, round((importance_weight - current_conf) * 25))
+        return "medium", "moderate", hours
+    else:
+        # Minor: partial gap but baseline competency >= 60%
+        hours = max(5, round((importance_weight - current_conf) * 15))
+        return "low", "minor", hours
+
+
 def compute_gap_scores(
     student_skills: dict[str, float],  # {skill_name (lower): confidence 0-1}
     target_role: str,
@@ -142,8 +173,14 @@ def compute_gap_scores(
         {
           "target_role": str,
           "overall_score": float (0-100),
+          "readiness_score": float (0-100),
+          "estimated_hours_to_bridge": int,
+          "critical_gaps": [str],
+          "moderate_gaps": [str],
+          "minor_gaps": [str],
           "gaps": [GapItem],
           "strengths": [str],
+          "available_roles": [str],
         }
     """
     profile = ROLE_PROFILES.get(target_role)
@@ -155,6 +192,7 @@ def compute_gap_scores(
     strengths = []
     total_required = sum(profile.values())
     weighted_gap_sum = 0.0
+    matched_weighted_sum = 0.0
 
     for skill, required_conf in sorted(profile.items(), key=lambda x: -x[1]):
         current_conf = student_skills.get(skill, 0.0)
@@ -171,15 +209,24 @@ def compute_gap_scores(
         adjusted_gap = max(0.0, raw_gap - semantic_boost)
         weighted_gap_sum += adjusted_gap * (required_conf / total_required)
 
+        # Readiness metric contribution: sum(w_s * min(1.0, c_s / r_s))
+        fulfillment = min(1.0, current_conf / required_conf) if required_conf > 0 else 1.0
+        matched_weighted_sum += (required_conf * fulfillment)
+
         if current_conf >= required_conf:
             strengths.append(skill)
+
+        # Multi-severity classification
+        sev, gap_type, est_hours = classify_gap_severity(required_conf, current_conf, adjusted_gap)
 
         gaps.append({
             "skill_name": skill,
             "current_score": round(current_conf * 100, 1),
             "required_score": round(required_conf * 100, 1),
             "gap": round(adjusted_gap * 100, 1),
-            "severity": _severity(adjusted_gap),
+            "severity": sev,
+            "gap_type": gap_type,
+            "estimated_hours": est_hours,
             "semantic_boost": round(semantic_boost * 100, 1),
             "resources": SKILL_RESOURCES.get(skill, _DEFAULT_RESOURCES),
         })
@@ -187,13 +234,26 @@ def compute_gap_scores(
     # Overall readiness score = 1 - weighted_gap
     overall_score = round(max(0.0, 100.0 - weighted_gap_sum * 100), 1)
 
+    # Formal readiness metric: (sum(w_s * c_s) / sum(w_s)) * 100
+    readiness_score = round(max(0.0, min(100.0, (matched_weighted_sum / max(total_required, 0.01)) * 100)), 1)
+
     # Sort gaps: critical → high → medium → low → none
     severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "none": 4}
     gaps.sort(key=lambda g: severity_order.get(g["severity"], 5))
 
+    critical_gaps = [g["skill_name"] for g in gaps if g["gap_type"] == "critical"]
+    moderate_gaps = [g["skill_name"] for g in gaps if g["gap_type"] == "moderate"]
+    minor_gaps = [g["skill_name"] for g in gaps if g["gap_type"] == "minor"]
+    total_hours = sum(g["estimated_hours"] for g in gaps)
+
     return {
         "target_role": target_role,
         "overall_score": overall_score,
+        "readiness_score": readiness_score,
+        "estimated_hours_to_bridge": total_hours,
+        "critical_gaps": critical_gaps,
+        "moderate_gaps": moderate_gaps,
+        "minor_gaps": minor_gaps,
         "gaps": gaps,
         "strengths": strengths,
         "available_roles": list(ROLE_PROFILES.keys()),

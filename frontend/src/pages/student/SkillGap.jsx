@@ -22,11 +22,13 @@ const TARGET_ROLES = [
 ];
 
 const SEVERITY_CONFIG = {
-  none:     { label: 'No Gap',  color: 'var(--accent-success)', bg: 'rgba(34,197,94,0.1)' },
-  low:      { label: 'Low',     color: '#22c55e',               bg: 'rgba(34,197,94,0.1)' },
-  medium:   { label: 'Medium',  color: 'var(--accent-warning)', bg: 'rgba(245,158,11,0.1)' },
-  high:     { label: 'High',    color: '#f97316',               bg: 'rgba(249,115,22,0.1)' },
-  critical: { label: 'Critical',color: 'var(--accent-danger)',  bg: 'rgba(239,68,68,0.1)' },
+  none:     { label: 'No Gap',   color: 'var(--accent-success)', bg: 'rgba(34,197,94,0.1)' },
+  low:      { label: 'Low',      color: '#22c55e',               bg: 'rgba(34,197,94,0.1)' },
+  minor:    { label: 'Minor',    color: '#22c55e',               bg: 'rgba(34,197,94,0.1)' },
+  medium:   { label: 'Medium',   color: 'var(--accent-warning)', bg: 'rgba(245,158,11,0.1)' },
+  moderate: { label: 'Moderate', color: 'var(--accent-warning)', bg: 'rgba(245,158,11,0.1)' },
+  high:     { label: 'High',     color: '#f97316',               bg: 'rgba(249,115,22,0.1)' },
+  critical: { label: 'Critical', color: 'var(--accent-danger)',  bg: 'rgba(239,68,68,0.1)' },
 };
 
 // ─── Score Ring ────────────────────────────────────────────────────
@@ -34,7 +36,7 @@ function ScoreRing({ score }) {
   const r = 54;
   const circ = 2 * Math.PI * r;
   const offset = circ - (score / 100) * circ;
-  const color = score >= 75 ? '#22c55e' : score >= 55 ? '#f59e0b' : '#ef4444';
+  const color = score >= 75 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444';
 
   return (
     <div style={{ position: 'relative', width: 140, height: 140 }}>
@@ -60,8 +62,8 @@ function ScoreRing({ score }) {
 }
 
 // ─── Skill Row ─────────────────────────────────────────────────────
-function SkillRow({ skill }) {
-  const cfg = SEVERITY_CONFIG[skill.severity];
+function SkillRow({ skill, onStartLearning }) {
+  const cfg = SEVERITY_CONFIG[skill.gapType] || SEVERITY_CONFIG[skill.severity] || SEVERITY_CONFIG.low;
   return (
     <tr>
       <td>
@@ -97,10 +99,14 @@ function SkillRow({ skill }) {
         </span>
       </td>
       <td style={{ textAlign: 'center' }}>
-        {skill.resources > 0 ? (
-          <Link to="/student/roadmap" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--accent-primary)' }}>
-            {skill.resources} resources →
-          </Link>
+        {skill.gap > 0 ? (
+          <button
+            onClick={() => onStartLearning(skill.skill)}
+            className="btn btn-secondary"
+            style={{ fontSize: 11, padding: '4px 10px', height: 28 }}
+          >
+            Start Learning →
+          </button>
         ) : (
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>Sufficient</span>
         )}
@@ -204,13 +210,15 @@ export default function SkillGap() {
     );
   }
 
-  const overallScore = Math.round(gapData?.overall_score ?? 0);
+  const overallScore = Math.round(gapData?.readiness_score ?? gapData?.overall_score ?? 0);
+  const estimatedHours = gapData?.estimated_hours_to_bridge ?? 45;
 
   // Map backend gaps to display items
   const gaps = (gapData?.gaps || []).map((g) => {
     const current = g.current_score > 1 ? Math.round(g.current_score) : Math.round(g.current_score * 100);
     const required = g.required_score > 1 ? Math.round(g.required_score) : Math.round(g.required_score * 100);
     const gap = g.gap > 1 ? Math.round(g.gap) : Math.round(g.gap * 100);
+    const gapType = g.gap_type || (g.severity === 'critical' ? 'critical' : (g.severity === 'medium' || g.severity === 'high') ? 'moderate' : (g.severity === 'low' ? 'minor' : 'none'));
     return {
       skill: g.skill_name,
       category: g.category ? g.category.charAt(0).toUpperCase() + g.category.slice(1) : 'General',
@@ -218,13 +226,24 @@ export default function SkillGap() {
       required,
       gap: Math.max(0, gap),
       severity: g.severity || 'low',
-      resources: gap > 0 ? Math.min(6, Math.max(1, Math.round(gap / 10))) : 0,
+      gapType,
+      hours: g.estimated_hours || (gap > 0 ? Math.max(10, Math.round(gap * 0.3)) : 0),
+      resources: g.resources?.length || (gap > 0 ? Math.min(6, Math.max(1, Math.round(gap / 10))) : 0),
     };
   });
 
   const filteredSkills = filter === 'all'
     ? gaps
-    : gaps.filter((s) => s.severity === filter);
+    : gaps.filter((s) => {
+        if (filter === 'critical') return s.severity === 'critical' || s.gapType === 'critical';
+        if (filter === 'moderate') return s.severity === 'medium' || s.severity === 'high' || s.gapType === 'moderate';
+        if (filter === 'minor') return s.severity === 'low' || s.gapType === 'minor';
+        return s.severity === filter;
+      });
+
+  const criticalCount = gaps.filter(g => g.severity === 'critical' || g.gapType === 'critical').length;
+  const moderateCount = gaps.filter(g => g.severity === 'medium' || g.severity === 'high' || g.gapType === 'moderate').length;
+  const minorCount = gaps.filter(g => g.severity === 'low' || g.gapType === 'minor').length;
 
   // Compute category averages for the bar chart
   const categoryMap = {};
@@ -239,8 +258,8 @@ export default function SkillGap() {
 
   const chartData = Object.entries(categoryMap).map(([category, data]) => ({
     name: category,
-    Current: Math.round(data.currentSum / data.count),
-    Required: Math.round(data.requiredSum / data.count),
+    "Your Score": Math.round(data.currentSum / data.count),
+    "Industry Benchmark": Math.round(data.requiredSum / data.count),
   }));
 
   // Derive student owned skills for Market Radar cross-referencing
@@ -300,35 +319,6 @@ export default function SkillGap() {
           ))}
         </div>
 
-        {/* Top 3 skill gaps across all active drives */}
-        <div className="card" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-            <div>
-              <h3 style={{ margin: 0 }}>Top 3 Skill Gaps Across Active Drives</h3>
-              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', margin: 0 }}>The most common missing skills holding you back.</p>
-            </div>
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <select className="input" style={{ width: 150, padding: '4px 8px' }}>
-                <option value="">Add a skill...</option>
-                <option value="AWS">AWS</option>
-                <option value="Docker">Docker</option>
-                <option value="React">React</option>
-              </select>
-              <button className="btn btn-secondary" style={{ padding: '4px 12px' }} onClick={() => alert('Simulated +6% match across 4 drives')}>See score change</button>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
-            {['AWS', 'System Design', 'Docker'].map((gap, i) => (
-              <div key={gap} style={{ flex: 1, padding: 'var(--space-3)', background: 'var(--bg-card)', borderRadius: 'var(--border-radius-sm)', border: '1px solid rgba(245,158,11,0.3)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 600 }}>{i + 1}. {gap}</span>
-                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--accent-warning)' }}>Missing in 4 drives</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Top row: score ring + category bar chart + Market Radar */}
         <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 290px', gap: 'var(--space-5)', alignItems: 'stretch' }}>
           {/* Score card */}
@@ -343,12 +333,15 @@ export default function SkillGap() {
             }}
           >
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)', fontWeight: 500 }}>
-              Overall Readiness
+              Readiness Score
             </div>
             <ScoreRing score={overallScore} />
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
-                {overallScore >= 75 ? '🟢 On track' : overallScore >= 55 ? '🟡 Needs work' : '🔴 Significant gaps'}
+                {overallScore >= 75 ? '🟢 Placement Ready (>75%)' : overallScore >= 50 ? '🟡 Moderate Gaps (50-75%)' : '🔴 Critical Gaps (<50%)'}
+              </div>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 'var(--space-2)' }}>
+                ⏳ Est. Study Time: <strong>{estimatedHours} hrs</strong>
               </div>
               <Link to="/student/roadmap">
                 <button
@@ -361,28 +354,31 @@ export default function SkillGap() {
             </div>
           </div>
 
-          {/* Category bar chart */}
+          {/* Category bar chart: Current vs Industry Benchmark */}
           <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontWeight: 600, marginBottom: 'var(--space-4)' }}>Skills by Category</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                <div style={{ fontWeight: 600 }}>Student Score vs Industry Benchmark</div>
+                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>Side-by-Side Analysis</span>
+              </div>
               <ResponsiveContainer width="100%" height={210}>
                 <BarChart data={chartData} margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
                   <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                   <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="Current" fill="#6366f1" radius={[4, 4, 0, 0]} name="Current" />
-                  <Bar dataKey="Required" fill="rgba(99,102,241,0.2)" radius={[4, 4, 0, 0]} name="Required" />
+                  <Bar dataKey="Your Score" fill="#6366f1" radius={[4, 4, 0, 0]} name="Your Score" />
+                  <Bar dataKey="Industry Benchmark" fill="rgba(99,102,241,0.25)" stroke="#6366f1" radius={[4, 4, 0, 0]} name="Industry Benchmark" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-6)', marginTop: 'var(--space-2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
                 <div style={{ width: 12, height: 12, background: '#6366f1', borderRadius: 2 }} />
-                Your current level
+                Your Current Score
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
-                <div style={{ width: 12, height: 12, background: 'rgba(99,102,241,0.35)', borderRadius: 2 }} />
-                Required by industry
+                <div style={{ width: 12, height: 12, background: 'rgba(99,102,241,0.25)', border: '1px solid #6366f1', borderRadius: 2 }} />
+                Industry Benchmark
               </div>
             </div>
           </div>
@@ -488,15 +484,171 @@ export default function SkillGap() {
         </div>
 
 
+        {/* Multi-Severity Skill Gap Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 'var(--space-4)' }}>
+          {/* Critical Card */}
+          <div
+            className="card"
+            onClick={() => setFilter(filter === 'critical' ? 'all' : 'critical')}
+            style={{
+              cursor: 'pointer',
+              border: filter === 'critical' ? '2px solid var(--accent-danger)' : '1px solid var(--border-color)',
+              background: filter === 'critical' ? 'rgba(239, 68, 68, 0.05)' : 'var(--bg-card)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: 'var(--space-3)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 'var(--font-size-sm)', color: 'var(--accent-danger)' }}>
+                  🔴 Critical Gaps
+                </span>
+                <span style={{
+                  padding: '2px 8px', borderRadius: 999, fontSize: 12, fontWeight: 700,
+                  background: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-danger)'
+                }}>
+                  {criticalCount} {criticalCount === 1 ? 'skill' : 'skills'}
+                </span>
+              </div>
+              <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 'var(--space-2)' }}>
+                Required core skills missing (weight &gt; 80%). Blocks immediate placement shortlisting.
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 'var(--space-2)', borderTop: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                ⏳ ~{criticalCount * 15} hrs study
+              </span>
+              <button
+                type="button"
+                className="btn btn-danger"
+                style={{ fontSize: 11, padding: '4px 10px', height: 28 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/student/roadmap');
+                }}
+              >
+                Start Learning →
+              </button>
+            </div>
+          </div>
+
+          {/* Moderate Card */}
+          <div
+            className="card"
+            onClick={() => setFilter(filter === 'moderate' ? 'all' : 'moderate')}
+            style={{
+              cursor: 'pointer',
+              border: filter === 'moderate' ? '2px solid var(--accent-warning)' : '1px solid var(--border-color)',
+              background: filter === 'moderate' ? 'rgba(245, 158, 11, 0.05)' : 'var(--bg-card)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: 'var(--space-3)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 'var(--font-size-sm)', color: 'var(--accent-warning)' }}>
+                  🟡 Moderate Gaps
+                </span>
+                <span style={{
+                  padding: '2px 8px', borderRadius: 999, fontSize: 12, fontWeight: 700,
+                  background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-warning)'
+                }}>
+                  {moderateCount} {moderateCount === 1 ? 'skill' : 'skills'}
+                </span>
+              </div>
+              <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 'var(--space-2)' }}>
+                Skills present but verified confidence &lt; 60%. Needs assessment or mini-projects to verify.
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 'var(--space-2)', borderTop: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                ⏳ ~{moderateCount * 10} hrs study
+              </span>
+              <button
+                type="button"
+                className="btn btn-warning"
+                style={{ fontSize: 11, padding: '4px 10px', height: 28 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/student/roadmap');
+                }}
+              >
+                Start Learning →
+              </button>
+            </div>
+          </div>
+
+          {/* Minor Card */}
+          <div
+            className="card"
+            onClick={() => setFilter(filter === 'minor' ? 'all' : 'minor')}
+            style={{
+              cursor: 'pointer',
+              border: filter === 'minor' ? '2px solid #22c55e' : '1px solid var(--border-color)',
+              background: filter === 'minor' ? 'rgba(34, 197, 94, 0.05)' : 'var(--bg-card)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: 'var(--space-3)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 'var(--font-size-sm)', color: '#22c55e' }}>
+                  🟢 Minor / Elective Gaps
+                </span>
+                <span style={{
+                  padding: '2px 8px', borderRadius: 999, fontSize: 12, fontWeight: 700,
+                  background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e'
+                }}>
+                  {minorCount} {minorCount === 1 ? 'skill' : 'skills'}
+                </span>
+              </div>
+              <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 'var(--space-2)' }}>
+                Bonus and optional skills. Bridging these elevates candidate from qualified to top-percentile.
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 'var(--space-2)', borderTop: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                ⏳ ~{minorCount * 5} hrs study
+              </span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: 11, padding: '4px 10px', height: 28 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/student/roadmap');
+                }}
+              >
+                Start Learning →
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Skill table */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
             <div style={{ fontWeight: 600 }}>Skill-Level Breakdown ({targetRole})</div>
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              {['all', 'critical', 'high', 'medium', 'low', 'none'].map((f) => (
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'critical', label: `Critical (${criticalCount})` },
+                { id: 'moderate', label: `Moderate (${moderateCount})` },
+                { id: 'minor', label: `Minor (${minorCount})` },
+                { id: 'none', label: 'No Gap' },
+              ].map((f) => (
                 <button
-                  key={f}
-                  onClick={() => setFilter(f)}
+                  key={f.id}
+                  onClick={() => setFilter(f.id)}
                   style={{
                     padding: '4px 12px',
                     borderRadius: 999,
@@ -504,13 +656,12 @@ export default function SkillGap() {
                     cursor: 'pointer',
                     fontSize: 'var(--font-size-xs)',
                     fontWeight: 500,
-                    background: filter === f ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                    color: filter === f ? 'white' : 'var(--text-muted)',
+                    background: filter === f.id ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                    color: filter === f.id ? 'white' : 'var(--text-muted)',
                     transition: 'all var(--transition-fast)',
-                    textTransform: 'capitalize',
                   }}
                 >
-                  {f === 'all' ? 'All' : f}
+                  {f.label}
                 </button>
               ))}
             </div>
@@ -524,12 +675,12 @@ export default function SkillGap() {
                   <th style={{ minWidth: 180 }}>Your Level</th>
                   <th style={{ textAlign: 'center' }}>Required</th>
                   <th>Gap</th>
-                  <th style={{ textAlign: 'center' }}>Resources</th>
+                  <th style={{ textAlign: 'center' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSkills.map((s) => (
-                  <SkillRow key={s.skill} skill={s} />
+                  <SkillRow key={s.skill} skill={s} onStartLearning={() => navigate('/student/roadmap')} />
                 ))}
               </tbody>
             </table>

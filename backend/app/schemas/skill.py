@@ -35,13 +35,22 @@ class SkillGapItem(BaseModel):
     current_score: float = Field(..., ge=0, le=100)
     required_score: float = Field(..., ge=0, le=100)
     gap: float
-    severity: str  # low | medium | high | critical
+    severity: str  # low | medium | high | critical | none
+    gap_type: Optional[str] = None  # critical | moderate | minor | none
+    estimated_hours: Optional[int] = 0
+    resources: list[dict] = []
 
 
 class SkillGapResponse(BaseModel):
     student_id: uuid.UUID
     target_role: str
     overall_score: float
+    readiness_score: Optional[float] = None
+    estimated_hours_to_bridge: Optional[int] = 0
+    critical_gaps: list[str] = []
+    moderate_gaps: list[str] = []
+    minor_gaps: list[str] = []
+    strengths: list[str] = []
     gaps: list[SkillGapItem]
 
 
