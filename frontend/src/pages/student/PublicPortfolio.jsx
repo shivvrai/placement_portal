@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { studentApi } from '../../api/endpoints';
+import { studentApi, portfolioApi } from '../../api/endpoints';
 
 function formatDate(dStr) {
   if (!dStr) return '';
@@ -14,7 +14,7 @@ function formatDate(dStr) {
 }
 
 export default function PublicPortfolio() {
-  const { studentId } = useParams();
+  const { studentId, slug } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,8 +26,18 @@ export default function PublicPortfolio() {
       try {
         setLoading(true);
         setError(null);
-        const res = await studentApi.getPublicProfile(studentId);
-        if (isMounted) {
+        let res;
+        const targetSlug = slug || (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId || '') ? studentId : null);
+        if (targetSlug) {
+          res = await portfolioApi.getBySlug(targetSlug);
+        } else if (studentId) {
+          try {
+            res = await portfolioApi.getById(studentId);
+          } catch (e) {
+            res = await studentApi.getPublicProfile(studentId);
+          }
+        }
+        if (isMounted && res) {
           setData(res.data);
         }
       } catch (err) {
@@ -61,7 +71,7 @@ export default function PublicPortfolio() {
     return () => {
       isMounted = false;
     };
-  }, [studentId]);
+  }, [studentId, slug]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);

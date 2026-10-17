@@ -599,6 +599,21 @@ export default function StudentProfile() {
     }
   };
 
+  // Toggle Featured Project Pin
+  const handleToggleFeaturedProject = async (proj) => {
+    try {
+      const nextFeatured = !(proj.is_featured || proj.featured);
+      await studentApi.updateProject(proj.id, { is_featured: nextFeatured, featured: nextFeatured });
+      setProjects((prev) =>
+        prev.map((p) => (p.id === proj.id ? { ...p, is_featured: nextFeatured, featured: nextFeatured } : p))
+      );
+      showToast(nextFeatured ? 'Project pinned as featured! ⭐' : 'Project unpinned from featured.');
+    } catch (err) {
+      console.error('Failed to update project featured status:', err);
+      showToast('Failed to toggle featured status.', 'error');
+    }
+  };
+
   // ─── Live Taxonomy Search for Add Skill ───────────────────────────
   useEffect(() => {
     if (!skillName || skillName.trim().length < 2) {
@@ -1269,30 +1284,48 @@ export default function StudentProfile() {
                             </span>
                           )}
                         </div>
-                        <button
-                          className="btn-icon"
-                          title="Delete Project"
-                          onClick={() => setDeleteConfirmModal({
-                            isOpen: true,
-                            type: 'project',
-                            id: proj.id,
-                            title: proj.title,
-                            deleting: false,
-                          })}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--text-muted)',
-                            padding: 4,
-                            borderRadius: 4,
-                            fontSize: '1rem',
-                          }}
-                          onMouseOver={(e) => (e.currentTarget.style.color = 'var(--accent-danger)')}
-                          onMouseOut={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-                        >
-                          🗑
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <button
+                            className="btn-icon"
+                            title={(proj.is_featured || proj.featured) ? "Unpin from Featured" : "Pin as Featured"}
+                            onClick={() => handleToggleFeaturedProject(proj)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: (proj.is_featured || proj.featured) ? '#eab308' : 'var(--text-muted)',
+                              padding: 4,
+                              borderRadius: 4,
+                              fontSize: '1.1rem',
+                            }}
+                          >
+                            {(proj.is_featured || proj.featured) ? '⭐' : '☆'}
+                          </button>
+                          <button
+                            className="btn-icon"
+                            title="Delete Project"
+                            onClick={() => setDeleteConfirmModal({
+                              isOpen: true,
+                              type: 'project',
+                              id: proj.id,
+                              title: proj.title,
+                              deleting: false,
+                            })}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'var(--text-muted)',
+                              padding: 4,
+                              borderRadius: 4,
+                              fontSize: '1rem',
+                            }}
+                            onMouseOver={(e) => (e.currentTarget.style.color = 'var(--accent-danger)')}
+                            onMouseOut={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                          >
+                            🗑
+                          </button>
+                        </div>
                       </div>
 
                       {proj.description && (

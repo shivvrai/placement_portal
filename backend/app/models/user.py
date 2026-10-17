@@ -72,8 +72,17 @@ class Student(Base):
     resume_parsed: Mapped[bool] = mapped_column(Boolean, default=False)
     consent_resume_analysis: Mapped[bool] = mapped_column(Boolean, default=False)
     consent_profile_visible: Mapped[bool] = mapped_column(Boolean, default=False)
+    custom_slug: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+    @property
+    def is_public(self) -> bool:
+        return self.consent_profile_visible
+
+    @is_public.setter
+    def is_public(self, val: bool):
+        self.consent_profile_visible = bool(val)
 
     user: Mapped["User"] = relationship(back_populates="student")
     department: Mapped["Department"] = relationship(back_populates="students")

@@ -11,6 +11,7 @@ import uuid
 import shutil
 from pathlib import Path
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +27,10 @@ from app.nlp.resume_parser import parse_resume
 from app.nlp.skill_extractor import extract_skills_from_sections
 from app.nlp.taxonomy_matcher import match_skills_to_db
 from app.schemas.common import MessageResponse
+from app.schemas.portfolio import AtsScoreRequest, AtsScoreResponse
+from app.services.resume_parser import analyze_ats_score, extract_text
+from app.models.placement import PlacementDrive
+from sqlalchemy.orm import selectinload
 
 router = APIRouter(prefix="/resume", tags=["Resume"])
 settings = get_settings()
@@ -257,3 +262,90 @@ async def reparse_resume(
     )
 
     return MessageResponse(message="Re-parse started. Check /status for completion.")
+
+
+@router.post(
+    "/ats-score",
+    response_model=AtsScoreResponse,
+    summary="Compute ATS compatibility score and diagnostic breakdown",
+)
+async def compute_ats_score(
+    payload: Optional[AtsScoreRequest] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Computes ATS match score (0-100%):
+      - Keyword density and skill coverage: 50%
+      - Section structural completeness: 25%
+      - Action verb usage and quantifiable metrics: 25%
+    Accepts resume_text, job_description, and/or drive_id.
+    If resume_text is omitted, extracts text from student's active resume.
+    """
+    resume_text = payload.resume_text if payload else None
+    job_description = payload.job_description if payload else None
+    drive_id = payload.drive_id if payload else None
+    target_skills: list[str] = []
+
+    # If drive_id is provided, fetch drive details
+    if drive_id:
+        res = await db.execute(select(PlacementDrive).where(PlacementDrive.id == drive_id))
+        drive = res.scalar_one_or_none()
+        if drive:
+            if not job_description and drive.description:
+                job_description = drive.description
+            if drive.required_skills:
+                target_skills = list(drive.required_skills)
+
+    # If resume_text not provided, try to load uploaded resume
+    if not resume_text:
+        student_res = await db.execute(select(Student).where(Student.id == current_user.id))
+        student = student_res.scalar_one_or_none()
+        if student and student.resume_url:
+            p = Path(student.resume_url)
+            if p.exists():
+                try:
+                    resume_text = extract_text(p.read_bytes(), p.name)
+                except Exception:
+                    pass
+
+    if not resume_text:
+        # Fallback to checking student's profile telemetry
+        student_res = await db.execute(
+            select(Student)
+            .where(Student.id == current_user.id)
+            .options(
+                selectinload(Student.projects),
+                selectinload(Student.internships),
+                selectinload(Student.skills).selectinload(StudentSkill.skill),
+            )
+        )
+        student = student_res.scalar_one_or_none()
+        if student:
+            parts = [f"Name: {current_user.first_name} {current_user.last_name}"]
+            if student.bio:
+                parts.append(f"Summary\n{student.bio}")
+            sk_names = [ss.skill.name for ss in student.skills if ss.skill]
+            if sk_names:
+                parts.append(f"Skills\n{', '.join(sk_names)}")
+            if student.projects:
+                proj_strs = [f"• {p.title}: {p.description or ''} (Tech: {', '.join(p.technologies or [])})" for p in student.projects]
+                parts.append("Projects\n" + "\n".join(proj_strs))
+            if student.internships:
+                exp_strs = [f"• {exp.role} at {exp.company_name}: {exp.description or ''}" for exp in student.internships]
+                parts.append("Experience\n" + "\n".join(exp_strs))
+            parts.append(f"Education\nB.Tech in Engineering with CGPA {student.cgpa or 8.0}")
+            resume_text = "\n\n".join(parts)
+
+    if not resume_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No resume text provided and no uploaded resume found. Please provide resume_text or upload a resume first.",
+        )
+
+    analysis = analyze_ats_score(
+        resume_text=resume_text,
+        target_job_description=job_description,
+        target_skills=target_skills,
+    )
+    return AtsScoreResponse(**analysis)

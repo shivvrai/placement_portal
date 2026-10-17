@@ -51,17 +51,24 @@ export const studentApi = {
   // Portfolio: Projects
   getMyProjects: () => mockOr('student_projects.json', () => api.get('/students/me/projects')),
   addProject: (data) => api.post('/students/me/projects', data),
+  updateProject: (id, data) => api.patch(`/students/me/projects/${id}`, data),
   deleteProject: (id) => api.delete(`/students/me/projects/${id}`),
 
   // Portfolio: Certifications
   getMyCertifications: () => mockOr('student_certifications.json', () => api.get('/students/me/certifications')),
   addCertification: (data) => api.post('/students/me/certifications', data),
+  updateCertification: (id, data) => api.patch(`/students/me/certifications/${id}`, data),
   deleteCertification: (id) => api.delete(`/students/me/certifications/${id}`),
 
-  // Portfolio: Work Experience
+  // Portfolio: Work Experience / Internships
   getMyExperience: () => mockOr('student_experience.json', () => api.get('/students/me/experience')),
   addExperience: (data) => api.post('/students/me/experience', data),
+  updateExperience: (id, data) => api.patch(`/students/me/experience/${id}`, data),
   deleteExperience: (id) => api.delete(`/students/me/experience/${id}`),
+
+  // Career Goals
+  getMyCareerGoals: () => api.get('/students/me/career-goals'),
+  updateMyCareerGoals: (data) => api.patch('/students/me/career-goals', data),
 
   // Bulk Skills Confirmation
   bulkConfirmSkills: (data) => {
@@ -163,6 +170,15 @@ export const resumeApi = {
   },
   getStatus: () => api.get('/resume/status'),
   reparse: () => api.post('/resume/reparse'),
+  getAtsScore: (data) => api.post('/resume/ats-score', data || {}),
+};
+
+// ─── Portfolio & Identity ─────────────────────────────────────────
+export const portfolioApi = {
+  getById: (studentId) => api.get(`/portfolio/${studentId}`),
+  getBySlug: (customSlug) => api.get(`/portfolio/slug/${customSlug}`),
+  getCompleteness: () => api.get('/portfolio/me/completeness'),
+  updateSettings: (data) => api.patch('/portfolio/me/settings', data),
 };
 
 

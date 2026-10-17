@@ -112,6 +112,7 @@ export function AppRouter() {
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/portfolio/slug/:slug" element={<PublicPortfolio />} />
         <Route path="/portfolio/:studentId" element={<PublicPortfolio />} />
         <Route path="/student/portfolio/:studentId" element={<PublicPortfolio />} />
 

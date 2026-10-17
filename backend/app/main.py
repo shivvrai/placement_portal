@@ -53,6 +53,7 @@ from app.api.v1.feedback import router as feedback_router
 from app.api.v1.company_reviews import router as company_reviews_router
 from app.api.v1.tracker_vault import router as tracker_vault_router
 from app.api.v1.faculty import router as faculty_router
+from app.api.v1.portfolio import router as portfolio_router
 
 # Import all models so SQLAlchemy registers them with Base.metadata
 import app.models.user  # noqa: F401
@@ -83,33 +84,77 @@ APP_START_TIME = time.time()
 
 def _migrate_sqlite_columns(sync_conn):
     from sqlalchemy import text
-    # projects: is_featured
+    # projects: is_featured, thumbnail_url, status, role, team_size, highlights
     res = sync_conn.execute(text("PRAGMA table_info(projects)")).fetchall()
     cols = [r[1] for r in res]
-    if "is_featured" not in cols and cols:
-        sync_conn.execute(text("ALTER TABLE projects ADD COLUMN is_featured BOOLEAN DEFAULT 0"))
+    if cols:
+        if "is_featured" not in cols:
+            sync_conn.execute(text("ALTER TABLE projects ADD COLUMN is_featured BOOLEAN DEFAULT 0"))
+        if "thumbnail_url" not in cols:
+            sync_conn.execute(text("ALTER TABLE projects ADD COLUMN thumbnail_url VARCHAR(500)"))
+        if "status" not in cols:
+            sync_conn.execute(text("ALTER TABLE projects ADD COLUMN status VARCHAR(50) DEFAULT 'completed'"))
+        if "role" not in cols:
+            sync_conn.execute(text("ALTER TABLE projects ADD COLUMN role VARCHAR(100)"))
+        if "team_size" not in cols:
+            sync_conn.execute(text("ALTER TABLE projects ADD COLUMN team_size INTEGER DEFAULT 1"))
+        if "highlights" not in cols:
+            sync_conn.execute(text("ALTER TABLE projects ADD COLUMN highlights JSON"))
 
-    # certifications: credential_id
+    # certifications: credential_id, certificate_image_url, skills_covered, is_verified
     res = sync_conn.execute(text("PRAGMA table_info(certifications)")).fetchall()
     cols = [r[1] for r in res]
-    if "credential_id" not in cols and cols:
-        sync_conn.execute(text("ALTER TABLE certifications ADD COLUMN credential_id VARCHAR(200)"))
+    if cols:
+        if "credential_id" not in cols:
+            sync_conn.execute(text("ALTER TABLE certifications ADD COLUMN credential_id VARCHAR(200)"))
+        if "certificate_image_url" not in cols:
+            sync_conn.execute(text("ALTER TABLE certifications ADD COLUMN certificate_image_url VARCHAR(500)"))
+        if "skills_covered" not in cols:
+            sync_conn.execute(text("ALTER TABLE certifications ADD COLUMN skills_covered JSON"))
+        if "is_verified" not in cols:
+            sync_conn.execute(text("ALTER TABLE certifications ADD COLUMN is_verified BOOLEAN DEFAULT 0"))
 
-    # internships: location, employment_type, is_current
+    # internships: location, employment_type, is_current, stipend_monthly, offer_letter_url, completion_certificate_url, is_verified
     res = sync_conn.execute(text("PRAGMA table_info(internships)")).fetchall()
     cols = [r[1] for r in res]
-    if "location" not in cols and cols:
-        sync_conn.execute(text("ALTER TABLE internships ADD COLUMN location VARCHAR(200)"))
-    if "employment_type" not in cols and cols:
-        sync_conn.execute(text("ALTER TABLE internships ADD COLUMN employment_type VARCHAR(50) DEFAULT 'Internship'"))
-    if "is_current" not in cols and cols:
-        sync_conn.execute(text("ALTER TABLE internships ADD COLUMN is_current BOOLEAN DEFAULT 0"))
+    if cols:
+        if "location" not in cols:
+            sync_conn.execute(text("ALTER TABLE internships ADD COLUMN location VARCHAR(200)"))
+        if "employment_type" not in cols:
+            sync_conn.execute(text("ALTER TABLE internships ADD COLUMN employment_type VARCHAR(50) DEFAULT 'Internship'"))
+        if "is_current" not in cols:
+            sync_conn.execute(text("ALTER TABLE internships ADD COLUMN is_current BOOLEAN DEFAULT 0"))
+        if "stipend_monthly" not in cols:
+            sync_conn.execute(text("ALTER TABLE internships ADD COLUMN stipend_monthly NUMERIC(10, 2)"))
+        if "offer_letter_url" not in cols:
+            sync_conn.execute(text("ALTER TABLE internships ADD COLUMN offer_letter_url VARCHAR(500)"))
+        if "completion_certificate_url" not in cols:
+            sync_conn.execute(text("ALTER TABLE internships ADD COLUMN completion_certificate_url VARCHAR(500)"))
+        if "is_verified" not in cols:
+            sync_conn.execute(text("ALTER TABLE internships ADD COLUMN is_verified BOOLEAN DEFAULT 0"))
+
+    # students: custom_slug
+    res = sync_conn.execute(text("PRAGMA table_info(students)")).fetchall()
+    cols = [r[1] for r in res]
+    if cols and "custom_slug" not in cols:
+        sync_conn.execute(text("ALTER TABLE students ADD COLUMN custom_slug VARCHAR(100)"))
 
     # student_skills: is_verified
     res = sync_conn.execute(text("PRAGMA table_info(student_skills)")).fetchall()
     cols = [r[1] for r in res]
     if "is_verified" not in cols and cols:
         sync_conn.execute(text("ALTER TABLE student_skills ADD COLUMN is_verified BOOLEAN DEFAULT 0"))
+
+    # career_goals: preferred_locations, expected_ctc_lpa, expected_ctc_range
+    res = sync_conn.execute(text("PRAGMA table_info(career_goals)")).fetchall()
+    cols = [r[1] for r in res]
+    if cols:
+        if "preferred_locations" not in cols:
+            sync_conn.execute(text("ALTER TABLE career_goals ADD COLUMN preferred_locations JSON"))
+        if "expected_ctc_lpa" not in cols:
+            sync_conn.execute(text("ALTER TABLE career_goals ADD COLUMN expected_ctc_lpa NUMERIC(10, 2)"))
+        if "expected_ctc_range" not in cols:
+            sync_conn.execute(text("ALTER TABLE career_goals ADD COLUMN expected_ctc_range VARCHAR(100)"))
 
     # applications: offer columns
     res = sync_conn.execute(text("PRAGMA table_info(applications)")).fetchall()
@@ -301,6 +346,8 @@ app.include_router(feedback_router, prefix=settings.API_V1_PREFIX)
 app.include_router(company_reviews_router, prefix=settings.API_V1_PREFIX)
 app.include_router(tracker_vault_router, prefix=settings.API_V1_PREFIX)
 app.include_router(faculty_router, prefix=settings.API_V1_PREFIX)
+app.include_router(portfolio_router, prefix=settings.API_V1_PREFIX)
+app.include_router(portfolio_router)
 
 # WebSocket Router (Root level)
 app.include_router(ws_router)

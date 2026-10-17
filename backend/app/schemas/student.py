@@ -125,7 +125,30 @@ class ProjectCreate(BaseModel):
     live_url: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    thumbnail_url: Optional[str] = None
+    status: Optional[str] = "completed"
+    role: Optional[str] = None
+    team_size: Optional[int] = 1
+    highlights: Optional[list[str]] = None
     is_featured: bool = False
+    featured: Optional[bool] = None
+
+
+class ProjectUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    tech_stack: Optional[list[str]] = None
+    github_url: Optional[str] = None
+    live_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    status: Optional[str] = None
+    role: Optional[str] = None
+    team_size: Optional[int] = None
+    highlights: Optional[list[str]] = None
+    is_featured: Optional[bool] = None
+    featured: Optional[bool] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
 
 
 class ProjectResponse(BaseModel):
@@ -136,9 +159,15 @@ class ProjectResponse(BaseModel):
     tech_stack: list[str] = []
     github_url: Optional[str] = None
     live_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    status: Optional[str] = "completed"
+    role: Optional[str] = None
+    team_size: Optional[int] = 1
+    highlights: Optional[list[str]] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     is_featured: bool = False
+    featured: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -147,55 +176,164 @@ class ProjectResponse(BaseModel):
 # ─── Portfolio: Certifications ──────────────────────────────────────────────────
 
 class CertificationCreate(BaseModel):
-    name: str = Field(..., min_length=3, max_length=300)
-    issuing_organization: str = Field(..., min_length=2, max_length=200)
-    issue_date: date
+    name: Optional[str] = None
+    title: Optional[str] = None
+    issuing_organization: Optional[str] = None
+    issuer: Optional[str] = None
+    issue_date: Optional[date] = None
+    issued_date: Optional[date] = None
     expiration_date: Optional[date] = None
+    expiry_date: Optional[date] = None
     credential_id: Optional[str] = None
     credential_url: Optional[str] = None  # URL to verify credential
+    certificate_image_url: Optional[str] = None
+    skills_covered: Optional[list[str]] = None
+    is_verified: bool = False
+    verified: Optional[bool] = None
+
+
+class CertificationUpdate(BaseModel):
+    name: Optional[str] = None
+    title: Optional[str] = None
+    issuing_organization: Optional[str] = None
+    issuer: Optional[str] = None
+    issue_date: Optional[date] = None
+    issued_date: Optional[date] = None
+    expiration_date: Optional[date] = None
+    expiry_date: Optional[date] = None
+    credential_id: Optional[str] = None
+    credential_url: Optional[str] = None
+    certificate_image_url: Optional[str] = None
+    skills_covered: Optional[list[str]] = None
+    is_verified: Optional[bool] = None
+    verified: Optional[bool] = None
 
 
 class CertificationResponse(BaseModel):
     id: uuid.UUID
     student_id: uuid.UUID
     name: str
+    title: Optional[str] = None
     issuing_organization: str
-    issue_date: date
+    issuer: Optional[str] = None
+    issue_date: Optional[date] = None
     expiration_date: Optional[date] = None
     credential_id: Optional[str] = None
     credential_url: Optional[str] = None
+    certificate_image_url: Optional[str] = None
+    skills_covered: Optional[list[str]] = None
+    is_verified: bool = False
+    verified: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-# ─── Portfolio: Work Experience ─────────────────────────────────────────────────
+# ─── Portfolio: Work Experience / Internships ───────────────────────────────────
 
 class WorkExperienceCreate(BaseModel):
-    company_name: str = Field(..., min_length=2, max_length=200)
+    company_name: Optional[str] = None
+    company: Optional[str] = None
     role: str = Field(..., min_length=2, max_length=200)
     location: Optional[str] = None
     employment_type: Literal["Internship", "Full-Time", "Part-Time", "Contract"] = "Internship"
-    start_date: date
+    start_date: Optional[date] = None
     end_date: Optional[date] = None    # None means currently working
     is_current: bool = False
     description: Optional[str] = None  # Bullet points / responsibilities
     skills_used: Optional[list[str]] = None
+    technologies: Optional[list[str]] = None
+    stipend_monthly: Optional[float] = None
+    offer_letter_url: Optional[str] = None
+    completion_certificate_url: Optional[str] = None
+    is_verified: bool = False
+    verified: Optional[bool] = None
+
+
+class WorkExperienceUpdate(BaseModel):
+    company_name: Optional[str] = None
+    company: Optional[str] = None
+    role: Optional[str] = None
+    location: Optional[str] = None
+    employment_type: Optional[Literal["Internship", "Full-Time", "Part-Time", "Contract"]] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    is_current: Optional[bool] = None
+    description: Optional[str] = None
+    skills_used: Optional[list[str]] = None
+    technologies: Optional[list[str]] = None
+    stipend_monthly: Optional[float] = None
+    offer_letter_url: Optional[str] = None
+    completion_certificate_url: Optional[str] = None
+    is_verified: Optional[bool] = None
+    verified: Optional[bool] = None
 
 
 class WorkExperienceResponse(BaseModel):
     id: uuid.UUID
     student_id: uuid.UUID
     company_name: str
+    company: Optional[str] = None
     role: str
     location: Optional[str] = None
     employment_type: str = "Internship"
-    start_date: date
+    start_date: Optional[date] = None
     end_date: Optional[date] = None
     is_current: bool = False
     description: Optional[str] = None
     skills_used: list[str] = []
+    stipend_monthly: Optional[float] = None
+    offer_letter_url: Optional[str] = None
+    completion_certificate_url: Optional[str] = None
+    is_verified: bool = False
+    verified: bool = False
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+InternshipCreate = WorkExperienceCreate
+InternshipUpdate = WorkExperienceUpdate
+InternshipResponse = WorkExperienceResponse
+
+
+# ─── Career Goals ──────────────────────────────────────────────────────────────
+
+class CareerGoalCreate(BaseModel):
+    target_role: str = Field(..., min_length=2, max_length=200)
+    target_domain: Optional[str] = None
+    target_companies: Optional[list[str]] = None
+    preferred_locations: Optional[list[str]] = None
+    expected_ctc_lpa: Optional[float] = None
+    expected_ctc_range: Optional[str] = None
+    priority: int = 1
+    is_active: bool = True
+
+
+class CareerGoalUpdate(BaseModel):
+    target_role: Optional[str] = None
+    target_domain: Optional[str] = None
+    target_companies: Optional[list[str]] = None
+    preferred_locations: Optional[list[str]] = None
+    expected_ctc_lpa: Optional[float] = None
+    expected_ctc_range: Optional[str] = None
+    priority: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class CareerGoalResponse(BaseModel):
+    id: uuid.UUID
+    student_id: uuid.UUID
+    target_role: str
+    target_domain: Optional[str] = None
+    target_companies: Optional[list[str]] = None
+    preferred_locations: Optional[list[str]] = None
+    expected_ctc_lpa: Optional[float] = None
+    expected_ctc_range: Optional[str] = None
+    priority: int = 1
+    is_active: bool = True
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 

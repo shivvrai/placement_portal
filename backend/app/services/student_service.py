@@ -12,11 +12,15 @@ from fastapi import HTTPException, status
 from app.models.user import User, Student, Department
 from app.models.academic import AcademicRecord, Subject
 from app.models.skill import StudentSkill, Skill
-from app.models.portfolio import Project, Certification, Internship, WorkExperience
+from app.models.portfolio import Project, Certification, Internship, WorkExperience, CareerGoal
 from app.models.placement import Application, PlacementOutcome
 from app.schemas.student import (
     StudentUpdateRequest, ConsentUpdateRequest, AddStudentSkillRequest,
-    ProjectCreate, CertificationCreate, WorkExperienceCreate, BulkSkillConfirm,
+    ProjectCreate, ProjectUpdate,
+    CertificationCreate, CertificationUpdate,
+    WorkExperienceCreate, WorkExperienceUpdate,
+    CareerGoalCreate, CareerGoalUpdate,
+    BulkSkillConfirm,
 )
 
 
@@ -356,7 +360,8 @@ async def create_student_project(
     student_id: uuid.UUID,
     data: ProjectCreate,
 ) -> Project:
-    """Create a new project entry for student."""
+    """Create a new project entry for student with rich fields."""
+    is_feat = data.featured if data.featured is not None else data.is_featured
     project = Project(
         student_id=student_id,
         title=data.title,
@@ -364,11 +369,64 @@ async def create_student_project(
         technologies=data.tech_stack,
         url=data.live_url,
         github_url=data.github_url,
+        thumbnail_url=data.thumbnail_url,
+        status=data.status or "completed",
+        role=data.role,
+        team_size=data.team_size or 1,
+        highlights=data.highlights or [],
         start_date=data.start_date,
         end_date=data.end_date,
-        is_featured=data.is_featured,
+        is_featured=bool(is_feat),
     )
     db.add(project)
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
+async def update_student_project(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    project_id: uuid.UUID,
+    data: ProjectUpdate,
+) -> Project:
+    """Update an existing project entry for student."""
+    res = await db.execute(select(Project).where(Project.id == project_id))
+    project = res.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if project.student_id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to edit this project")
+
+    if data.title is not None:
+        project.title = data.title
+    if data.description is not None:
+        project.description = data.description
+    if data.tech_stack is not None:
+        project.technologies = data.tech_stack
+    if data.live_url is not None:
+        project.url = data.live_url
+    if data.github_url is not None:
+        project.github_url = data.github_url
+    if data.thumbnail_url is not None:
+        project.thumbnail_url = data.thumbnail_url
+    if data.status is not None:
+        project.status = data.status
+    if data.role is not None:
+        project.role = data.role
+    if data.team_size is not None:
+        project.team_size = data.team_size
+    if data.highlights is not None:
+        project.highlights = data.highlights
+    if data.start_date is not None:
+        project.start_date = data.start_date
+    if data.end_date is not None:
+        project.end_date = data.end_date
+
+    is_feat = data.featured if data.featured is not None else data.is_featured
+    if is_feat is not None:
+        project.is_featured = bool(is_feat)
+
     await db.commit()
     await db.refresh(project)
     return project
@@ -408,17 +466,69 @@ async def create_student_certification(
     student_id: uuid.UUID,
     data: CertificationCreate,
 ) -> Certification:
-    """Create a new certification entry for student."""
+    """Create a new certification entry for student with rich verification fields."""
+    title_val = data.name or data.title or "Certification"
+    issuer_val = data.issuing_organization or data.issuer or ""
+    issue_date_val = data.issue_date or data.issued_date
+    expiry_date_val = data.expiration_date or data.expiry_date
+    is_ver = data.verified if data.verified is not None else data.is_verified
+
     cert = Certification(
         student_id=student_id,
-        title=data.name,
-        issuer=data.issuing_organization,
-        issue_date=data.issue_date,
-        expiry_date=data.expiration_date,
+        title=title_val,
+        issuer=issuer_val,
+        issue_date=issue_date_val,
+        expiry_date=expiry_date_val,
         credential_id=data.credential_id,
         credential_url=data.credential_url,
+        certificate_image_url=data.certificate_image_url,
+        skills_covered=data.skills_covered or [],
+        is_verified=bool(is_ver),
     )
     db.add(cert)
+    await db.commit()
+    await db.refresh(cert)
+    return cert
+
+
+async def update_student_certification(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    cert_id: uuid.UUID,
+    data: CertificationUpdate,
+) -> Certification:
+    """Update a student certification entry."""
+    res = await db.execute(select(Certification).where(Certification.id == cert_id))
+    cert = res.scalar_one_or_none()
+    if not cert:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certification not found")
+    if cert.student_id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to edit this certification")
+
+    title_val = data.name or data.title
+    if title_val is not None:
+        cert.title = title_val
+    issuer_val = data.issuing_organization or data.issuer
+    if issuer_val is not None:
+        cert.issuer = issuer_val
+    issue_date_val = data.issue_date or data.issued_date
+    if issue_date_val is not None:
+        cert.issue_date = issue_date_val
+    expiry_date_val = data.expiration_date or data.expiry_date
+    if expiry_date_val is not None:
+        cert.expiry_date = expiry_date_val
+    if data.credential_id is not None:
+        cert.credential_id = data.credential_id
+    if data.credential_url is not None:
+        cert.credential_url = data.credential_url
+    if data.certificate_image_url is not None:
+        cert.certificate_image_url = data.certificate_image_url
+    if data.skills_covered is not None:
+        cert.skills_covered = data.skills_covered
+    is_ver = data.verified if data.verified is not None else data.is_verified
+    if is_ver is not None:
+        cert.is_verified = bool(is_ver)
+
     await db.commit()
     await db.refresh(cert)
     return cert
@@ -441,7 +551,7 @@ async def delete_student_certification(
     return True
 
 
-# ─── Work Experience CRUD ──────────────────────────────────────────────────────
+# ─── Work Experience / Internships CRUD ────────────────────────────────────────
 
 async def get_student_experience(db: AsyncSession, student_id: uuid.UUID) -> list[Internship]:
     """Returns all work experience/internship entries for a student sorted by start_date DESC."""
@@ -458,20 +568,77 @@ async def create_student_experience(
     student_id: uuid.UUID,
     data: WorkExperienceCreate,
 ) -> Internship:
-    """Create a new work experience entry for student."""
+    """Create a new work experience entry for student with stipend & verification."""
+    comp = data.company or data.company_name or "Company"
+    skills = data.skills_used or data.technologies or []
+    is_ver = data.verified if data.verified is not None else data.is_verified
+
     exp = Internship(
         student_id=student_id,
-        company_name=data.company_name,
+        company_name=comp,
         role=data.role,
         location=data.location,
-        employment_type=data.employment_type,
+        employment_type=data.employment_type or "Internship",
         start_date=data.start_date,
         end_date=data.end_date,
         is_current=data.is_current,
         description=data.description,
-        technologies=data.skills_used or [],
+        technologies=skills,
+        stipend_monthly=data.stipend_monthly,
+        offer_letter_url=data.offer_letter_url,
+        completion_certificate_url=data.completion_certificate_url,
+        is_verified=bool(is_ver),
     )
     db.add(exp)
+    await db.commit()
+    await db.refresh(exp)
+    return exp
+
+
+async def update_student_experience(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    exp_id: uuid.UUID,
+    data: WorkExperienceUpdate,
+) -> Internship:
+    """Update a work experience/internship entry."""
+    res = await db.execute(select(Internship).where(Internship.id == exp_id))
+    exp = res.scalar_one_or_none()
+    if not exp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work experience not found")
+    if exp.student_id != student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to edit this work experience")
+
+    comp = data.company or data.company_name
+    if comp is not None:
+        exp.company_name = comp
+    if data.role is not None:
+        exp.role = data.role
+    if data.location is not None:
+        exp.location = data.location
+    if data.employment_type is not None:
+        exp.employment_type = data.employment_type
+    if data.start_date is not None:
+        exp.start_date = data.start_date
+    if data.end_date is not None:
+        exp.end_date = data.end_date
+    if data.is_current is not None:
+        exp.is_current = data.is_current
+    if data.description is not None:
+        exp.description = data.description
+    skills = data.skills_used or data.technologies
+    if skills is not None:
+        exp.technologies = skills
+    if data.stipend_monthly is not None:
+        exp.stipend_monthly = data.stipend_monthly
+    if data.offer_letter_url is not None:
+        exp.offer_letter_url = data.offer_letter_url
+    if data.completion_certificate_url is not None:
+        exp.completion_certificate_url = data.completion_certificate_url
+    is_ver = data.verified if data.verified is not None else data.is_verified
+    if is_ver is not None:
+        exp.is_verified = bool(is_ver)
+
     await db.commit()
     await db.refresh(exp)
     return exp
@@ -492,6 +659,67 @@ async def delete_student_experience(
     await db.delete(exp)
     await db.commit()
     return True
+
+
+# ─── Career Goals ──────────────────────────────────────────────────────────────
+
+async def get_student_career_goals(db: AsyncSession, student_id: uuid.UUID) -> list[CareerGoal]:
+    """Fetch career goals for current student."""
+    res = await db.execute(
+        select(CareerGoal)
+        .where(CareerGoal.student_id == student_id)
+        .order_by(CareerGoal.priority.asc(), CareerGoal.created_at.desc())
+    )
+    return list(res.scalars().all())
+
+
+async def upsert_student_career_goal(
+    db: AsyncSession,
+    student_id: uuid.UUID,
+    data: CareerGoalUpdate | CareerGoalCreate,
+) -> CareerGoal:
+    """Create or update primary career goal for student."""
+    res = await db.execute(
+        select(CareerGoal)
+        .where(CareerGoal.student_id == student_id, CareerGoal.is_active == True)
+        .order_by(CareerGoal.priority.asc())
+    )
+    goal = res.scalar_one_or_none()
+    if not goal:
+        target_role = getattr(data, "target_role", None) or "Software Engineer"
+        goal = CareerGoal(
+            student_id=student_id,
+            target_role=target_role,
+            target_domain=data.target_domain,
+            target_companies=data.target_companies or [],
+            preferred_locations=data.preferred_locations or [],
+            expected_ctc_lpa=data.expected_ctc_lpa,
+            expected_ctc_range=data.expected_ctc_range,
+            priority=data.priority if data.priority is not None else 1,
+            is_active=data.is_active if data.is_active is not None else True,
+        )
+        db.add(goal)
+    else:
+        if getattr(data, "target_role", None) is not None:
+            goal.target_role = data.target_role
+        if data.target_domain is not None:
+            goal.target_domain = data.target_domain
+        if data.target_companies is not None:
+            goal.target_companies = data.target_companies
+        if data.preferred_locations is not None:
+            goal.preferred_locations = data.preferred_locations
+        if data.expected_ctc_lpa is not None:
+            goal.expected_ctc_lpa = data.expected_ctc_lpa
+        if data.expected_ctc_range is not None:
+            goal.expected_ctc_range = data.expected_ctc_range
+        if data.priority is not None:
+            goal.priority = data.priority
+        if data.is_active is not None:
+            goal.is_active = data.is_active
+
+    await db.commit()
+    await db.refresh(goal)
+    return goal
 
 
 # ─── Bulk Skill Confirmation ───────────────────────────────────────────────────

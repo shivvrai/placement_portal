@@ -60,12 +60,17 @@ async def list_resources(
     difficulty: Optional[str] = Query(None),
     resource_type: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    company: Optional[str] = Query(None),
+    target_company: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     current_user: User = Depends(_any_user),
     db: AsyncSession = Depends(get_db),
 ):
-    resources, total = await svc.list_prep_resources(db, category, difficulty, resource_type, search, page, per_page)
+    comp_filter = target_company or company
+    resources, total = await svc.list_prep_resources(
+        db, category, difficulty, resource_type, search, page, per_page, target_company=comp_filter
+    )
     items = [PrepResourceResponse(
         id=r.id, title=r.title, description=r.description,
         category=r.category, resource_type=r.resource_type,
@@ -76,9 +81,19 @@ async def list_resources(
         upvotes=r.upvotes, view_count=r.view_count,
         created_at=r.created_at,
     ) for r in resources]
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    meta = PaginationMeta(
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages,
+        page_size=per_page,
+        total_items=total,
+    )
     return PaginatedResponse(
         data=[i.model_dump() for i in items],
-        pagination=PaginationMeta(page=page, per_page=per_page, total=total),
+        meta=meta,
+        pagination=meta,
     )
 
 

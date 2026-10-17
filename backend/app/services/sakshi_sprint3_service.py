@@ -42,7 +42,8 @@ async def create_alumni_profile(db: AsyncSession, user_id: uuid.UUID, data: Alum
         max_mentees=data.max_mentees,
     )
     db.add(profile)
-    await db.flush()
+    await db.commit()
+    await db.refresh(profile)
     return profile
 
 
@@ -52,17 +53,31 @@ async def list_alumni(
     available_only: bool = True,
     page: int = 1,
     per_page: int = 20,
+    company: Optional[str] = None,
+    graduation_year: Optional[int] = None,
+    domain: Optional[str] = None,
 ) -> tuple[list[AlumniProfile], int]:
+    from sqlalchemy import cast, String
     q = select(AlumniProfile)
     if department:
-        q = q.where(AlumniProfile.department_code == department)
+        q = q.where(func.lower(AlumniProfile.department_code) == department.strip().lower())
+    if company:
+        q = q.where(AlumniProfile.current_company.ilike(f"%{company.strip()}%"))
+    if graduation_year:
+        q = q.where(AlumniProfile.graduation_year == graduation_year)
+    if domain:
+        clean_dom = domain.strip()
+        q = q.where(
+            AlumniProfile.department_code.ilike(f"%{clean_dom}%")
+            | cast(AlumniProfile.expertise_areas, String).ilike(f"%{clean_dom}%")
+        )
     if available_only:
         q = q.where(AlumniProfile.is_available_for_mentorship == True)  # noqa: E712
 
     count_q = select(func.count()).select_from(q.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
-    q = q.order_by(AlumniProfile.rating.desc()).offset((page - 1) * per_page).limit(per_page)
+    q = q.order_by(AlumniProfile.rating.desc(), AlumniProfile.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
     rows = (await db.execute(q)).scalars().all()
     return list(rows), total
 
@@ -94,7 +109,8 @@ async def request_mentorship(db: AsyncSession, student_id: uuid.UUID, data: Ment
         goals=data.goals,
     )
     db.add(connection)
-    await db.flush()
+    await db.commit()
+    await db.refresh(connection)
     return connection
 
 
@@ -105,7 +121,8 @@ async def update_mentorship_status(db: AsyncSession, connection_id: uuid.UUID, n
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mentorship connection not found")
     conn.status = new_status
     conn.updated_at = _utcnow()
-    await db.flush()
+    await db.commit()
+    await db.refresh(conn)
     return conn
 
 
@@ -126,7 +143,8 @@ async def create_session(db: AsyncSession, data: MentorshipSessionCreate) -> Men
         meeting_link=data.meeting_link,
     )
     db.add(session)
-    await db.flush()
+    await db.commit()
+    await db.refresh(session)
     return session
 
 
@@ -138,7 +156,8 @@ async def submit_session_feedback(db: AsyncSession, session_id: uuid.UUID, feedb
     session.student_rating = feedback.rating
     session.student_feedback = feedback.feedback
     session.status = "completed"
-    await db.flush()
+    await db.commit()
+    await db.refresh(session)
     return session
 
 
@@ -161,7 +180,8 @@ async def create_prep_resource(db: AsyncSession, data: PrepResourceCreate, user_
         created_by=user_id,
     )
     db.add(resource)
-    await db.flush()
+    await db.commit()
+    await db.refresh(resource)
     return resource
 
 
@@ -173,21 +193,37 @@ async def list_prep_resources(
     search: Optional[str] = None,
     page: int = 1,
     per_page: int = 20,
+    target_company: Optional[str] = None,
 ) -> tuple[list[PrepResource], int]:
+    from sqlalchemy import cast, String
     q = select(PrepResource)
     if category:
-        q = q.where(PrepResource.category == category)
+        cat_lower = category.strip().lower()
+        cat_map = {
+            "dsa": "coding",
+            "system design": "system_design",
+            "system-design": "system_design",
+            "system_design": "system_design",
+            "behavioral": "behavioral",
+            "hr": "hr",
+            "aptitude": "aptitude",
+            "coding": "coding",
+        }
+        mapped_cat = cat_map.get(cat_lower, cat_lower)
+        q = q.where(func.lower(PrepResource.category) == mapped_cat)
     if difficulty:
-        q = q.where(PrepResource.difficulty == difficulty)
+        q = q.where(func.lower(PrepResource.difficulty) == difficulty.strip().lower())
     if resource_type:
-        q = q.where(PrepResource.resource_type == resource_type)
+        q = q.where(func.lower(PrepResource.resource_type) == resource_type.strip().lower())
     if search:
-        q = q.where(PrepResource.title.ilike(f"%{search}%"))
+        q = q.where(PrepResource.title.ilike(f"%{search}%") | PrepResource.description.ilike(f"%{search}%"))
+    if target_company:
+        q = q.where(cast(PrepResource.target_companies, String).ilike(f"%{target_company.strip()}%"))
 
     count_q = select(func.count()).select_from(q.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
-    q = q.order_by(PrepResource.upvotes.desc()).offset((page - 1) * per_page).limit(per_page)
+    q = q.order_by(PrepResource.upvotes.desc(), PrepResource.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
     rows = (await db.execute(q)).scalars().all()
     return list(rows), total
 
@@ -209,7 +245,8 @@ async def upvote_resource(db: AsyncSession, resource_id: uuid.UUID) -> PrepResou
     if not resource:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
     resource.upvotes += 1
-    await db.flush()
+    await db.commit()
+    await db.refresh(resource)
     return resource
 
 
@@ -234,7 +271,8 @@ async def update_prep_progress(
         progress.completed_at = _utcnow()
         progress.progress_pct = 100.0
     progress.updated_at = _utcnow()
-    await db.flush()
+    await db.commit()
+    await db.refresh(progress)
     return progress
 
 
@@ -255,7 +293,8 @@ async def create_collection(db: AsyncSession, data: PrepCollectionCreate, user_i
         created_by=user_id,
     )
     db.add(collection)
-    await db.flush()
+    await db.commit()
+    await db.refresh(collection)
     return collection
 
 

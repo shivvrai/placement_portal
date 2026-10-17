@@ -21,9 +21,11 @@ from app.models.academic import AcademicRecord
 from app.schemas.student import (
     StudentProfile, StudentSummary, StudentUpdateRequest,
     ConsentUpdateRequest, AcademicRecordResponse, AddStudentSkillRequest,
-    ProjectCreate, ProjectResponse,
-    CertificationCreate, CertificationResponse,
-    WorkExperienceCreate, WorkExperienceResponse,
+    ProjectCreate, ProjectUpdate, ProjectResponse,
+    CertificationCreate, CertificationUpdate, CertificationResponse,
+    WorkExperienceCreate, WorkExperienceUpdate, WorkExperienceResponse,
+    InternshipCreate, InternshipUpdate, InternshipResponse,
+    CareerGoalCreate, CareerGoalUpdate, CareerGoalResponse,
     BulkSkillConfirm,
     PublicProfileResponse,
 )
@@ -156,6 +158,17 @@ async def add_project(
     return await student_service.create_student_project(db, current_user.id, data)
 
 
+@router.patch("/me/projects/{project_id}", response_model=ProjectResponse, summary="Update a project")
+async def update_project(
+    project_id: uuid.UUID,
+    data: ProjectUpdate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Updates project details and toggles featured flag."""
+    return await student_service.update_student_project(db, current_user.id, project_id, data)
+
+
 @router.delete("/me/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a project")
 async def delete_project(
     project_id: uuid.UUID,
@@ -188,6 +201,17 @@ async def add_certification(
     return await student_service.create_student_certification(db, current_user.id, data)
 
 
+@router.patch("/me/certifications/{cert_id}", response_model=CertificationResponse, summary="Update a certification")
+async def update_certification(
+    cert_id: uuid.UUID,
+    data: CertificationUpdate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Updates a certification entry for the current student."""
+    return await student_service.update_student_certification(db, current_user.id, cert_id, data)
+
+
 @router.delete("/me/certifications/{cert_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a certification")
 async def delete_certification(
     cert_id: uuid.UUID,
@@ -199,7 +223,7 @@ async def delete_certification(
     return None
 
 
-# ─── Work Experience ──────────────────────────────────────────────────────────
+# ─── Work Experience / Internships ────────────────────────────────────────────
 
 @router.get("/me/experience", response_model=list[WorkExperienceResponse], summary="Get my work experience")
 async def get_my_experience(
@@ -220,6 +244,17 @@ async def add_experience(
     return await student_service.create_student_experience(db, current_user.id, data)
 
 
+@router.patch("/me/experience/{exp_id}", response_model=WorkExperienceResponse, summary="Update work experience")
+async def update_experience(
+    exp_id: uuid.UUID,
+    data: WorkExperienceUpdate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Updates a work experience entry for the current student."""
+    return await student_service.update_student_experience(db, current_user.id, exp_id, data)
+
+
 @router.delete("/me/experience/{exp_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete work experience")
 async def delete_experience(
     exp_id: uuid.UUID,
@@ -229,6 +264,75 @@ async def delete_experience(
     """Deletes a work experience entry. Returns 403 if work experience doesn't belong to current student."""
     await student_service.delete_student_experience(db, current_user.id, exp_id)
     return None
+
+
+# Direct /internships aliases for task compliance
+@router.get("/me/internships", response_model=list[InternshipResponse], summary="Get my internships")
+async def get_my_internships(
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    return await student_service.get_student_experience(db, current_user.id)
+
+
+@router.post("/me/internships", response_model=InternshipResponse, status_code=status.HTTP_201_CREATED, summary="Add internship")
+async def add_internship(
+    data: InternshipCreate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    return await student_service.create_student_experience(db, current_user.id, data)
+
+
+@router.patch("/me/internships/{internship_id}", response_model=InternshipResponse, summary="Update internship")
+async def update_internship(
+    internship_id: uuid.UUID,
+    data: InternshipUpdate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    return await student_service.update_student_experience(db, current_user.id, internship_id, data)
+
+
+@router.delete("/me/internships/{internship_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete internship")
+async def delete_internship(
+    internship_id: uuid.UUID,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    await student_service.delete_student_experience(db, current_user.id, internship_id)
+    return None
+
+
+# ─── Career Goals ──────────────────────────────────────────────────────────────
+
+@router.get("/me/career-goals", response_model=list[CareerGoalResponse], summary="Get career goals")
+async def get_my_career_goals(
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch career preferences and goals for student."""
+    return await student_service.get_student_career_goals(db, current_user.id)
+
+
+@router.patch("/me/career-goals", response_model=CareerGoalResponse, summary="Update career goals")
+async def update_my_career_goals(
+    data: CareerGoalUpdate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update target roles, preferred locations, and expected CTC range."""
+    return await student_service.upsert_student_career_goal(db, current_user.id, data)
+
+
+@router.post("/me/career-goals", response_model=CareerGoalResponse, status_code=status.HTTP_201_CREATED, summary="Create career goal")
+async def create_my_career_goal(
+    data: CareerGoalCreate,
+    current_user: User = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create or set career target role and preferences."""
+    return await student_service.upsert_student_career_goal(db, current_user.id, data)
 
 
 # ─── Bulk Skill Confirmation ───────────────────────────────────────────────────

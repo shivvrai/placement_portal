@@ -65,13 +65,25 @@ async def register_alumni(
 @router.get("", response_model=PaginatedResponse, summary="Browse available alumni mentors")
 async def list_alumni(
     department: Optional[str] = Query(None),
+    company: Optional[str] = Query(None),
+    graduation_year: Optional[int] = Query(None),
+    domain: Optional[str] = Query(None),
     available_only: bool = Query(True),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     current_user: User = Depends(_any_user),
     db: AsyncSession = Depends(get_db),
 ):
-    alumni_list, total = await svc.list_alumni(db, department, available_only, page, per_page)
+    alumni_list, total = await svc.list_alumni(
+        db,
+        department=department,
+        available_only=available_only,
+        page=page,
+        per_page=per_page,
+        company=company,
+        graduation_year=graduation_year,
+        domain=domain,
+    )
     items = []
     for a in alumni_list:
         user_name = None
@@ -86,9 +98,19 @@ async def list_alumni(
             max_mentees=a.max_mentees, rating=a.rating, total_sessions=a.total_sessions,
             created_at=a.created_at,
         ))
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    meta = PaginationMeta(
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages,
+        page_size=per_page,
+        total_items=total,
+    )
     return PaginatedResponse(
         data=[item.model_dump() for item in items],
-        pagination=PaginationMeta(page=page, per_page=per_page, total=total),
+        meta=meta,
+        pagination=meta,
     )
 
 
