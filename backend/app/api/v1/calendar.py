@@ -1,4 +1,4 @@
-﻿"""
+"""
 Calendar API - drive scheduling, month view, and conflict detection.
 Prefix: /calendar
 """
@@ -206,3 +206,113 @@ def _get_conflict_pairs(drives: list) -> list[dict]:
                 "days_apart": delta,
             })
     return conflicts
+
+
+# ─── Calendar Events Endpoint (Task 3 Spec) ──────────────────────────────────
+
+@router.get("/events", summary="All upcoming campus placement milestones (calendar events)")
+async def get_calendar_events(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    GET /calendar/events — Returns all upcoming campus placement milestones
+    across active drives, formatted as structured calendar events.
+
+    Event types covered:
+    - Pre-Placement Talks (PPTs) — upcoming drives with registration deadline
+    - Online Assessment Windows — drives in 'open' status
+    - Technical Interview Slots — drives in 'in_progress' status
+    - Drive Day Events — drives with a drive_date set
+
+    Also checks for scheduling conflicts: flags warnings if two Tier-1 companies
+    schedule technical interviews for the same department cohort simultaneously.
+
+    Returns iCal-compatible payload structure for dashboard integration.
+    """
+    stmt = (
+        select(PlacementDrive)
+        .options(selectinload(PlacementDrive.company))
+        .where(PlacementDrive.status.in_(["upcoming", "open", "in_progress"]))
+        .order_by(PlacementDrive.drive_date.asc().nullslast())
+    )
+    result = await db.execute(stmt)
+    drives = result.scalars().all()
+
+    conflicts_map = _get_conflict_pairs(drives)
+    conflicted_ids = set()
+    for c in conflicts_map:
+        conflicted_ids.add(str(c["drive_a_id"]))
+        conflicted_ids.add(str(c["drive_b_id"]))
+
+    events = []
+    for d in drives:
+        company_name = d.company.name if d.company else "Unknown"
+
+        # Pre-Placement Talk (PPT) event — tied to registration deadline
+        if d.registration_deadline and d.status in ("upcoming", "open"):
+            events.append({
+                "event_id": f"ppt-{d.id}",
+                "drive_id": str(d.id),
+                "event_type": "Pre-Placement Talk (PPT)",
+                "title": f"PPT: {company_name}",
+                "company_name": company_name,
+                "date": d.registration_deadline.date().isoformat(),
+                "datetime": d.registration_deadline.isoformat(),
+                "status": d.status,
+                "eligible_departments": d.eligible_departments or [],
+                "academic_year": d.academic_year,
+                "has_conflict": str(d.id) in conflicted_ids,
+                "conflict_warning": any(
+                    c for c in conflicts_map
+                    if str(d.id) in (str(c["drive_a_id"]), str(c["drive_b_id"]))
+                ),
+                "ical_summary": f"PPT — {company_name} | Deadline: {d.registration_deadline.strftime('%d %b %Y')}",
+            })
+
+        # Online Assessment Window — open drives
+        if d.status == "open":
+            events.append({
+                "event_id": f"oa-{d.id}",
+                "drive_id": str(d.id),
+                "event_type": "Online Assessment Window",
+                "title": f"Online Assessment: {company_name}",
+                "company_name": company_name,
+                "date": d.drive_date.isoformat() if d.drive_date else None,
+                "datetime": d.registration_deadline.isoformat() if d.registration_deadline else None,
+                "status": d.status,
+                "eligible_departments": d.eligible_departments or [],
+                "academic_year": d.academic_year,
+                "has_conflict": str(d.id) in conflicted_ids,
+                "conflict_warning": False,
+                "ical_summary": f"Online Assessment — {company_name}",
+            })
+
+        # Technical Interview / Drive Day — in_progress drives with a drive_date
+        if d.drive_date:
+            event_type = "Technical Interview Slots" if d.status == "in_progress" else "Drive Day"
+            events.append({
+                "event_id": f"drive-{d.id}",
+                "drive_id": str(d.id),
+                "event_type": event_type,
+                "title": f"{event_type}: {company_name} — {d.title}",
+                "company_name": company_name,
+                "date": d.drive_date.isoformat(),
+                "datetime": d.drive_date.isoformat(),
+                "status": d.status,
+                "eligible_departments": d.eligible_departments or [],
+                "academic_year": d.academic_year,
+                "has_conflict": str(d.id) in conflicted_ids,
+                "conflict_warning": str(d.id) in conflicted_ids,
+                "ical_summary": f"{event_type} — {company_name} | {d.drive_date.strftime('%d %b %Y')}",
+                "salary_ctc": float(d.salary_ctc) if d.salary_ctc else None,
+            })
+
+    # Sort all events by date ascending
+    events.sort(key=lambda e: (e["date"] or "9999-99-99"))
+
+    return {
+        "total_events": len(events),
+        "conflicts_detected": len(conflicts_map),
+        "events": events,
+    }

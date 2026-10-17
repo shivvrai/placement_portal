@@ -608,3 +608,32 @@ async def shortlist_summary(
         "last_criteria_used": last_criteria,
     }
 
+
+
+# ─── Bulk Shortlisting (Task 2 Spec Name: bulk-shortlist) ────────────────────
+
+@router.post("/{drive_id}/bulk-shortlist", summary="Bulk shortlist applicants for a drive (TPO)")
+async def bulk_shortlist(
+    drive_id: uuid.UUID,
+    criteria: ShortlistingCriteria,
+    current_user: User = Depends(_tpo_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Automated Bulk Shortlisting Engine.
+
+    Accepts a multi-parameter filter payload:
+    - min_cgpa: Minimum CGPA floor
+    - max_backlogs: Maximum active backlogs allowed (0 for Tier-1 recruiters)
+    - required_skills: Skills candidates MUST have
+    - allowed_departments: Department eligibility filter
+    - target_stage: The stage to advance shortlisted candidates to
+
+    Executes a single atomic database query selecting eligible applicants
+    and automatically promotes their status to 'shortlisted'.
+    Records shortlisting decision in applications.extra_metadata with audit explanation.
+    """
+    try:
+        return await shortlisting_service.run_auto_shortlist(drive_id, criteria, current_user.id, db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
