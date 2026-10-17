@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { assessmentsApi, intelligenceApi } from '../../api/endpoints';
+import { assessmentsApi, roadmapApi, intelligenceApi } from '../../api/endpoints';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import './Assessments.css';
@@ -19,6 +19,22 @@ export default function AssessmentTake() {
   
   // Basic integrity: optional timer
   const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes
+  const [tabSwitches, setTabSwitches] = useState(0);
+
+  useEffect(() => {
+    if (result) return;
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setTabSwitches(prev => {
+          const next = prev + 1;
+          assessmentsApi.reportTabSwitch(id, next).catch(() => {});
+          return next;
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [id, result]);
 
   useEffect(() => {
     // If accessed directly without state, we'd normally fetch the session by ID.
@@ -74,7 +90,7 @@ export default function AssessmentTake() {
       if (scoreNormalized < 0.70) {
         const resources = getRemediationResources(topic, submissionResult.weak_subtopics || []);
         
-        await intelligenceApi.injectRemedialTask({
+        await roadmapApi.injectRemedialTask({
             title: `Remedial Practice: ${topic} (Score: ${Math.round(scoreNormalized * 100)}%)`,
             description: `Your ${topic} assessment revealed gaps in foundational concepts. Complete these targeted resources before your next attempt.`,
             assessment_topic: topic,
@@ -205,6 +221,24 @@ export default function AssessmentTake() {
           Time Left: <strong>{formatTime(timeLeft)}</strong>
         </div>
       </div>
+      
+      {tabSwitches > 0 && (
+        <div style={{
+          padding: '12px 18px',
+          marginBottom: '20px',
+          borderRadius: '8px',
+          background: 'rgba(239, 68, 68, 0.12)',
+          border: '1px solid rgba(239, 68, 68, 0.4)',
+          color: '#ef4444',
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          ⚠️ Warning: Tab switch detected ({tabSwitches} time{tabSwitches > 1 ? 's' : ''}). Please remain on this tab during the assessment.
+        </div>
+      )}
       
       <form onSubmit={handleSubmit} className="assessment-form">
         {session.questions.map((q, idx) => (

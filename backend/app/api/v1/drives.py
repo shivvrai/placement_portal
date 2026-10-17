@@ -143,7 +143,6 @@ async def create_drive(
         ip_address=request.client.host if request.client else None,
     )
     
-    # Notify eligible students securely using the imported service without interfering with transaction
     try:
         redis_client = aioredis.from_url(get_settings().REDIS_URL, decode_responses=True)
         ns = NotificationService(db, redis_client)
@@ -329,6 +328,27 @@ async def update_application_stage(
 
     await db.commit()
     await db.refresh(app)
+
+    # Trigger real-time notifications based on new status
+    if old_status != new_status:
+        try:
+            redis_client = aioredis.from_url(get_settings().REDIS_URL, decode_responses=True)
+            ns = NotificationService(db, redis_client)
+            drive = await drive_service.get_drive(db, drive_id)
+            company_name = drive.company.name if drive and drive.company else "a company"
+
+            if new_status == "shortlisted":
+                await ns.publish(app.student_id, "APPLICATION_STATUS", f"🎉 Shortlisted for {company_name}", "You have been shortlisted! Check your application for details.")
+            elif new_status == "selected":
+                ctc = getattr(update, 'offer_ctc_lpa', None) or (drive.salary_ctc if drive else None)
+                await ns.publish(app.student_id, "OFFER_RECEIVED", f"🏆 Offer: ₹{ctc}L from {company_name}", "Congratulations! You've been selected.", priority="high")
+            elif new_status == "rejected":
+                await ns.publish(app.student_id, "APPLICATION_STATUS", f"Application update from {company_name}", "Your application was not moved forward.")
+
+            await redis_client.aclose()
+        except Exception:
+            pass
+
     return {
         "message": "Application updated successfully",
         "status": app.status,
@@ -587,3 +607,4 @@ async def shortlist_summary(
         "total": sum(counts.values()),
         "last_criteria_used": last_criteria,
     }
+

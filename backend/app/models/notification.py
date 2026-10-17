@@ -22,6 +22,7 @@ class Notification(Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     link: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
+
     priority: Mapped[str] = mapped_column(String(20), default="normal")
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     metadata_payload = mapped_column(JSONB, nullable=True) # Changed from metadata to avoid model conflicts

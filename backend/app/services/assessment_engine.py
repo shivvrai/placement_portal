@@ -150,11 +150,24 @@ async def submit_assessment(
     await db.commit()
     await db.refresh(session)
     
-    # 4. Trigger skill profile update and skill gap recalculation
-    await update_student_skill_from_assessment(db, student_id, session)
+    # 4. Trigger skill profile update and record audit record on passing score (>= 70%)
+    if session.score is not None and session.score >= 70:
+        await update_student_skill_from_assessment(db, student_id, session)
+        try:
+            from app.models.system import AuditLog
+            audit = AuditLog(
+                user_id=student_id,
+                action="ASSESSMENT_PASSED",
+                entity_type="assessment_session",
+                entity_id=str(session.id),
+                details={"topic": session.topic, "score": session.score, "passed": True}
+            )
+            db.add(audit)
+            await db.commit()
+        except Exception:
+            pass
     
     return session
-
 
 # ─── V2: Remediation Plan Generator ─────────────────────────────────
 
@@ -528,3 +541,4 @@ async def submit_code(db: AsyncSession, student_id: uuid.UUID, session_id: uuid.
         "time_ms": time_ms,
         "results": results
     }
+

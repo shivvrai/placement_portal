@@ -1,6 +1,6 @@
 /**
  * Global In-App Notification Center (Bell Dropdown).
- * Supports Real-time WebSockets, priority styling, filtering, and deep-linking.
+ * Supports Real-time WebSockets, toast notifications, priority styling, filtering, and deep-linking.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -30,8 +30,13 @@ export default function NotificationBell() {
   const [activeTab, setActiveTab] = useState('All');
   const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [toasts, setToasts] = useState([]);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.toastId !== id));
+  };
 
   const fetchUnreadCount = async () => {
     try {
@@ -107,6 +112,13 @@ export default function NotificationBell() {
     setShake(true);
     setTimeout(() => setShake(false), 600);
     setNotifications((prev) => [{ ...payload, is_new: true, is_read: false }, ...prev]);
+
+    const toastId = Date.now() + Math.random();
+    const newToast = { ...payload, toastId };
+    setToasts((prev) => [newToast, ...prev].slice(0, 3));
+    setTimeout(() => {
+      removeToast(toastId);
+    }, 5000);
   }, []);
 
   useWebSocket(onWebSocketMessage);
@@ -227,42 +239,32 @@ export default function NotificationBell() {
               padding: '12px 16px',
               borderBottom: '1px solid var(--border-color, #374151)',
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
+              justifyContent: 'space-between',
               background: 'var(--bg-primary, #0f172a)',
             }}
           >
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <button
-                type="button"
-                onClick={() => setActiveTab('All')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: activeTab === 'All' ? 700 : 500,
-                  color: activeTab === 'All' ? 'var(--accent-primary, #6366f1)' : 'var(--text-secondary, #9ca3af)',
-                  fontSize: '0.88rem',
-                  padding: 0,
-                }}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('Unread')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: activeTab === 'Unread' ? 700 : 500,
-                  color: activeTab === 'Unread' ? 'var(--accent-primary, #6366f1)' : 'var(--text-secondary, #9ca3af)',
-                  fontSize: '0.88rem',
-                  padding: 0,
-                }}
-              >
-                Unread ({unreadCount})
-              </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['All', 'Unread'].map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  style={{
+                    background: activeTab === tab ? 'var(--accent-primary, #6366f1)' : 'transparent',
+                    color: activeTab === tab ? '#ffffff' : 'var(--text-secondary, #9ca3af)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {tab === 'Unread' ? `Unread (${unreadCount})` : 'All'}
+                </button>
+              ))}
             </div>
 
             {unreadCount > 0 && (
@@ -273,9 +275,10 @@ export default function NotificationBell() {
                   background: 'none',
                   border: 'none',
                   color: 'var(--accent-primary, #6366f1)',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
+                  fontSize: '0.75rem',
                   fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '2px 6px',
                 }}
               >
                 Mark all read
@@ -283,58 +286,55 @@ export default function NotificationBell() {
             )}
           </div>
 
-          {/* Notifications List */}
-          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
-            {displayedNotifications.length === 0 ? (
-              <div
-                style={{
-                  padding: '36px 16px',
-                  textAlign: 'center',
-                  color: 'var(--text-muted, #6b7280)',
-                }}
-              >
-                <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: 8 }}>🔕</span>
-                {activeTab === 'Unread' ? 'No unread notifications' : 'All caught up!'}
+          {/* List */}
+          <div style={{ maxHeight: 380, overflowY: 'auto' }}>
+            {loading ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted, #9ca3af)', fontSize: '0.85rem' }}>
+                Loading...
+              </div>
+            ) : displayedNotifications.length === 0 ? (
+              <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted, #9ca3af)', fontSize: '0.85rem' }}>
+                🔕 All caught up! No notifications.
               </div>
             ) : (
               displayedNotifications.map((n) => {
-                const priorityColor =
-                  n.priority === 'critical'
-                    ? '#ef4444'
-                    : n.priority === 'high'
-                    ? '#f59e0b'
-                    : '#10b981';
+                const isCritical = n.priority === 'critical';
+                const isHigh = n.priority === 'high';
+                const borderLeftColor = isCritical ? '#ef4444' : isHigh ? '#f59e0b' : '#10b981';
 
                 return (
                   <div
                     key={n.id}
                     onClick={() => handleMarkRead(n)}
                     style={{
-                      padding: '12px 16px',
-                      borderBottom: '1px solid var(--border-color, #374151)',
-                      borderLeft: `4px solid ${priorityColor}`,
-                      background: n.is_read
-                        ? 'transparent'
-                        : 'var(--accent-primary-subtle, rgba(99,102,241,0.08))',
+                      padding: '12px 14px',
+                      borderBottom: '1px solid var(--border-color, #1f2937)',
+                      borderLeft: `4px solid ${borderLeftColor}`,
+                      background: n.is_read ? 'transparent' : 'rgba(99, 102, 241, 0.06)',
                       cursor: 'pointer',
                       transition: 'background 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = n.is_read
-                        ? 'rgba(255,255,255,0.03)'
-                        : 'rgba(99,102,241,0.15)';
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = n.is_read
                         ? 'transparent'
-                        : 'var(--accent-primary-subtle, rgba(99,102,241,0.08))';
+                        : 'rgba(99, 102, 241, 0.06)';
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: 4,
+                      }}
+                    >
                       <div
                         style={{
                           fontWeight: n.is_read ? 500 : 700,
-                          fontSize: '0.88rem',
+                          fontSize: '0.85rem',
                           color: 'var(--text-primary, #f9fafb)',
                           display: 'flex',
                           alignItems: 'center',
@@ -414,6 +414,73 @@ export default function NotificationBell() {
         </div>
       )}
 
+      {/* Toast Popups */}
+      {toasts.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            maxWidth: '360px',
+          }}
+        >
+          {toasts.map((toast) => (
+            <div
+              key={toast.toastId}
+              onClick={() => {
+                handleMarkRead(toast);
+                removeToast(toast.toastId);
+              }}
+              style={{
+                background: '#1e293b',
+                color: '#f1f5f9',
+                border: '1px solid #334155',
+                borderLeft: `5px solid ${toast.priority === 'critical' ? '#ef4444' : toast.priority === 'high' ? '#f59e0b' : '#10b981'}`,
+                borderRadius: '8px',
+                padding: '12px 16px',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                animation: 'slideIn 0.3s ease-out',
+              }}
+            >
+              <div style={{ flex: 1, paddingRight: '8px' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '4px' }}>
+                  {toast.type === 'APPLICATION_STATUS' ? '📄' : toast.type === 'OFFER_RECEIVED' ? '🏆' : '🔔'} {toast.title}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.4 }}>
+                  {toast.message}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeToast(toast.toastId);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  lineHeight: 1,
+                  padding: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <style>{`
         @keyframes bellShake {
           0% { transform: rotate(0deg); }
@@ -421,6 +488,10 @@ export default function NotificationBell() {
           50% { transform: rotate(-15deg); }
           75% { transform: rotate(10deg); }
           100% { transform: rotate(0deg); }
+        }
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
       `}</style>
     </div>

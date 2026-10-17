@@ -1,5 +1,6 @@
 """
-Copilot API — AI career advisor conversations.
+Copilot API — AI career advisor conversations + Mock Interview.
+Uses Server-Sent Events (text/event-stream) for streaming responses.
 """
 
 import uuid
@@ -25,6 +26,7 @@ def _conv_to_response(conv) -> ConversationResponse:
     messages = [
         ChatMessage(role=m["role"], content=m["content"], timestamp=m.get("timestamp"))
         for m in (conv.messages or [])
+        if m.get("role") in ("user", "assistant")
     ]
     return ConversationResponse(
         id=conv.id,
@@ -91,13 +93,63 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Send a message to the copilot and get a streaming text response.
-    Returns plain text chunks.
+    Send a message to the copilot and get a streaming SSE response.
+    Uses text/event-stream for incremental delivery.
     """
-    # copilot_service.add_message_stream returns an AsyncGenerator of strings
-    generator = copilot_service.add_message_stream(db, conversation_id, current_user.id, data)
-    return StreamingResponse(generator, media_type="text/plain")
+    async def sse_generator():
+        async for chunk in copilot_service.add_message_stream(db, conversation_id, current_user.id, data):
+            # SSE format: data: <chunk>\n\n
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
 
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+# ─── Chat Stream (POST /copilot/chat/stream) — V3 endpoint ────────
+@router.post("/chat/stream")
+@limiter.limit("30/hour")
+async def chat_stream(
+    request: Request,
+    data: NewMessageRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    V3 streaming endpoint: POST /copilot/chat/stream
+    Automatically creates a conversation if needed, then streams SSE.
+    """
+    async def sse_generator():
+        # Auto-create or reuse latest conversation
+        convs = await copilot_service.list_conversations(db, student_id=current_user.id)
+        if convs:
+            conv = convs[0]
+        else:
+            conv = await copilot_service.create_conversation(db, student_id=current_user.id)
+
+        yield f"data: {{\"conversation_id\": \"{conv.id}\"}}\n\n"
+
+        async for chunk in copilot_service.add_message_stream(db, conv.id, current_user.id, data):
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+# ─── Mock Interview ──────────────────────────────────────────────────
 
 class MockInterviewStartRequest(BaseModel):
     role: str
@@ -111,11 +163,19 @@ async def start_mock_interview(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Start a Mock Interview and yield the first question.
-    """
-    generator = copilot_service.start_mock_interview_stream(db, current_user.id, data.role, data.difficulty, data.total_questions)
-    return StreamingResponse(generator, media_type="text/plain")
+    """Start a Mock Interview and yield the first question via SSE."""
+    async def sse_generator():
+        async for chunk in copilot_service.start_mock_interview_stream(
+            db, current_user.id, data.role, data.difficulty, data.total_questions
+        ):
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 
 @router.post("/mock-interview/{conversation_id}/respond")
@@ -125,11 +185,33 @@ async def respond_mock_interview(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Respond to an interview question via SSE — evaluation+next question or scorecard."""
+    async def sse_generator():
+        async for chunk in copilot_service.respond_mock_interview_stream(
+            db, conversation_id, current_user.id, data
+        ):
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
+
+
+@router.post("/mock-interview/{conversation_id}/complete")
+async def complete_mock_interview(
+    conversation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Respond to an interview question and yield the evaluation+next question or scorecard.
+    POST /mock-interviews/{session_id}/complete — generate final scorecard
+    for a mock interview session that is still in progress.
     """
-    generator = copilot_service.respond_mock_interview_stream(db, conversation_id, current_user.id, data)
-    return StreamingResponse(generator, media_type="text/plain")
+    result = await copilot_service.complete_mock_interview(db, conversation_id, current_user.id)
+    return result
 
 
 # ─── V3: Context Inspector ──────────────────────────────────────────
@@ -157,4 +239,3 @@ async def get_suggestions(
     Used by the Copilot UI to show action cards.
     """
     return await copilot_service.generate_suggestions(db, current_user.id)
-

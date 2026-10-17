@@ -148,3 +148,32 @@ async def get_report(
             detail="Interview report not available. Complete the interview first."
         )
     return session.final_report
+
+
+@router.post("/{session_id}/complete", summary="Manually complete interview and generate final report")
+async def complete_interview(
+    session_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    POST /mock-interviews/{session_id}/complete
+    Computes comprehensive scorecard across 4 metrics:
+    1. Technical Correctness (0-100%)
+    2. Communication Clarity (0-100%)
+    3. Filler-Word Count
+    4. Response Pace & Depth
+    Generates post-interview transcript review with actionable bullet-point recommendations.
+    """
+    from datetime import datetime, timezone
+    session = await mock_interview_service.get_session(db, session_id, current_user.id)
+    if session.status != "completed":
+        session.status = "completed"
+        session.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        if session.started_at:
+            delta = session.completed_at - session.started_at
+            session.duration_seconds = int(delta.total_seconds())
+        await db.commit()
+    report = await mock_interview_service.generate_final_report(db, session_id)
+    return report
+

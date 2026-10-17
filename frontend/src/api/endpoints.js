@@ -357,6 +357,7 @@ export const assessmentsApi = {
   getDetailedHistory: () => api.get('/assessments/history/detailed'),
   getMyAnalytics: () => api.get('/assessments/analytics/my'),
   getCohortAnalytics: (skill) => api.get(`/assessments/analytics/cohort/${encodeURIComponent(skill)}`),
+  reportTabSwitch: (sessionId, count) => api.post(`/assessments/${sessionId}/tab-switch`, { tab_switches: count }),
 };
 
 // ─── Mock Interview V2 ───────────────────────────────────────────
@@ -393,7 +394,6 @@ export const notificationsApi = {
   markRead: (id) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.patch('/notifications/read-all'),
 };
-
 // ─── Drive Calendar ───────────────────────────────────────────────
 export const calendarApi = {
   getDrives: () => api.get('/calendar/drives'),
@@ -427,5 +427,4 @@ export const recruiterApi = {
   submitFeedback: (appId, data) => api.post(`/recruiter/applicants/${appId}/feedback`, data),
   getDashboard: () => api.get('/recruiter/dashboard'),
 };
-
 
