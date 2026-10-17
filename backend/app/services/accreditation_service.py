@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy.orm import joinedload
 
-from app.models.placement import Application, PlacementDrive
+from app.models.placement import Application, PlacementDrive, PlacementOutcome
 from app.models.user import Student, User
 from app.models.roadmap import RoadmapTask
 
@@ -34,15 +34,19 @@ class AccreditationService:
         Queries all Applications with status='selected' for the given academic year,
         aggregates CTC stats and gender breakdown.
         Falls back to aggregate across all years if no drives match the academic_year.
+        Higher studies count queried from placement_outcomes where placement_type in
+        ('higher_studies', 'higher_education').
         """
         db = self.db
 
         # Fetch all selected applications joined with drive + student + user
+        # NOTE: Do NOT add an explicit join to User table — Student.user is already
+        # loaded via joinedload. The previous explicit .join(User, Student.id == User.id)
+        # was incorrect and caused duplicate result issues.
         stmt = (
             select(Application)
             .join(PlacementDrive, Application.drive_id == PlacementDrive.id)
             .join(Student, Application.student_id == Student.id)
-            .join(User, Student.id == User.id)
             .options(
                 joinedload(Application.student).joinedload(Student.user),
                 joinedload(Application.drive).joinedload(PlacementDrive.company),
@@ -72,7 +76,7 @@ class AccreditationService:
             statistics.mean(sorted(ctc_values, reverse=True)[:top10_count]), 2
         ) if ctc_values else 0.0
 
-        # Gender breakdown from User table
+        # Gender breakdown aggregated from linked users table
         gender_breakdown = {"male": 0, "female": 0, "other": 0}
         for app in selected_apps:
             try:
@@ -90,11 +94,23 @@ class AccreditationService:
             if total_graduating > 0 else 0.0
         )
 
+        # Higher studies count queried from placement_outcomes where
+        # placement_type in ('higher_studies', 'higher_education')
+        higher_studies_count = 0
+        try:
+            hs_stmt = select(func.count(PlacementOutcome.id)).where(
+                PlacementOutcome.placement_type.in_(["higher_studies", "higher_education"])
+            )
+            hs_result = await db.execute(hs_stmt)
+            higher_studies_count = hs_result.scalar_one() or 0
+        except Exception:
+            higher_studies_count = 0
+
         return {
             "academic_year": academic_year,
             "total_graduating": total_graduating,
             "placed_count": placed_count,
-            "higher_studies_count": 0,  # not tracked yet — placeholder
+            "higher_studies_count": higher_studies_count,
             "placement_pct": placement_pct,
             "median_ctc_lpa": median_ctc,
             "top10_ctc_lpa": top10_ctc,
@@ -229,6 +245,7 @@ class AccreditationService:
         writer.writerow(["NIRF Metric 1A — Placement Statistics"])
         writer.writerow(["Total Graduating Students", p["total_graduating"]])
         writer.writerow(["Students Placed", p["placed_count"]])
+        writer.writerow(["Higher Studies", p["higher_studies_count"]])
         writer.writerow(["Placement %", f"{p['placement_pct']}%"])
         writer.writerow(["Median CTC (LPA)", p["median_ctc_lpa"]])
         writer.writerow(["Average CTC (LPA)", p["avg_ctc_lpa"]])

@@ -114,7 +114,9 @@ class ShortlistingService:
 
     async def run_auto_shortlist(self, drive_id, criteria, tpo_user_id, db):
         from app.models.skill import StudentSkill
-        drive_result = await db.execute(select(PlacementDrive).where(PlacementDrive.id == drive_id))
+        drive_result = await db.execute(
+            select(PlacementDrive).options(selectinload(PlacementDrive.company)).where(PlacementDrive.id == drive_id)
+        )
         drive = drive_result.scalar_one_or_none()
         if not drive:
             raise ValueError(f'Drive {drive_id} not found')
@@ -153,7 +155,9 @@ class ShortlistingService:
 
     async def dry_run(self, drive_id, criteria, db):
         from app.models.skill import StudentSkill
-        drive_result = await db.execute(select(PlacementDrive).where(PlacementDrive.id == drive_id))
+        drive_result = await db.execute(
+            select(PlacementDrive).options(selectinload(PlacementDrive.company)).where(PlacementDrive.id == drive_id)
+        )
         drive = drive_result.scalar_one_or_none()
         if not drive:
             raise ValueError(f'Drive {drive_id} not found')

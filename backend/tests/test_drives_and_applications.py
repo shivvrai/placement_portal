@@ -330,3 +330,130 @@ async def test_drive_announcements_broadcast(
     assert notif_res.status_code == 200
     notifs = notif_res.json()["items"]
     assert any("Announcement" in n["title"] and "Venue changed" in n["message"] for n in notifs)
+
+
+@pytest.mark.asyncio
+async def test_bulk_shortlist_endpoint(
+    client: AsyncClient,
+    seed_tpo: User,
+    seed_student: tuple[User, Student],
+):
+    tpo_headers = auth_headers(seed_tpo)
+    student_user, _ = seed_student
+    student_headers = auth_headers(student_user)
+
+    # 1. Create drive and student applies
+    create_res = await client.post(
+        "/api/v1/drives",
+        json={"company_name": "BulkCorp", "title": "Bulk SDE 2026", "min_cgpa": 7.0},
+        headers=tpo_headers,
+    )
+    drive_id = create_res.json()["id"]
+    await client.post(f"/api/v1/drives/{drive_id}/apply", headers=student_headers)
+
+    # 2. Bulk shortlist endpoint
+    shortlist_payload = {
+        "min_cgpa": 6.0,
+        "max_backlogs": 0,
+        "required_skills": [],
+        "allowed_departments": ["CS", "IT"],
+        "target_stage": "Technical Interview Round 1",
+    }
+    bs_res = await client.post(
+        f"/api/v1/drives/{drive_id}/bulk-shortlist",
+        json=shortlist_payload,
+        headers=tpo_headers,
+    )
+    assert bs_res.status_code == 200
+    res_data = bs_res.json()
+    assert res_data["total_evaluated"] >= 1
+    assert res_data["shortlisted"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_calendar_events_endpoint(
+    client: AsyncClient,
+    seed_tpo: User,
+):
+    tpo_headers = auth_headers(seed_tpo)
+
+    # 1. Create a drive with drive_date and deadline
+    await client.post(
+        "/api/v1/drives",
+        json={
+            "company_name": "CalendarCorp",
+            "title": "Calendar Lead Engineer",
+            "drive_date": "2026-12-01",
+            "registration_deadline": "2026-11-25T23:59:59",
+            "eligible_departments": ["CS"],
+        },
+        headers=tpo_headers,
+    )
+
+    # 2. Fetch events
+    res = await client.get("/api/v1/calendar/events", headers=tpo_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert "events" in data
+    assert "conflicts_detected" in data
+    assert data["total_events"] >= 1
+    event_titles = [e["title"] for e in data["events"]]
+    assert any("CalendarCorp" in t for t in event_titles)
+
+
+@pytest.mark.asyncio
+async def test_digital_offer_letter_release_and_student_response(
+    client: AsyncClient,
+    seed_tpo: User,
+    seed_student: tuple[User, Student],
+):
+    tpo_headers = auth_headers(seed_tpo)
+    student_user, _ = seed_student
+    student_headers = auth_headers(student_user)
+
+    # 1. Create drive and student applies
+    create_res = await client.post(
+        "/api/v1/drives",
+        json={"company_name": "DigitalOffersInc", "title": "Platform Engineer 2026"},
+        headers=tpo_headers,
+    )
+    drive_id = create_res.json()["id"]
+    await client.post(f"/api/v1/drives/{drive_id}/apply", headers=student_headers)
+
+    applicants_res = await client.get(f"/api/v1/drives/{drive_id}/applicants", headers=tpo_headers)
+    app_id = applicants_res.json()[0]["application_id"]
+
+    # 2. Set status to selected
+    await client.patch(
+        f"/api/v1/drives/{drive_id}/applications/{app_id}",
+        json={"status": "selected"},
+        headers=tpo_headers,
+    )
+
+    # 3. Release digital offer letter via POST /api/v1/offer-letters/release
+    release_payload = {
+        "role_title": "Platform Engineer I",
+        "company_name": "DigitalOffersInc",
+        "offered_ctc_lpa": 18.5,
+        "ctc_fixed_lpa": 15.0,
+        "ctc_bonus_lpa": 3.5,
+        "joining_date": "2027-01-15",
+        "acceptance_deadline": "2026-12-31",
+        "offer_reference_number": "DOI-2026-001",
+        "remarks": "Welcome to DigitalOffersInc!",
+    }
+    release_res = await client.post(
+        f"/api/v1/offer-letters/release?application_id={app_id}",
+        json=release_payload,
+        headers=tpo_headers,
+    )
+    assert release_res.status_code == 201
+    rel_data = release_res.json()
+    assert rel_data["role_title"] == "Platform Engineer I"
+    assert rel_data["offered_ctc_lpa"] == 18.5
+    assert rel_data["offer_letter_status"] == "uploaded"
+
+    # 4. Student accepts offer
+    accept_res = await client.post(f"/api/v1/offer-letters/{app_id}/accept", headers=student_headers)
+    assert accept_res.status_code == 200
+    assert "accepted successfully" in accept_res.json()["message"]
