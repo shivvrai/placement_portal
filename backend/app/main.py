@@ -52,6 +52,7 @@ from app.api.v1.prep_resources import router as prep_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.company_reviews import router as company_reviews_router
 from app.api.v1.tracker_vault import router as tracker_vault_router
+from app.api.v1.faculty import router as faculty_router
 
 # Import all models so SQLAlchemy registers them with Base.metadata
 import app.models.user  # noqa: F401
@@ -150,6 +151,33 @@ def _migrate_sqlite_columns(sync_conn):
     cols = [r[1] for r in res]
     if "company_id" not in cols and cols:
         sync_conn.execute(text("ALTER TABLE users ADD COLUMN company_id VARCHAR(36)"))
+
+    # company_reviews: interview intelligence columns
+    res = sync_conn.execute(text("PRAGMA table_info(company_reviews)")).fetchall()
+    cols = [r[1] for r in res]
+    if cols:
+        if "difficulty_rating" not in cols:
+            sync_conn.execute(text("ALTER TABLE company_reviews ADD COLUMN difficulty_rating INTEGER"))
+        if "selection_outcome" not in cols:
+            sync_conn.execute(text("ALTER TABLE company_reviews ADD COLUMN selection_outcome VARCHAR(50)"))
+        if "academic_year" not in cols:
+            sync_conn.execute(text("ALTER TABLE company_reviews ADD COLUMN academic_year VARCHAR(20)"))
+        if "offered_ctc_lpa" not in cols:
+            sync_conn.execute(text("ALTER TABLE company_reviews ADD COLUMN offered_ctc_lpa NUMERIC(8, 2)"))
+        if "stipend_monthly" not in cols:
+            sync_conn.execute(text("ALTER TABLE company_reviews ADD COLUMN stipend_monthly NUMERIC(10, 2)"))
+
+    # company_insights: avg_difficulty
+    res = sync_conn.execute(text("PRAGMA table_info(company_insights)")).fetchall()
+    cols = [r[1] for r in res]
+    if cols and "avg_difficulty" not in cols:
+        sync_conn.execute(text("ALTER TABLE company_insights ADD COLUMN avg_difficulty NUMERIC(3, 2)"))
+
+    # student_documents: file_checksum
+    res = sync_conn.execute(text("PRAGMA table_info(student_documents)")).fetchall()
+    cols = [r[1] for r in res]
+    if cols and "file_checksum" not in cols:
+        sync_conn.execute(text("ALTER TABLE student_documents ADD COLUMN file_checksum VARCHAR(64)"))
 
 
 @asynccontextmanager
@@ -272,6 +300,7 @@ app.include_router(prep_router, prefix=settings.API_V1_PREFIX)
 app.include_router(feedback_router, prefix=settings.API_V1_PREFIX)
 app.include_router(company_reviews_router, prefix=settings.API_V1_PREFIX)
 app.include_router(tracker_vault_router, prefix=settings.API_V1_PREFIX)
+app.include_router(faculty_router, prefix=settings.API_V1_PREFIX)
 
 # WebSocket Router (Root level)
 app.include_router(ws_router)

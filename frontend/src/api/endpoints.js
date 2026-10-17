@@ -433,3 +433,33 @@ export const recruiterApi = {
   getDashboard: () => api.get('/recruiter/dashboard'),
 };
 
+// ─── Company Reviews & Intelligence ───────────────────────────────
+export const companyReviewsApi = {
+  getReviews: (params) => api.get('/companies/reviews', { params }),
+  submitReview: (data) => api.post('/companies/reviews', data),
+  upvoteReview: (id) => api.post(`/companies/reviews/${id}/upvote`),
+  getInsights: () => api.get('/companies/insights'),
+  getCompanyInsight: (name) => api.get(`/companies/insights/${name}`),
+};
+
+// ─── Application Tracker & Document Vault ─────────────────────────
+export const trackerVaultApi = {
+  getApplications: () => api.get('/tracker/applications'),
+  getTimeline: (appId) => api.get(`/tracker/timeline/${appId}`),
+  getDocuments: (params) => api.get('/vault/documents', { params }),
+  getDocument: (id) => api.get(`/vault/documents/${id}`),
+  uploadDocument: (data) => api.post('/vault/documents', data),
+  updateDocument: (id, data) => api.patch(`/vault/documents/${id}`, data),
+  deleteDocument: (id) => api.delete(`/vault/documents/${id}`),
+  verifyDocument: (id) => api.patch(`/vault/documents/${id}/verify`),
+  getSharedDocuments: (params) => api.get('/vault/shared', { params }),
+};
+
+// ─── Faculty Department Placement & Curriculum Analytics ───────────
+export const facultyApi = {
+  getDashboard: (departmentCode) => api.get('/faculty/dashboard', { params: { department_code: departmentCode } }),
+  getStudents: (params) => api.get('/faculty/students', { params }),
+  assignMentor: (studentId, data) => api.post(`/faculty/students/${studentId}/assign-mentor`, data),
+};
+
+

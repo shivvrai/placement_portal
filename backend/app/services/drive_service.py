@@ -150,6 +150,24 @@ async def apply_to_drive(
 
     app = Application(student_id=student_id, drive_id=drive_id)
     db.add(app)
+    await db.flush()
+
+    try:
+        from app.models.company_reviews import ApplicationTimelineEvent
+        timeline_event = ApplicationTimelineEvent(
+            application_id=app.id,
+            student_id=student_id,
+            event_type="applied",
+            from_status=None,
+            to_status="applied",
+            description=f"Applied for {drive.title}",
+            actor_id=student_id,
+            metadata_payload={"drive_title": drive.title},
+        )
+        db.add(timeline_event)
+    except Exception:
+        pass
+
     await db.commit()
     await db.refresh(app)
     return app
@@ -295,6 +313,28 @@ async def update_application_stage(
     if (update.status == "selected" or app.status == "selected") and app.student:
         if hasattr(app.student, "placement_status"):
             setattr(app.student, "placement_status", "placed")
+
+    if old_status != app.status or update.current_stage:
+        try:
+            from app.models.company_reviews import ApplicationTimelineEvent
+            timeline_event = ApplicationTimelineEvent(
+                application_id=app.id,
+                student_id=app.student_id,
+                event_type=app.status,
+                from_status=old_status,
+                to_status=app.status,
+                description=f"Status updated to '{app.status}'" + (f" - Stage: {app.current_stage}" if app.current_stage else ""),
+                actor_id=actor_id,
+                metadata_payload={
+                    "stage": app.current_stage,
+                    "scheduled_at": str(update.scheduled_at) if update.scheduled_at else None,
+                    "meeting_link": update.meeting_link,
+                    "venue": update.venue,
+                },
+            )
+            db.add(timeline_event)
+        except Exception:
+            pass
 
     await db.flush()
     return app, old_status

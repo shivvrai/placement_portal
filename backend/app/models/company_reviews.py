@@ -14,6 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 from app.core.db_types import UUIDType, JSONB
+from app.models.application_timeline import ApplicationTimelineEvent  # noqa: F401
 
 
 def utcnow():
@@ -35,6 +36,13 @@ class CompanyReview(Base):
     growth_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     compensation_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     interview_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    difficulty_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    selection_outcome: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    academic_year: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    offered_ctc_lpa: Mapped[float | None] = mapped_column(Float, nullable=True)
+    stipend_monthly: Mapped[float | None] = mapped_column(Float, nullable=True)
+    round_breakdown = mapped_column(JSONB, nullable=True, default=dict)
+    question_tags = mapped_column(JSONB, nullable=True, default=list)
     pros: Mapped[str] = mapped_column(Text, nullable=False)
     cons: Mapped[str] = mapped_column(Text, nullable=False)
     advice: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -71,6 +79,7 @@ class CompanyInsight(Base):
     company_name: Mapped[str] = mapped_column(String(200), nullable=False, unique=True, index=True)
     company_id: Mapped[uuid.UUID | None] = mapped_column(UUIDType, ForeignKey("companies.id"), nullable=True)
     avg_rating: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_difficulty: Mapped[float | None] = mapped_column(Float, nullable=True, default=0.0)
     total_reviews: Mapped[int] = mapped_column(Integer, default=0)
     total_hires_from_college: Mapped[int] = mapped_column(Integer, default=0)
     avg_package_lpa: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -79,6 +88,7 @@ class CompanyInsight(Base):
     hiring_frequency: Mapped[str | None] = mapped_column(String(30), nullable=True)
     common_roles = mapped_column(JSONB, nullable=True, default=list)
     required_skills = mapped_column(JSONB, nullable=True, default=list)
+    topic_tags_cloud = mapped_column(JSONB, nullable=True, default=list)
     selection_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
     last_visited_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)

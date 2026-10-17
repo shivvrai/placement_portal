@@ -33,6 +33,7 @@ class StudentDocument(Base):
     file_name: Mapped[str] = mapped_column(String(300), nullable=False)
     file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    file_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     verified_by: Mapped[uuid.UUID | None] = mapped_column(UUIDType, ForeignKey("users.id"), nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -47,7 +48,7 @@ class StudentDocument(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "document_type IN ('offer_letter', 'id_proof', 'certificate', 'transcript', 'resume', 'recommendation', 'other')",
+            "document_type IN ('offer_letter', 'id_proof', 'certificate', 'transcript', 'resume', 'resume_pdf', 'recommendation', 'marksheet_10th', 'marksheet_12th', 'semester_gradesheet', 'caste_certificate', 'other')",
             name="ck_document_type",
         ),
         Index("idx_doc_student_type", "student_id", "document_type"),

@@ -40,6 +40,7 @@ import AssessmentAnalytics from '../pages/student/AssessmentAnalytics';
 import AlumniMentorship from '../pages/student/AlumniMentorship';
 import PrepHub from '../pages/student/PrepHub';
 import CompanyInsights from '../pages/student/CompanyInsights';
+import CompanyReviews from '../pages/student/CompanyReviews';
 import ApplicationTracker from '../pages/student/ApplicationTracker';
 import DocumentVault from '../pages/student/DocumentVault';
 
@@ -155,7 +156,9 @@ export function AppRouter() {
           <Route path="quiz" element={<QuizCenter />} />
           <Route path="mentorship" element={<AlumniMentorship />} />
           <Route path="prep" element={<PrepHub />} />
-          <Route path="company-insights" element={<CompanyInsights />} />
+          <Route path="company-insights" element={<CompanyReviews />} />
+          <Route path="company-reviews" element={<CompanyReviews />} />
+          <Route path="reviews" element={<CompanyReviews />} />
           <Route path="applications" element={<ApplicationTracker />} />
           <Route path="vault" element={<DocumentVault />} />
         </Route>
