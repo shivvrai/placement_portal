@@ -217,6 +217,7 @@ export const placementApi = {
   postAnnouncement: (driveId, data) => api.post(`/drives/${driveId}/announcements`, data),
   getAnnouncements: (driveId) => api.get(`/drives/${driveId}/announcements`),
   // Shortlisting Engine
+  bulkShortlist: (driveId, criteria) => api.post(`/drives/${driveId}/bulk-shortlist`, criteria),
   shortlistDryRun: (driveId, criteria) => api.post(`/drives/${driveId}/shortlist/dry-run`, criteria),
   shortlistExecute: (driveId, criteria) => api.post(`/drives/${driveId}/shortlist/execute`, criteria),
   overrideApplication: (driveId, appId, newStatus, reason) => api.post(`/drives/${driveId}/applicants/${appId}/override`, { new_status: newStatus, reason }),
@@ -397,6 +398,7 @@ export const notificationsApi = {
 };
 // ─── Drive Calendar ───────────────────────────────────────────────
 export const calendarApi = {
+  getEvents: () => api.get('/calendar/events'),
   getDrives: () => api.get('/calendar/drives'),
   getDrivesForMonth: (year, month) => api.get('/calendar/drives/month', { params: { year, month } }),
   rescheduleDrive: (id, data) => api.post(`/calendar/drives/${id}/reschedule`, data),
@@ -405,6 +407,8 @@ export const calendarApi = {
 
 // ─── Offer Letters ────────────────────────────────────────────────
 export const offerLetterApi = {
+  releaseOffer: (applicationId, data) =>
+    api.post('/offer-letters/release', data, { params: { application_id: applicationId } }),
   upload: (applicationId, file) => {
     const form = new FormData();
     form.append('file', file);
