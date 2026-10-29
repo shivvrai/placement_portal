@@ -39,9 +39,11 @@ export default function AdminLayout() {
             display: 'flex',
             justifyContent: 'flex-end',
             alignItems: 'center',
-            padding: '12px 32px',
-            borderBottom: '1px solid var(--border-color, #374151)',
-            background: 'var(--bg-secondary, #111827)',
+            padding: '10px 28px',
+            borderBottom: '1px solid var(--border-color)',
+            background: 'var(--bg-secondary)',
+            height: 'var(--header-height)',
+            transition: 'background-color 0.3s ease, border-color 0.3s ease',
           }}
         >
           <NotificationBell />

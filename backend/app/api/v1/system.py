@@ -108,3 +108,73 @@ async def get_audit_logs(
             "total_pages": total_pages,
         },
     }
+
+
+# ─── AI Engine & Gemini Configuration ─────────────────────────────────────────
+
+from pydantic import BaseModel, Field
+from app.core.security import get_current_user
+from app.services.gemini_client import is_gemini_configured, get_gemini_api_key
+import os
+import re
+from fastapi import HTTPException
+
+
+class GeminiKeyRequest(BaseModel):
+    api_key: str = Field(..., min_length=10, max_length=200)
+
+
+@router.get("/ai-status", summary="Check active AI model status")
+async def get_ai_status(current_user: User = Depends(get_current_user)):
+    configured = is_gemini_configured()
+    return {
+        "is_gemini_active": configured,
+        "provider": "Google Gemini 1.5 Flash (Live AI)" if configured else "Adaptive Placement Engine (Local)",
+        "model": "gemini-1.5-flash" if configured else "deterministic-v2",
+    }
+
+
+@router.post("/gemini-key", summary="Configure and test Gemini API Key")
+async def set_gemini_key(data: GeminiKeyRequest, current_user: User = Depends(get_current_user)):
+    key = data.api_key.strip()
+    if not key:
+        raise HTTPException(status_code=400, detail="API key cannot be empty")
+
+    # Validate key by making a test ping to Google Gemini
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        resp = model.generate_content("Ping")
+        if not resp or not resp.text:
+            raise ValueError("Empty response from Gemini")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to validate Gemini API key: {str(e)}")
+
+    # Update in memory
+    from app.core.config import get_settings
+    settings = get_settings()
+    settings.GEMINI_API_KEY = key
+    os.environ["GEMINI_API_KEY"] = key
+
+    # Persist in backend/.env
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env")
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            if "GEMINI_API_KEY=" in content:
+                new_content = re.sub(r'GEMINI_API_KEY=.*', f'GEMINI_API_KEY={key}', content)
+            else:
+                new_content = content + f"\nGEMINI_API_KEY={key}\n"
+            with open(env_path, "w", encoding="utf-8") as f:
+                f.write(new_content)
+        except Exception:
+            pass
+
+    return {
+        "status": "success",
+        "message": "Gemini API Key verified and activated successfully! All interviews and Copilot now use live Gemini 1.5 Flash.",
+        "model": "gemini-1.5-flash",
+    }
+

@@ -10,8 +10,13 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+import os
+
+def get_gemini_api_key() -> str:
+    return settings.GEMINI_API_KEY or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
+
 def is_gemini_configured() -> bool:
-    return bool(settings.GEMINI_API_KEY)
+    return bool(get_gemini_api_key())
 
 
 def _sync_stream_chat(system_prompt: str, history: list[dict], user_message: str) -> list[str]:
@@ -20,7 +25,8 @@ def _sync_stream_chat(system_prompt: str, history: list[dict], user_message: str
     Runs in a thread to avoid blocking the async event loop.
     """
     import google.generativeai as genai
-    genai.configure(api_key=settings.GEMINI_API_KEY)
+    api_key = get_gemini_api_key()
+    genai.configure(api_key=api_key)
 
     model = genai.GenerativeModel(
         model_name="gemini-1.5-flash",
@@ -29,7 +35,7 @@ def _sync_stream_chat(system_prompt: str, history: list[dict], user_message: str
 
     chat_history = []
     for m in history:
-        role = "model" if m["role"] == "assistant" else "user"
+        role = "model" if m.get("role") in ["assistant", "model"] else "user"
         chat_history.append({"role": role, "parts": [m["content"]]})
 
     chat = model.start_chat(history=chat_history)
@@ -75,7 +81,8 @@ def _sync_generate_content(system_prompt: str, prompt: str) -> str:
     except ImportError:
         logger.warning("google-generativeai is not installed.")
         raise RuntimeError("google-generativeai is not installed.")
-    genai.configure(api_key=settings.GEMINI_API_KEY)
+    api_key = get_gemini_api_key()
+    genai.configure(api_key=api_key)
     
     model = genai.GenerativeModel(
         model_name="gemini-1.5-flash",

@@ -13,14 +13,14 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [metRes, hltRes, audRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get('/admin/metrics/summary'),
         api.get('/health'),
         api.get('/system/audit-logs?page_size=10')
       ]);
-      setMetrics(metRes.data);
-      setHealth(hltRes.data);
-      setAudits(audRes.data?.data || []);
+      if (results[0].status === 'fulfilled') setMetrics(results[0].value.data);
+      if (results[1].status === 'fulfilled') setHealth(results[1].value.data);
+      if (results[2].status === 'fulfilled') setAudits(results[2].value.data?.data || []);
     } catch (e) {
       console.error(e);
     } finally {

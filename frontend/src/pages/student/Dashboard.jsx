@@ -20,7 +20,7 @@ function StatCard({ label, value, unit, icon, to }) {
         <span style={{ fontSize: '1.5rem' }}>{icon}</span>
       </div>
       <div className="stat-card-value">
-        {value}<span style={{ fontSize: 'var(--font-size-lg)', WebkitTextFillColor: 'inherit' }}>{unit}</span>
+        {value}<span style={{ fontSize: 'var(--font-size-lg)' }}>{unit}</span>
       </div>
     </div>
   );

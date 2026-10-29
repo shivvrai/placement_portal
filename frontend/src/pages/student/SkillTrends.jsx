@@ -103,15 +103,15 @@ export default function SkillTrends() {
           </div>
         </div>
 
-        {/* Gemini Insights */}
+        {/* ML Insights */}
         <div>
-          <h2 style={{ fontSize: 'var(--font-size-xl)', marginBottom: 'var(--space-4)' }}>💡 Gemini AI Insights</h2>
+          <h2 style={{ fontSize: 'var(--font-size-xl)', marginBottom: 'var(--space-4)' }}>💡 ML Insights</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 'var(--space-4)' }}>
             {displayEmerging.map(e => (
               <div key={e.skill} className="card" style={{ borderLeft: '4px solid #a855f7' }}>
                 <div style={{ fontWeight: 700, marginBottom: 'var(--space-2)' }}>{e.skill}</div>
                 <div style={{ fontStyle: 'italic', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
-                  "💡 Gemini Insight: {e.insight}"
+                  "💡 Insight: {e.insight}"
                 </div>
               </div>
             ))}

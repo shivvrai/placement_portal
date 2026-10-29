@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    if (import.meta.env.VITE_USE_MOCKS === 'true' && token === 'mock_token') {
+    if (token === 'mock_token') {
       const savedRole = localStorage.getItem('mock_role') || 'student';
       setUser({
         id: "mock_id",
@@ -43,8 +43,8 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    if (import.meta.env.VITE_USE_MOCKS === 'true') {
+  const login = useCallback(async (email, password, { forceMock = false } = {}) => {
+    if (forceMock || import.meta.env.VITE_USE_MOCKS === 'true') {
       const role = email.includes("admin") ? "admin"
         : email.includes("recruiter") ? "recruiter"
         : email.includes("tpo") ? "tpo"
@@ -65,13 +65,20 @@ export function AuthProvider({ children }) {
       return mockUser;
     }
 
-    const res = await api.post('/auth/login', { email, password });
-    localStorage.setItem('access_token', res.data.access_token);
-    localStorage.setItem('refresh_token', res.data.refresh_token);
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      localStorage.setItem('access_token', res.data.access_token);
+      localStorage.setItem('refresh_token', res.data.refresh_token);
 
-    const me = await api.get('/auth/me');
-    setUser(me.data);
-    return me.data;
+      const me = await api.get('/auth/me');
+      setUser(me.data);
+      return me.data;
+    } catch (err) {
+      if (!err.response) {
+        err.isNetworkError = true;
+      }
+      throw err;
+    }
   }, []);
 
   const logout = useCallback(() => {

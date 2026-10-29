@@ -13,6 +13,7 @@ const FACULTY_NAV = [
       { path: '/faculty/curriculum', icon: '📚', label: 'Curriculum Map' },
       { path: '/faculty/proposals', icon: '📋', label: 'BoS Proposals' },
       { path: '/faculty/students', icon: '👥', label: 'Students Roster' },
+      { path: '/faculty/exam-results', icon: '📊', label: 'Exam Results' },
     ],
   },
 ];

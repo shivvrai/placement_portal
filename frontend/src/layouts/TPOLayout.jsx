@@ -20,13 +20,13 @@ const TPO_NAV = [
       { path: '/tpo/drives', icon: '🏢', label: 'Placement Drives' },
       { path: '/tpo/calendar', icon: '📅', label: 'Drive Calendar' },
       { path: '/tpo/offers', icon: '📄', label: 'Offer Pipeline' },
+      { path: '/tpo/exam-uploads', icon: '📊', label: 'Exam Uploads' },
     ],
   },
   {
     label: 'Insights',
     items: [
       { path: '/tpo/analytics', icon: '📈', label: 'Analytics' },
-      { path: '/tpo/bi-studio', icon: '📊', label: 'BI Studio' },
     ],
   },
 ];
@@ -40,9 +40,11 @@ export default function TPOLayout() {
           display: 'flex',
           justifyContent: 'flex-end',
           alignItems: 'center',
-          padding: '12px 32px',
+          padding: '10px 28px',
           borderBottom: '1px solid var(--border-color)',
           background: 'var(--bg-secondary)',
+          height: 'var(--header-height)',
+          transition: 'background-color 0.3s ease, border-color 0.3s ease',
         }}>
           <NotificationBell />
         </div>

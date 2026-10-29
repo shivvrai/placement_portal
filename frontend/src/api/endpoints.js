@@ -324,19 +324,18 @@ export const curriculumApi = {
   getCoverageHeatmap: (dept) => api.get(`/curriculum/coverage-heatmap/${dept}`),
 };
 
-// ─── AI Career Copilot ────────────────────────────────────────────
-export const copilotApi = {
-  getConversations: () => api.get('/copilot/conversations'),
-  createConversation: (title, initialMessage) =>
-    api.post('/copilot/conversations', { title: title || undefined, initial_message: initialMessage || undefined }),
-  sendMessage: (convId, message) =>
-    api.post(`/copilot/conversations/${convId}/messages`, { content: message }),
-  getHistory: (convId) => api.get(`/copilot/conversations/${convId}`),
-  startMockInterview: (payload) => api.post('/copilot/mock-interview/start', payload),
-  // V3: Context-aware features
-  getContext: (convId) => api.get(`/copilot/conversations/${convId}/context`),
-  getSuggestions: () => api.get('/copilot/suggestions'),
-};
+// ─── AI Career Copilot (DISABLED — AI features removed) ──────────
+// export const copilotApi = {
+//   getConversations: () => api.get('/copilot/conversations'),
+//   createConversation: (title, initialMessage) =>
+//     api.post('/copilot/conversations', { title: title || undefined, initial_message: initialMessage || undefined }),
+//   sendMessage: (convId, message) =>
+//     api.post(`/copilot/conversations/${convId}/messages`, { content: message }),
+//   getHistory: (convId) => api.get(`/copilot/conversations/${convId}`),
+//   startMockInterview: (payload) => api.post('/copilot/mock-interview/start', payload),
+//   getContext: (convId) => api.get(`/copilot/conversations/${convId}/context`),
+//   getSuggestions: () => api.get('/copilot/suggestions'),
+// };
 
 // ─── Skills Taxonomy ──────────────────────────────────────────────
 export const skillsApi = {
@@ -378,25 +377,27 @@ export const assessmentsApi = {
   reportTabSwitch: (sessionId, count) => api.post(`/assessments/${sessionId}/tab-switch`, { tab_switches: count }),
 };
 
-// ─── Mock Interview V2 ───────────────────────────────────────────
-export const mockInterviewApi = {
-  start: (roleTarget, companyStyle = 'Product', difficulty = 'campus') =>
-    api.post('/mock-interviews/start', {
-      role_target: roleTarget,
-      company_style: companyStyle,
-      difficulty: difficulty,
-    }),
-  sendMessage: (sessionId, content) =>
-    api.post(`/mock-interviews/${sessionId}/message`, { content }),
-  getSession: (sessionId) => api.get(`/mock-interviews/${sessionId}`),
-  getReport: (sessionId) => api.get(`/mock-interviews/${sessionId}/report`),
-  getMyHistory: (limit = 20) => api.get('/mock-interviews/my', { params: { limit } }),
-  getMyStats: () => api.get('/mock-interviews/my/stats'),
-};
+// ─── Mock Interview V2 (DISABLED — AI features removed) ──────────
+// export const mockInterviewApi = {
+//   start: (roleTarget, companyStyle = 'Product', difficulty = 'campus') =>
+//     api.post('/mock-interviews/start', {
+//       role_target: roleTarget,
+//       company_style: companyStyle,
+//       difficulty: difficulty,
+//     }),
+//   sendMessage: (sessionId, content) =>
+//     api.post(`/mock-interviews/${sessionId}/message`, { content }),
+//   getSession: (sessionId) => api.get(`/mock-interviews/${sessionId}`),
+//   getReport: (sessionId) => api.get(`/mock-interviews/${sessionId}/report`),
+//   getMyHistory: (limit = 20) => api.get('/mock-interviews/my', { params: { limit } }),
+//   getMyStats: () => api.get('/mock-interviews/my/stats'),
+// };
 
 // ─── System & Audit ───────────────────────────────────────────────
 export const systemApi = {
   getAuditLogs: (params) => api.get('/system/audit-logs', { params }),
+  getAiStatus: () => api.get('/system/ai-status'),
+  setGeminiKey: (apiKey) => api.post('/system/gemini-key', { api_key: apiKey }),
 };
 
 // ─── Interview Experiences & Questions ─────────────────────────────
@@ -478,4 +479,15 @@ export const facultyApi = {
   assignMentor: (studentId, data) => api.post(`/faculty/students/${studentId}/assign-mentor`, data),
 };
 
-
+// ─── Exam Upload / Assessment Sheet ───────────────────────────────
+export const examUploadApi = {
+  upload: (formData) => api.post('/exam-uploads/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  list: (params) => api.get('/exam-uploads', { params }),
+  getDetail: (id) => api.get(`/exam-uploads/${id}`),
+  getStats: (id) => api.get(`/exam-uploads/${id}/stats`),
+  getMyResults: () => api.get('/exam-uploads/my/results'),
+  getSectionResults: (id, params) => api.get(`/exam-uploads/${id}/section`, { params }),
+  delete: (id) => api.delete(`/exam-uploads/${id}`),
+};

@@ -16,7 +16,10 @@ if not IS_SQLITE:
     engine_kwargs["max_overflow"] = 20
     engine_kwargs["connect_args"] = {"statement_cache_size": 0}
 else:
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
+    engine_kwargs["connect_args"] = {
+        "check_same_thread": False,
+        "timeout": 60.0,
+    }
 
 engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 

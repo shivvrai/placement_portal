@@ -27,22 +27,20 @@ import Notifications from '../pages/student/Notifications';
 import PlacementDrives from '../pages/student/PlacementDrives';
 import DriveDetail from '../pages/student/DriveDetail';
 import InterviewExperiences from '../pages/student/InterviewExperiences';
-import Copilot from '../pages/student/Copilot';
 import AssessmentsList from '../pages/student/AssessmentsList';
 import AssessmentTake from '../pages/student/AssessmentTake';
 import PublicPortfolio from '../pages/student/PublicPortfolio';
-import MockInterview from '../pages/student/MockInterview';
-import MockInterviewHistory from '../pages/student/MockInterviewHistory';
+
 import QuizCenter from '../pages/student/QuizCenter';
 import SkillTrends from '../pages/student/SkillTrends';
 import Benchmark from '../pages/student/Benchmark';
 import AssessmentAnalytics from '../pages/student/AssessmentAnalytics';
 import AlumniMentorship from '../pages/student/AlumniMentorship';
 import PrepHub from '../pages/student/PrepHub';
-import CompanyInsights from '../pages/student/CompanyInsights';
 import CompanyReviews from '../pages/student/CompanyReviews';
 import ApplicationTracker from '../pages/student/ApplicationTracker';
 import DocumentVault from '../pages/student/DocumentVault';
+import MyExamResults from '../pages/student/MyExamResults';
 
 // TPO portal
 import TPOLayout from '../layouts/TPOLayout';
@@ -50,9 +48,9 @@ import TPODashboard from '../pages/tpo/Dashboard';
 import TPOStudents from '../pages/tpo/Students';
 import TPODrives from '../pages/tpo/Drives';
 import TPOAnalytics from '../pages/tpo/Analytics';
-import BIStudio from '../pages/tpo/BIStudio';
 import DriveCalendar from '../pages/tpo/DriveCalendar';
 import OfferPipeline from '../pages/tpo/OfferPipeline';
+import ExamUploads from '../pages/tpo/ExamUploads';
 
 // Recruiter portal
 import RecruiterLayout from '../layouts/RecruiterLayout';
@@ -64,6 +62,7 @@ import FacultyLayout from '../layouts/FacultyLayout';
 import FacultyDashboard from '../pages/faculty/Dashboard';
 import CurriculumMap from '../pages/faculty/CurriculumMap';
 import ProposalManager from '../pages/faculty/ProposalManager';
+import SectionExamResults from '../pages/faculty/SectionExamResults';
 
 // Shared
 import NotFound from '../pages/NotFound';
@@ -141,27 +140,22 @@ export function AppRouter() {
           <Route path="matches" element={<JobMatches />} />
           <Route path="skill-gap" element={<SkillGap />} />
           <Route path="roadmap" element={<Roadmap />} />
-          <Route path="career-roadmap" element={<Roadmap />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="drives" element={<PlacementDrives />} />
           <Route path="drives/:id" element={<DriveDetail />} />
           <Route path="experiences" element={<InterviewExperiences />} />
-          <Route path="copilot" element={<Copilot />} />
           <Route path="assessments" element={<AssessmentsList />} />
           <Route path="assessments/:id/take" element={<AssessmentTake />} />
           <Route path="assessments/analytics" element={<AssessmentAnalytics />} />
           <Route path="skill-trends" element={<SkillTrends />} />
           <Route path="benchmark" element={<Benchmark />} />
-          <Route path="mock-interview" element={<MockInterview />} />
-          <Route path="mock-interview/history" element={<MockInterviewHistory />} />
           <Route path="quiz" element={<QuizCenter />} />
           <Route path="mentorship" element={<AlumniMentorship />} />
           <Route path="prep" element={<PrepHub />} />
           <Route path="company-insights" element={<CompanyReviews />} />
-          <Route path="company-reviews" element={<CompanyReviews />} />
-          <Route path="reviews" element={<CompanyReviews />} />
           <Route path="applications" element={<ApplicationTracker />} />
           <Route path="vault" element={<DocumentVault />} />
+          <Route path="exam-results" element={<MyExamResults />} />
         </Route>
 
         {/* ─── TPO Portal ─── */}
@@ -181,7 +175,7 @@ export function AppRouter() {
           <Route path="calendar" element={<DriveCalendar />} />
           <Route path="offers" element={<OfferPipeline />} />
           <Route path="analytics" element={<TPOAnalytics />} />
-          <Route path="bi-studio" element={<BIStudio />} />
+          <Route path="exam-uploads" element={<ExamUploads />} />
         </Route>
 
         {/* ─── Faculty/HOD Portal ─── */}
@@ -198,6 +192,7 @@ export function AppRouter() {
           <Route path="curriculum" element={<CurriculumMap />} />
           <Route path="proposals" element={<ProposalManager />} />
           <Route path="students" element={<TPOStudents />} />
+          <Route path="exam-results" element={<SectionExamResults />} />
         </Route>
 
         {/* ─── Recruiter Portal ─── */}

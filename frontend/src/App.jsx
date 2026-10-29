@@ -1,14 +1,17 @@
 /**
- * Root application component — wraps AuthProvider and AppRouter.
+ * Root application component — wraps ThemeProvider, AuthProvider and AppRouter.
  */
 
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { AppRouter } from './router/AppRouter';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRouter />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
