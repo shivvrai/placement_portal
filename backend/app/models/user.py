@@ -97,7 +97,6 @@ class Student(Base):
     applications: Mapped[list["Application"]] = relationship(back_populates="student")
     placement_outcomes: Mapped[list["PlacementOutcome"]] = relationship(back_populates="student")
     roadmaps: Mapped[list["Roadmap"]] = relationship(back_populates="student")
-    copilot_conversations: Mapped[list["CopilotConversation"]] = relationship(back_populates="student")
 
 
 class Faculty(Base):
@@ -119,4 +118,3 @@ from app.models.skill import StudentSkill  # noqa: E402, F401
 from app.models.portfolio import Project, Certification, Internship, CareerGoal, Resume  # noqa: E402, F401
 from app.models.placement import Application, PlacementOutcome  # noqa: E402, F401
 from app.models.roadmap import Roadmap  # noqa: E402, F401
-from app.models.system import CopilotConversation  # noqa: E402, F401

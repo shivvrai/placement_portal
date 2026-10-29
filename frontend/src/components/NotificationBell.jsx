@@ -6,7 +6,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
-import { useWebSocket } from '../hooks/useWebSocket';
 
 function formatTimeAgo(isoString) {
   if (!isoString) return '';
@@ -121,7 +120,6 @@ export default function NotificationBell() {
     }, 5000);
   }, []);
 
-  useWebSocket(onWebSocketMessage);
 
   const handleMarkRead = async (notif) => {
     try {

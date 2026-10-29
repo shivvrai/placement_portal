@@ -9,12 +9,11 @@ from app.models.industry import Company, Job, JobSkill, IndustrySkillTrend
 from app.models.portfolio import Project, Certification, Internship, CareerGoal, Resume
 from app.models.placement import PlacementDrive, Application, InterviewStage, PlacementOutcome
 from app.models.roadmap import Resource, ResourceSkill, Roadmap, RoadmapTask
-from app.models.system import CopilotConversation, AuditLog
+from app.models.system import AuditLog, UsedResetToken
 from app.models.assessment import AssessmentQuestionBank, AssessmentSession, AssessmentSessionQuestion
 from app.models.cohort import StudentCohort, Notification
 from app.models.experiences import InterviewExperience
 from app.models.announcements import DriveAnnouncement
-from app.models.interview_session import MockInterviewSession
 from app.models.curriculum_proposal import CurriculumProposal
 from app.models.alumni import AlumniProfile, MentorshipConnection, MentorshipSession
 from app.models.prep_resources import PrepResource, PrepCollection, PrepProgress
@@ -39,22 +38,18 @@ __all__ = [
     # Learning & Roadmap (4)
     "Resource", "ResourceSkill", "Roadmap", "RoadmapTask",
     # Intelligence & System (2)
-    "CopilotConversation", "AuditLog",
+    "AuditLog", "UsedResetToken",
     "AssessmentQuestionBank", "AssessmentSession", "AssessmentSessionQuestion",
     "StudentCohort", "Notification",
     "InterviewExperience",
-    # Sprint 3 — AI Learning Infrastructure
-    "MockInterviewSession",
+    # Curriculum
     "CurriculumProposal",
-    # Sprint 3 — Sakshi: Alumni & Mentorship, Prep Resources, Feedback
+    # Alumni & Mentorship, Prep Resources, Feedback
     "AlumniProfile", "MentorshipConnection", "MentorshipSession",
     "PrepResource", "PrepCollection", "PrepProgress",
     "FeedbackSurvey", "SurveyQuestion", "SurveyResponse",
-    # Sprint 3 — Anjula: Company Reviews, Document Vault, Application Timeline
+    # Company Reviews, Document Vault, Application Timeline
     "CompanyReview", "CompanyInsight",
     "StudentDocument",
     "ApplicationTimelineEvent",
 ]
-# Total: 53 tables
-
-

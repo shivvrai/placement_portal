@@ -1,32 +1,18 @@
 """
 SQLAlchemy ORM models — Intelligence & System domain.
-Tables: copilot_conversations, audit_logs
+Tables: audit_logs, used_reset_tokens
 """
 
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, DateTime, ForeignKey, Integer
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, DateTime, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 from app.core.db_types import UUIDType, JSONB
 
 
 def utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
-
-
-class CopilotConversation(Base):
-    __tablename__ = "copilot_conversations"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUIDType, primary_key=True, default=uuid.uuid4)
-    student_id: Mapped[uuid.UUID] = mapped_column(UUIDType, ForeignKey("students.id"), nullable=False, index=True)
-    title: Mapped[str | None] = mapped_column(String(300))
-    messages = mapped_column(JSONB, nullable=True, default=list)
-    message_count: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
-
-    student: Mapped["Student"] = relationship(back_populates="copilot_conversations")
 
 
 class AuditLog(Base):
@@ -42,4 +28,10 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
-from app.models.user import Student  # noqa: E402, F401
+class UsedResetToken(Base):
+    __tablename__ = "used_reset_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDType, primary_key=True, default=uuid.uuid4)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUIDType, ForeignKey("users.id"), index=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

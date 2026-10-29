@@ -20,10 +20,10 @@ const STUDENT_NAV = [
     items: [
       { path: '/student/matches', icon: '🎯', label: 'Job Matches' },
       { path: '/student/skill-gap', icon: '📊', label: 'Skill Gap' },
-      { path: '/student/roadmap', icon: '🗺️', label: 'Career Roadmap' },
+      // { path: '/student/roadmap', icon: '🗺️', label: 'Career Roadmap' }, // Commented out
       { path: '/student/assessments', icon: '📝', label: 'Assessments' },
       { path: '/student/exam-results', icon: '🎓', label: 'Exam Results' },
-      { path: '/student/skill-trends', icon: '📈', label: 'Skill Trends' },
+      // { path: '/student/skill-trends', icon: '📈', label: 'Skill Trends' }, // Commented out
       { path: '/student/benchmark', icon: '🏆', label: 'Peer Benchmark' },
     ],
   },

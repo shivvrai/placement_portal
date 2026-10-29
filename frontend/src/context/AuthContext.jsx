@@ -45,11 +45,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password, { forceMock = false } = {}) => {
     if (forceMock || import.meta.env.VITE_USE_MOCKS === 'true') {
-      const role = email.includes("admin") ? "admin"
-        : email.includes("recruiter") ? "recruiter"
-        : email.includes("tpo") ? "tpo"
-        : email.includes("faculty") ? "faculty"
-        : "student";
+      const role = email.includes("admin") ? "admin" : email.includes("student") ? "student" : "tpo";
       const mockUser = {
         id: "mock_id",
         email: email,

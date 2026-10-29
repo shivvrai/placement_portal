@@ -16,6 +16,7 @@ const ADMIN_NAV = [
   {
     label: 'Administration',
     items: [
+      { path: '/admin/migration', icon: '📦', label: 'Data Migration' },
       { path: '/admin/users', icon: '👥', label: 'User Management' },
       { path: '/admin/settings', icon: '⚙️', label: 'System Settings' },
     ],
@@ -24,7 +25,7 @@ const ADMIN_NAV = [
     label: 'Platform Views',
     items: [
       { path: '/tpo/dashboard', icon: '🏢', label: 'TPO Portal' },
-      { path: '/faculty/dashboard', icon: '🎓', label: 'Faculty Portal' },
+      { path: '/student/dashboard', icon: '🎓', label: 'Student Portal' },
     ],
   },
 ];

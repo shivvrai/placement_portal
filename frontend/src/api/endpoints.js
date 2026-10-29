@@ -208,6 +208,7 @@ export const roadmapApi = intelligenceApi;
 export const matchingApi = {
   getDriveMatch: (driveId) => api.get(`/matching/drives/${driveId}`),
   getTopDrives: () => api.get('/matching/my-top-drives'),
+  getMyTopDrives: () => api.get('/matching/my-top-drives'),
   getDriveSkillGap: (driveId) => api.get(`/matching/skill-gap/${driveId}`),
   getJobFit: (jobId) => api.get(`/matching/job-fit/${jobId}`),
   getRankCohort: () => api.get('/matching/rank-cohort'),
@@ -281,24 +282,6 @@ export const analyticsApi = {
     }),
 };
 
-// ─── BI Studio (Superset + Power BI) ──────────────────────────────────────
-export const biApi = {
-  // Superset integration
-  getEmbedToken: (dashboardId) =>
-    api.get('/bi/embed-token', { params: { dashboard_id: dashboardId } }),
-  getDashboards: () => api.get('/bi/dashboards'),
-  getConfig: () => api.get('/bi/config'),
-
-  // Data export
-  exportData: (entity, format = 'csv') =>
-    api.get(`/bi/export/${entity}`, { params: { format }, responseType: 'blob' }),
-
-  // Entity counts
-  getCounts: () => api.get('/bi/counts'),
-};
-
-
-
 // ─── Curriculum ───────────────────────────────────────────────────
 export const curriculumApi = {
   getSubjects: (dept, semester) =>
@@ -324,18 +307,6 @@ export const curriculumApi = {
   getCoverageHeatmap: (dept) => api.get(`/curriculum/coverage-heatmap/${dept}`),
 };
 
-// ─── AI Career Copilot (DISABLED — AI features removed) ──────────
-// export const copilotApi = {
-//   getConversations: () => api.get('/copilot/conversations'),
-//   createConversation: (title, initialMessage) =>
-//     api.post('/copilot/conversations', { title: title || undefined, initial_message: initialMessage || undefined }),
-//   sendMessage: (convId, message) =>
-//     api.post(`/copilot/conversations/${convId}/messages`, { content: message }),
-//   getHistory: (convId) => api.get(`/copilot/conversations/${convId}`),
-//   startMockInterview: (payload) => api.post('/copilot/mock-interview/start', payload),
-//   getContext: (convId) => api.get(`/copilot/conversations/${convId}/context`),
-//   getSuggestions: () => api.get('/copilot/suggestions'),
-// };
 
 // ─── Skills Taxonomy ──────────────────────────────────────────────
 export const skillsApi = {
@@ -377,21 +348,6 @@ export const assessmentsApi = {
   reportTabSwitch: (sessionId, count) => api.post(`/assessments/${sessionId}/tab-switch`, { tab_switches: count }),
 };
 
-// ─── Mock Interview V2 (DISABLED — AI features removed) ──────────
-// export const mockInterviewApi = {
-//   start: (roleTarget, companyStyle = 'Product', difficulty = 'campus') =>
-//     api.post('/mock-interviews/start', {
-//       role_target: roleTarget,
-//       company_style: companyStyle,
-//       difficulty: difficulty,
-//     }),
-//   sendMessage: (sessionId, content) =>
-//     api.post(`/mock-interviews/${sessionId}/message`, { content }),
-//   getSession: (sessionId) => api.get(`/mock-interviews/${sessionId}`),
-//   getReport: (sessionId) => api.get(`/mock-interviews/${sessionId}/report`),
-//   getMyHistory: (limit = 20) => api.get('/mock-interviews/my', { params: { limit } }),
-//   getMyStats: () => api.get('/mock-interviews/my/stats'),
-// };
 
 // ─── System & Audit ───────────────────────────────────────────────
 export const systemApi = {
@@ -490,4 +446,27 @@ export const examUploadApi = {
   getMyResults: () => api.get('/exam-uploads/my/results'),
   getSectionResults: (id, params) => api.get(`/exam-uploads/${id}/section`, { params }),
   delete: (id) => api.delete(`/exam-uploads/${id}`),
+};
+
+// ─── Admin & Data Migration ─────────────────────────────────────────
+export const adminApi = {
+  getMetricsSummary: () => api.get('/admin/metrics/summary'),
+  getUsers: (params) => api.get('/admin/users', { params }),
+  updateUserRole: (userId, role) => api.patch(`/admin/users/${userId}/role`, null, { params: { new_role: role } }),
+  updateUserStatus: (userId, isActive) => api.patch(`/admin/users/${userId}/status`, null, { params: { is_active: isActive } }),
+  generateResetLink: (userId) => api.post(`/admin/users/${userId}/generate-reset-link`),
+  getSettings: () => api.get('/admin/settings'),
+  updateSettings: (data) => api.patch('/admin/settings', data),
+  // Data Migration & Bulk Ingestion
+  getSchemaGuide: () => api.get('/admin/migration/schema-guide'),
+  downloadTemplate: (entity = 'students', format = 'xlsx') =>
+    api.get(`/admin/migration/template/${entity}`, { params: { format }, responseType: 'blob' }),
+  previewStudents: (formData) => api.post('/admin/migration/students/preview', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  commitStudents: (formData, defaultPassword = 'student123', conflictStrategy = 'skip') =>
+    api.post('/admin/migration/students/commit', formData, {
+      params: { default_password: defaultPassword, conflict_strategy: conflictStrategy },
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 };

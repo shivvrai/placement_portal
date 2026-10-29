@@ -247,3 +247,71 @@ async def get_settings_dummy(current_user: User = Depends(_admin_only)):
 @router.patch("/settings")
 async def update_settings_dummy(data: dict, current_user: User = Depends(_admin_only)):
     return {"message": "Settings updated"}
+
+
+# ─── Institutional Data Migration & Bulk Ingestion ───────────────────────────
+from fastapi.responses import Response
+from app.services.migration_service import (
+    STUDENT_SCHEMA_GUIDE,
+    preview_student_migration,
+    execute_student_migration,
+    generate_sample_student_template,
+)
+
+_admin_or_tpo = RoleChecker(["admin", "tpo"])
+
+@router.get("/migration/schema-guide", summary="Get data schema field definitions for migration")
+async def get_migration_schema_guide(current_user: User = Depends(_admin_or_tpo)):
+    return {"students": STUDENT_SCHEMA_GUIDE}
+
+
+@router.get("/migration/template/{entity_type}", summary="Download sample Excel or CSV template")
+async def download_migration_template(
+    entity_type: str,
+    format: str = Query("xlsx", regex="^(xlsx|csv)$"),
+    current_user: User = Depends(_admin_or_tpo)
+):
+    if entity_type == "students":
+        data = generate_sample_student_template(format)
+        media_type = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            if format == "xlsx"
+            else "text/csv"
+        )
+        filename = f"ccip_student_roster_template.{format}"
+        return Response(
+            content=data,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    raise HTTPException(status_code=400, detail="Unknown entity type")
+
+
+@router.post("/migration/students/preview", summary="Preview and validate student roster before importing")
+async def preview_students(
+    file: UploadFile = File(...),
+    current_user: User = Depends(_admin_or_tpo),
+    db: AsyncSession = Depends(get_db)
+):
+    content = await file.read()
+    try:
+        return await preview_student_migration(content, file.filename, db)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/migration/students/commit", summary="Commit student roster migration and generate credentials")
+async def commit_students(
+    file: UploadFile = File(...),
+    default_password: str = Query("student123"),
+    conflict_strategy: str = Query("skip", regex="^(skip|update)$"),
+    current_user: User = Depends(_admin_or_tpo),
+    db: AsyncSession = Depends(get_db)
+):
+    content = await file.read()
+    try:
+        return await execute_student_migration(
+            content, file.filename, db, default_password=default_password, conflict_strategy=conflict_strategy
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

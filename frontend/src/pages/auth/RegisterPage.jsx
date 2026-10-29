@@ -47,7 +47,7 @@ export default function RegisterPage() {
     } finally { setLoading(false); }
   }
 
-  const needsDept = ['student', 'faculty', 'hod'].includes(form.role);
+  const needsDept = form.role === 'student';
 
   return (
     <div style={{
@@ -150,8 +150,6 @@ export default function RegisterPage() {
               <select id="reg-role" className="input" value={form.role} onChange={e => update('role', e.target.value)} style={{ width: '100%' }}>
                 <option value="student">Student</option>
                 <option value="tpo">TPO (Placement Officer)</option>
-                <option value="faculty">Faculty</option>
-                <option value="hod">HOD</option>
               </select>
             </div>
 

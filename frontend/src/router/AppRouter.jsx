@@ -1,5 +1,5 @@
 /**
- * Application router — role-based routing for all 4 portals.
+ * Application router — role-based routing for Student, TPO, and Admin portals.
  * Route protection via ProtectedRoute component.
  */
 
@@ -10,9 +10,10 @@ import { useAuth } from '../context/AuthContext';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 
-// Admin Portal
+// Admin portal
 import AdminLayout from '../layouts/AdminLayout';
 import AdminDashboard from '../pages/admin/AdminDashboard';
+import DataMigration from '../pages/admin/DataMigration';
 import UserManagement from '../pages/admin/UserManagement';
 import SystemSettings from '../pages/admin/SystemSettings';
 
@@ -52,18 +53,6 @@ import DriveCalendar from '../pages/tpo/DriveCalendar';
 import OfferPipeline from '../pages/tpo/OfferPipeline';
 import ExamUploads from '../pages/tpo/ExamUploads';
 
-// Recruiter portal
-import RecruiterLayout from '../layouts/RecruiterLayout';
-import RecruiterDashboard from '../pages/recruiter/RecruiterDashboard';
-import RecruiterApplicants from '../pages/recruiter/RecruiterApplicants';
-
-// Faculty/HOD portal
-import FacultyLayout from '../layouts/FacultyLayout';
-import FacultyDashboard from '../pages/faculty/Dashboard';
-import CurriculumMap from '../pages/faculty/CurriculumMap';
-import ProposalManager from '../pages/faculty/ProposalManager';
-import SectionExamResults from '../pages/faculty/SectionExamResults';
-
 // Shared
 import NotFound from '../pages/NotFound';
 
@@ -93,21 +82,6 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Admin Routes */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute roles={['admin']}>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="settings" element={<SystemSettings />} />
-        </Route>
-
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -120,10 +94,26 @@ export function AppRouter() {
           path="/"
           element={
             user
-              ? <Navigate to={`/${user.role === 'admin' ? 'admin' : user.role === 'student' ? 'student' : user.role === 'tpo' ? 'tpo' : user.role === 'recruiter' ? 'recruiter' : 'faculty'}/dashboard`} replace />
+              ? <Navigate to={`/${user.role === 'admin' ? 'admin' : user.role === 'student' ? 'student' : 'tpo'}/dashboard`} replace />
               : <Navigate to="/login" replace />
           }
         />
+
+        {/* ─── Admin Portal ─── */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="migration" element={<DataMigration />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="settings" element={<SystemSettings />} />
+        </Route>
 
         {/* ─── Student Portal ─── */}
         <Route
@@ -139,7 +129,8 @@ export function AppRouter() {
           <Route path="profile" element={<StudentProfile />} />
           <Route path="matches" element={<JobMatches />} />
           <Route path="skill-gap" element={<SkillGap />} />
-          <Route path="roadmap" element={<Roadmap />} />
+          {/* <Route path="roadmap" element={<Roadmap />} /> */}
+          <Route path="roadmap" element={<Navigate to="/student/prep" replace />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="drives" element={<PlacementDrives />} />
           <Route path="drives/:id" element={<DriveDetail />} />
@@ -147,7 +138,8 @@ export function AppRouter() {
           <Route path="assessments" element={<AssessmentsList />} />
           <Route path="assessments/:id/take" element={<AssessmentTake />} />
           <Route path="assessments/analytics" element={<AssessmentAnalytics />} />
-          <Route path="skill-trends" element={<SkillTrends />} />
+          {/* <Route path="skill-trends" element={<SkillTrends />} /> */}
+          <Route path="skill-trends" element={<Navigate to="/student/benchmark" replace />} />
           <Route path="benchmark" element={<Benchmark />} />
           <Route path="quiz" element={<QuizCenter />} />
           <Route path="mentorship" element={<AlumniMentorship />} />
@@ -176,38 +168,6 @@ export function AppRouter() {
           <Route path="offers" element={<OfferPipeline />} />
           <Route path="analytics" element={<TPOAnalytics />} />
           <Route path="exam-uploads" element={<ExamUploads />} />
-        </Route>
-
-        {/* ─── Faculty/HOD Portal ─── */}
-        <Route
-          path="/faculty"
-          element={
-            <ProtectedRoute roles={['faculty', 'hod']}>
-              <FacultyLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<FacultyDashboard />} />
-          <Route path="curriculum" element={<CurriculumMap />} />
-          <Route path="proposals" element={<ProposalManager />} />
-          <Route path="students" element={<TPOStudents />} />
-          <Route path="exam-results" element={<SectionExamResults />} />
-        </Route>
-
-        {/* ─── Recruiter Portal ─── */}
-        <Route
-          path="/recruiter"
-          element={
-            <ProtectedRoute roles={['recruiter', 'tpo', 'admin']}>
-              <RecruiterLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<RecruiterDashboard />} />
-          <Route path="drives" element={<RecruiterDashboard />} />
-          <Route path="drives/:driveId/applicants" element={<RecruiterApplicants />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

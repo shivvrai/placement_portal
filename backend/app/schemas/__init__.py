@@ -27,8 +27,4 @@ from .analytics import (  # noqa: F401
     PlacementStatsResponse, DeptPlacementRow, MonthlyTrendRow,
     RecruiterRow, PackageBandRow, SkillDemandRow, CurriculumGapRow,
 )
-from .copilot import (  # noqa: F401
-    ChatMessage, ConversationResponse, ConversationSummary,
-    NewMessageRequest, NewConversationRequest,
-)
 from .matching import JobMatchResponse, SkillMatchDetail  # noqa: F401

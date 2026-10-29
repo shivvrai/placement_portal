@@ -182,7 +182,8 @@ export default function StudentDashboard() {
         <div className="stat-grid">
           <StatCard label="Skill Readiness Score" value={stats.skill_score} unit="%" icon="🎯" to="/student/skill-gap" />
           <StatCard label="Job Matches" value={stats.match_count} unit=" roles" icon="💼" to="/student/matches" />
-          <StatCard label="Roadmap Progress" value={stats.roadmap_progress} unit="%" icon="🗺️" to="/student/roadmap" />
+          {/* <StatCard label="Roadmap Progress" value={stats.roadmap_progress} unit="%" icon="🗺️" to="/student/roadmap" /> */}
+          <StatCard label="Prep & Practice" value="Hub" unit="" icon="📚" to="/student/prep" />
           <StatCard label="Active Applications" value={stats.applications} unit="" icon="📋" to="/student/drives" />
         </div>
 

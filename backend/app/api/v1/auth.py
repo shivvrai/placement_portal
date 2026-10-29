@@ -6,9 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import hashlib
-import redis.asyncio as aioredis
-from app.core.config import get_settings
 from app.middleware.rate_limit import limiter
+from app.models.system import UsedResetToken
 
 from app.core.database import get_db
 from app.core.security import (
@@ -197,19 +196,18 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(
             detail="Invalid token type — expected reset token",
         )
         
-    # Check single use atomicity via Redis
     token_hash = hashlib.sha256(data.token.encode()).hexdigest()
-    redis_key = f"used_reset_token:{token_hash}"
-    r = aioredis.from_url(get_settings().REDIS_URL, decode_responses=True)
-    
-    try:
-        # SETNX equivalent (set if not exists)
-        is_new = await r.set(redis_key, "1", ex=86400, nx=True)
-        if not is_new:
-            raise HTTPException(status_code=400, detail="Token has already been used.")
-    finally:
-        await r.aclose()
-        
+
+    # Check token reuse in DB (atomic within transaction, no Redis dependency)
+    existing_used = await db.execute(
+        select(UsedResetToken).where(UsedResetToken.token_hash == token_hash)
+    )
+    if existing_used.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token has already been used.",
+        )
+
     user_id = payload.get("sub")
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
@@ -218,7 +216,7 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(
         raise HTTPException(status_code=404, detail="User not found")
         
     user.password_hash = hash_password(data.new_password)
-    # Could optionally bump a user version to invalidate existing JWTs
+    db.add(UsedResetToken(token_hash=token_hash, user_id=user.id))
     await db.commit()
     
     return MessageResponse(message="Password has been reset successfully.")

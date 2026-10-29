@@ -31,19 +31,7 @@ const DEMO_ROLES = [
     password: 'tpo123',
     color: '#f59e0b',
     portal: '/tpo/dashboard',
-    desc: 'Campus recruitment drives, student pipelines & BI analytics',
-  },
-  {
-    role: 'faculty',
-    label: 'Faculty',
-    icon: '👨‍🏫',
-    name: 'Dr. Sharma',
-    tag: 'HOD Computer Science',
-    email: 'faculty@ccip.edu',
-    password: 'faculty123',
-    color: '#06b6d4',
-    portal: '/faculty/dashboard',
-    desc: 'Curriculum industry alignment & syllabus proposal reviews',
+    desc: 'Campus recruitment drives, student pipelines & analytics',
   },
   {
     role: 'admin',
@@ -55,19 +43,7 @@ const DEMO_ROLES = [
     password: 'admin123',
     color: '#10b981',
     portal: '/admin/dashboard',
-    desc: 'System health, global settings, and user permissions',
-  },
-  {
-    role: 'recruiter',
-    label: 'Recruiter',
-    icon: '💼',
-    name: 'Corporate HR',
-    tag: 'Talent Acquisition',
-    email: 'recruiter@ccip.edu',
-    password: 'recruiter123',
-    color: '#ec4899',
-    portal: '/recruiter/dashboard',
-    desc: 'Job listings, applicant review & interview scheduling',
+    desc: 'Institutional data migration, student onboarding & settings',
   },
 ];
 
@@ -102,11 +78,7 @@ export default function LoginPage() {
 
     try {
       const user = await login(targetEmail, targetPassword, options);
-      const portal = user.role === 'student' ? '/student/dashboard'
-        : user.role === 'admin' ? '/admin/dashboard'
-        : user.role === 'tpo' ? '/tpo/dashboard'
-        : user.role === 'recruiter' ? '/recruiter/dashboard'
-        : '/faculty/dashboard';
+      const portal = user.role === 'admin' ? '/admin/dashboard' : user.role === 'student' ? '/student/dashboard' : '/tpo/dashboard';
       navigate(portal, { replace: true });
     } catch (err) {
       if (err.isNetworkError || !err.response) {

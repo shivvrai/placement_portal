@@ -5,8 +5,13 @@ Loads settings from environment variables with sensible defaults for development
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+ENV_FILE = BACKEND_DIR / ".env"
+DEFAULT_DB_FILE = BACKEND_DIR / "ccip_dev.db"
 
 
 class Settings(BaseSettings):
@@ -16,8 +21,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://ccip:ccip_dev@localhost:5432/ccip"
+    # Database (defaults to absolute path of ccip_dev.db in backend directory)
+    DATABASE_URL: str = f"sqlite+aiosqlite:///{DEFAULT_DB_FILE.as_posix()}"
     DATABASE_ECHO: bool = False
 
     # Redis
@@ -32,32 +37,27 @@ class Settings(BaseSettings):
     # UMS Integration Mode
     UMS_MODE: str = "mock"  # "mock" | "api" | "etl"
 
-    # LLM
-    LLM_PROVIDER: str = "gemini"  # "gemini" | "ollama"
+    # LLM / AI (Basic models & features)
+    LLM_PROVIDER: str = "gemini"
     GEMINI_API_KEY: str = ""
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "mistral"
 
     # File Storage
-    UPLOAD_DIR: str = "./uploads"
+    UPLOAD_DIR: str = str((BACKEND_DIR / "uploads").as_posix())
     MAX_RESUME_SIZE_MB: int = 10
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
-
-    # BI Integration — Apache Superset
-    SUPERSET_URL: str = "http://localhost:8088"
-    SUPERSET_PUBLIC_URL: str = "http://localhost:8088"
-    SUPERSET_ADMIN_USERNAME: str = "admin"
-    SUPERSET_ADMIN_PASSWORD: str = "admin"
-
-    # BI Integration — Power BI (optional)
-    POWERBI_EMBED_URL: str = ""  # Published Power BI report embed URL
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ]
 
     model_config = {
-        "env_file": ".env",
+        "env_file": str(ENV_FILE),
         "env_file_encoding": "utf-8",
         "case_sensitive": True,
+        "extra": "ignore",
     }
 
 

@@ -29,7 +29,6 @@ from app.api.v1.applications import router as applications_router
 from app.api.v1.matching import router as matching_router
 from app.api.v1.roadmap import router as roadmap_router
 from app.api.v1.analytics import router as analytics_router
-# from app.api.v1.copilot import router as copilot_router  # DISABLED — AI features removed
 from app.api.v1.skills import router as skills_router
 from app.api.v1.resume import router as resume_router
 from app.api.v1.assessments import router as assessments_router
@@ -37,12 +36,9 @@ from app.api.v1.ums import router as ums_router
 from app.api.v1.curriculum import router as curriculum_router
 from app.api.v1.tpo import router as tpo_router
 from app.api.v1.system import router as system_router
-# from app.api.v1.superset_bi import router as bi_router  # DISABLED — requires Apache Superset Docker
 from app.api.v1.experiences import router as experiences_router
 from app.api.v1.notifications import router as notifications_router
-# from app.api.v1.mock_interviews import router as mock_interviews_router  # DISABLED — AI features removed
 from app.api.v1.admin import router as admin_router
-# from app.api.v1.websocket import router as ws_router  # DISABLED — requires Redis
 from app.api.v1.questions import router as questions_router
 from app.api.v1.calendar import router as calendar_router
 from app.api.v1.offer_letters import router as offer_letters_router
@@ -69,7 +65,6 @@ import app.models.notification  # noqa: F401
 import app.models.cohort  # noqa: F401
 import app.models.experiences  # noqa: F401
 import app.models.announcements  # noqa: F401
-import app.models.interview_session  # noqa: F401
 import app.models.curriculum_proposal  # noqa: F401
 import app.models.alumni  # noqa: F401
 import app.models.prep_resources  # noqa: F401
@@ -226,6 +221,12 @@ def _migrate_sqlite_columns(sync_conn):
     if cols and "file_checksum" not in cols:
         sync_conn.execute(text("ALTER TABLE student_documents ADD COLUMN file_checksum VARCHAR(64)"))
 
+    # assessment_sessions: metadata
+    res = sync_conn.execute(text("PRAGMA table_info(assessment_sessions)")).fetchall()
+    cols = [r[1] for r in res]
+    if cols and "metadata" not in cols:
+        sync_conn.execute(text("ALTER TABLE assessment_sessions ADD COLUMN metadata JSON"))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -265,6 +266,7 @@ app.add_middleware(RowLevelSecurityMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -326,7 +328,6 @@ app.include_router(applications_router, prefix=settings.API_V1_PREFIX)
 app.include_router(matching_router, prefix=settings.API_V1_PREFIX)
 app.include_router(roadmap_router, prefix=settings.API_V1_PREFIX)
 app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)
-# app.include_router(copilot_router, prefix=settings.API_V1_PREFIX)  # DISABLED — AI features removed
 app.include_router(skills_router, prefix=settings.API_V1_PREFIX)
 app.include_router(resume_router, prefix=settings.API_V1_PREFIX)
 app.include_router(assessments_router, prefix=settings.API_V1_PREFIX)
@@ -334,10 +335,8 @@ app.include_router(ums_router, prefix=settings.API_V1_PREFIX)
 app.include_router(curriculum_router, prefix=settings.API_V1_PREFIX)
 app.include_router(tpo_router, prefix=settings.API_V1_PREFIX)
 app.include_router(system_router, prefix=settings.API_V1_PREFIX)
-# app.include_router(bi_router, prefix=settings.API_V1_PREFIX)  # DISABLED — requires Apache Superset Docker
 app.include_router(experiences_router, prefix=settings.API_V1_PREFIX)
 app.include_router(notifications_router, prefix=settings.API_V1_PREFIX)
-# app.include_router(mock_interviews_router, prefix=settings.API_V1_PREFIX)  # DISABLED — AI features removed
 app.include_router(admin_router, prefix=settings.API_V1_PREFIX)
 app.include_router(questions_router, prefix=settings.API_V1_PREFIX)
 app.include_router(calendar_router, prefix=settings.API_V1_PREFIX)
@@ -353,8 +352,6 @@ app.include_router(portfolio_router, prefix=settings.API_V1_PREFIX)
 app.include_router(exam_uploads_router, prefix=settings.API_V1_PREFIX)
 app.include_router(portfolio_router)
 
-# WebSocket Router (Root level) — DISABLED, requires Redis
-# app.include_router(ws_router)
 
 
 if __name__ == "__main__":
